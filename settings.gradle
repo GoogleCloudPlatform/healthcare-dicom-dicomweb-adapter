@@ -17,6 +17,4 @@
 include ":export"
 include ":import"
 include ":util"
-
 include ':dicom_util'
-project(':dicom_util').projectDir = new File('../util')
