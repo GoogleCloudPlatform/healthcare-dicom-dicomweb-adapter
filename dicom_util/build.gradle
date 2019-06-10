@@ -19,7 +19,7 @@ apply plugin: 'java'
 buildDir = '/tmp/gradle_build/dicom_adapter/dicom_util'
 
 sourceCompatibility = 1.8
-version = '0.0.1'
+version = '0.0.2'
 
 compileJava {
     // Print out detailed deprecation warnings.
