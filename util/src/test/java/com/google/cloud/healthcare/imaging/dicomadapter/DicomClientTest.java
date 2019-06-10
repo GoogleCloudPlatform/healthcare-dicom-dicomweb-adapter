@@ -14,18 +14,16 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import static com.google.common.truth.Truth.assertThat;
-
-import com.google.cloud.healthcare.TestUtils;
-import org.dcm4che3.data.Attributes;
-import org.dcm4che3.data.Tag;
+import com.google.cloud.healthcare.util.TestUtils;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.StubCStoreService;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.Connection;
 import org.dcm4che3.net.Device;
-import org.dcm4che3.net.DimseRSPHandler;
 import org.dcm4che3.net.NoPresentationContextException;
 import org.dcm4che3.net.Status;
 import org.dcm4che3.net.TransferCapability;
@@ -59,18 +57,6 @@ public final class DicomClientTest {
     dicom = new DicomInputStream(TestUtils.streamTestFile(TestUtils.TEST_MR_FILE));
   }
 
-  // Creates the client-side C-STORE response handler.
-  private static DimseRSPHandler createDimseRSPHandler(Association association, int wantStatus) {
-    return new DimseRSPHandler(association.nextMessageID()) {
-      @Override
-      public void onDimseRSP(Association association, Attributes cmd, Attributes data) {
-        super.onDimseRSP(association, cmd, data);
-        int gotStatus = cmd.getInt(Tag.Status, /* default status */ -1);
-        assertThat(gotStatus).isEqualTo(wantStatus);
-      }
-    };
-  }
-
   private int createServerDevice(String sopClass, String transferSyntax, int wantResponseStatus)
       throws Exception {
     int serverPort = PortUtil.getFreePort();
@@ -94,15 +80,17 @@ public final class DicomClientTest {
     PresentationContext pc = new PresentationContext(1, sopClass, transferSyntax);
     DicomClient client = DicomClient.associatePeer(clientAE, serverAET, serverHost, serverPort, pc);
     Association association = client.getAssociation();
+    DimseRSPAssert rspAssert = new DimseRSPAssert(association, Status.Success);
     client.cstore(
         sopClass,
         sopInstanceUID,
-        dicom,
         transferSyntax,
-        createDimseRSPHandler(association, Status.Success));
+        dicom,
+        rspAssert);
     association.waitForOutstandingRSP();
     association.release();
     association.waitForSocketClose();
+    rspAssert.assertResult();
   }
 
   @Test
@@ -113,15 +101,17 @@ public final class DicomClientTest {
     PresentationContext pc = new PresentationContext(1, sopClass, transferSyntax);
     DicomClient client = DicomClient.associatePeer(clientAE, serverAET, serverHost, serverPort, pc);
     Association association = client.getAssociation();
+    DimseRSPAssert rspAssert = new DimseRSPAssert(association, Status.ProcessingFailure);
     client.cstore(
         sopClass,
         sopInstanceUID,
-        dicom,
         transferSyntax,
-        createDimseRSPHandler(association, Status.ProcessingFailure));
+        dicom,
+        rspAssert);
     association.waitForOutstandingRSP();
     association.release();
     association.waitForSocketClose();
+    rspAssert.assertResult();
   }
 
   @Test(expected = NoPresentationContextException.class)
@@ -136,9 +126,9 @@ public final class DicomClientTest {
     client.cstore(
         sopClass,
         sopInstanceUID,
-        dicom,
         transferSyntax,
-        createDimseRSPHandler(association, Status.Success));
+        dicom,
+        null);
   }
 
   @Test(expected = NoPresentationContextException.class)
@@ -153,8 +143,8 @@ public final class DicomClientTest {
     client.cstore(
         sopClass,
         sopInstanceUID,
-        dicom,
         transferSyntax,
-        createDimseRSPHandler(association, Status.Success));
+        dicom,
+        null);
   }
 }

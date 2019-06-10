@@ -19,15 +19,25 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class ImportAdapter {
+
+  private static Logger log = LoggerFactory.getLogger(ImportAdapter.class);
+
   public static void main(String[] args) throws IOException, GeneralSecurityException {
     Flags flags = new Flags();
     JCommander jCommander = new JCommander(flags);
@@ -44,19 +54,38 @@ public class ImportAdapter {
       credentials = credentials.createScoped(Arrays.asList(flags.oauthScopes.split(",")));
     }
 
+    HttpRequestFactory requestFactory =
+        new NetHttpTransport().createRequestFactory(new HttpCredentialsAdapter(credentials));
+
+    // Initialize Monitoring
+    MonitoringService.initialize(flags.gcpProjectId, Event.values(), requestFactory);
+    MonitoringService.addEvent(Event.STARTED);
+
     // Dicom service handlers.
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
 
     // Handle C-ECHO (all nodes which accept associations must support this).
     serviceRegistry.addDicomService(new BasicCEchoSCP());
 
-    // Handle C-STORE.
-    HttpRequestFactory requestFactory =
-        new NetHttpTransport().createRequestFactory(new HttpCredentialsAdapter(credentials));
+    // Handle C-STORE
     CStoreService cStoreService =
         new CStoreService(flags.dicomwebAddr, flags.dicomwebStowPath, requestFactory);
     serviceRegistry.addDicomService(cStoreService);
 
+    // Handle C-FIND
+    DicomWebClient dicomWebClient =
+        new DicomWebClient(requestFactory, flags.dicomwebAddr);
+    CFindService cFindService = new CFindService(dicomWebClient);
+    serviceRegistry.addDicomService(cFindService);
+
+    // Handle C-MOVE
+    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
+    CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet, dicomWebClient);
+    AetDictionary aetDict = new AetDictionary(flags.aetDictionaryPath);
+    CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cStoreSenderFactory);
+    serviceRegistry.addDicomService(cMoveService);
+
+    // Start DICOM server
     Device device = DeviceUtil.createServerDevice(flags.dimseAET, flags.dimsePort, serviceRegistry);
     device.bindConnections();
   }

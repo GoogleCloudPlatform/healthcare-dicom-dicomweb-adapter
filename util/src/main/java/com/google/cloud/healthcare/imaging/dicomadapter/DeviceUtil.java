@@ -21,14 +21,19 @@ import org.dcm4che3.net.Device;
 import org.dcm4che3.net.TransferCapability;
 import org.dcm4che3.net.service.DicomServiceRegistry;
 
-/** Static utilities for creating {@link Device} used in dcm4che library. */
+/**
+ * Static utilities for creating {@link Device} used in dcm4che library.
+ */
 public class DeviceUtil {
-  private DeviceUtil() {}
 
   private static final String ALL_ALLOWED_SOP_CLASSES = "*";
   private static final String ALL_ALLOWED_TRANSFER_SYNTAXES = "*";
+  private DeviceUtil() {
+  }
 
-  /** Creates a DICOM server listening to the port for the given services handling all syntaxes */
+  /**
+   * Creates a DICOM server listening to the port for the given services handling all syntaxes
+   */
   static Device createServerDevice(
       String applicationEntityName, Integer dicomPort, DicomServiceRegistry serviceRegistry) {
     TransferCapability transferCapability =
@@ -41,7 +46,9 @@ public class DeviceUtil {
         applicationEntityName, dicomPort, serviceRegistry, transferCapability);
   }
 
-  /** Creates a DICOM server listening to the port for the given services */
+  /**
+   * Creates a DICOM server listening to the port for the given services
+   */
   public static Device createServerDevice(
       String applicationEntityName,
       Integer dicomPort,
@@ -67,7 +74,9 @@ public class DeviceUtil {
     return device;
   }
 
-  /** Creates a DICOM client device containing the given Application Entity */
+  /**
+   * Creates a DICOM client device containing the given Application Entity
+   */
   public static Device createClientDevice(
       ApplicationEntity applicationEntity, Connection connection) {
     Device device = new Device("dicom-to-dicomweb-adapter-client");

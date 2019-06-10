@@ -18,8 +18,10 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.api.client.testing.http.HttpTesting;
 import com.google.cloud.healthcare.DicomWebClient;
-import com.google.cloud.healthcare.FakeWebServer;
-import com.google.cloud.healthcare.TestUtils;
+import com.google.cloud.healthcare.util.FakeWebServer;
+import com.google.cloud.healthcare.util.TestUtils;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.StubCStoreService;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;

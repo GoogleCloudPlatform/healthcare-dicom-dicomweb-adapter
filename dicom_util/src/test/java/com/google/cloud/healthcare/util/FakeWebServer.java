@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.google.cloud.healthcare;
+package com.google.cloud.healthcare.util;
 
 import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.LowLevelHttpRequest;

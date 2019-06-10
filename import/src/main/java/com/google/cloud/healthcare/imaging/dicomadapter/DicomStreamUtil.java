@@ -32,7 +32,7 @@ public class DicomStreamUtil {
       String sopInstanceUID,
       String sopClassUID,
       String transferSyntax,
-      PDVInputStream inDicomStream)
+      InputStream inDicomStream) // PDVInputStream
       throws IOException {
     // File meta header (group 0002 tags), always in Explicit VR Little Endian.
     // http://dicom.nema.org/dicom/2013/output/chtml/part10/chapter_7.html
