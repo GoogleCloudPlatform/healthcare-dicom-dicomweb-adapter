@@ -1,0 +1,5 @@
+steps:
+- name: 'gradle:5.4.1-jdk8'
+  args:
+  - gradle
+  - build
