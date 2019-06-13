@@ -37,7 +37,7 @@ public class AetDictionary {
       }
 
       log.info("aetMap = {}", aetMap);
-    } catch (IOException e) {
+    } catch (Throwable e) {
       log.error("Failed to load aet dictionary", e);
     }
   }
