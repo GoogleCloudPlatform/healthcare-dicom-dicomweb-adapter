@@ -1,0 +1,104 @@
+﻿steps:
+- name: 'gcr.io/cloud-builders/git'
+  id: clone-dcm4che
+  args:
+  - clone
+  - https://github.com/dcm4che/dcm4che.git
+  - dcm4che
+
+- name: 'gcr.io/cloud-builders/git'
+  id: checkout-dcm4che-tag
+  args:
+  - checkout
+  - "tags/5.15.1"
+  dir: dcm4che
+
+- name: "maven:3.6.0-jdk-8"
+  id: build-store-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - install
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+
+- name: 'gradle:5.4.1-jdk8'
+  id: gradle-run-adapter
+  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
+  dir: import
+  waitFor: ['-']
+
+- name: 'google/cloud-sdk:250.0.0'
+  id: create-dicom-store
+  args:
+  - gcloud
+  - alpha
+  - healthcare
+  - dicom-stores
+  - create
+  - ${_STORE_NAME}
+  - "--dataset=${_DATASET}"
+  - "--location=${_LOCATION}"  
+  - "--quiet"
+  waitFor: ['-']
+
+
+- name: 'busybox:latest'
+  id: wait-for-adapter
+  args:
+  - ash
+  - integration_test/wait_for_port.sh
+  - ${_ADAPTER_RUN_STEP}
+  - ${_ADAPTER_PORT}
+  waitFor:
+  - build-store-scu
+  - create-dicom-store
+
+- name: "maven:3.6.0-jdk-8"
+  id: run-store-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@step_3:${_ADAPTER_PORT} ../../../integration_test/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+  waitFor:
+  - wait-for-adapter
+
+- name: 'busybox:latest'
+  id: close-adapter
+  args:
+  - nc
+  - '-z'
+  - ${_ADAPTER_RUN_STEP}
+  - ${_CLOSE_ADAPTER_PORT}
+  waitFor:
+  - run-store-scu
+
+- name: 'google/cloud-sdk:250.0.0'
+  id: delete-dicom-store
+  args:
+  - gcloud
+  - alpha
+  - healthcare
+  - dicom-stores
+  - delete
+  - ${_STORE_NAME}
+  - "--dataset=${_DATASET}"
+  - "--location=${_LOCATION}"  
+  - "--quiet"
+  waitFor:
+  - run-store-scu
+
+substitutions:
+  _PROJECT: healthcare-api-215503
+  _LOCATION: europe-west2
+  _DATASET: example-west
+  _STORE_NAME: IntegrationTestStore
+  _ADAPTER_PORT: '2575'
+  _CLOSE_ADAPTER_PORT: '3000'
+  _ADAPTER_RUN_STEP: 'step_3'
