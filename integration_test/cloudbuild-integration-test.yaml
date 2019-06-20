@@ -80,6 +80,25 @@
   - run-store-scu
 
 - name: 'google/cloud-sdk:250.0.0'
+  id: curl-dcm
+  args:
+  - bash
+  - integration_test/curl-dcm.sh
+  - "https://healthcare.googleapis.com/v1alpha2/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/1.3.6.1.4.1.5962.1.167.1174395400.11033.0/series/1.3.6.1.4.1.5962.1.176.1174395403.11033.0/instances/1.3.6.1.4.1.5962.1.178.1174395404.11033.0"
+  - integration_test/downloaded.dcm
+  waitFor:
+  - run-store-scu
+
+- name: 'busybox:latest'
+  id: diff-dcm
+  args:
+  - diff
+  - 'integration_test/downloaded.dcm'
+  - 'integration_test/example.dcm'
+  waitFor:
+  - curl-dcm
+
+- name: 'google/cloud-sdk:250.0.0'
   id: delete-dicom-store
   args:
   - gcloud
@@ -92,7 +111,7 @@
   - "--location=${_LOCATION}"  
   - "--quiet"
   waitFor:
-  - run-store-scu
+  - diff-dcm
 
 substitutions:
   _PROJECT: healthcare-api-215503
