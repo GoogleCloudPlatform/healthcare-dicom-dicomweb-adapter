@@ -23,10 +23,22 @@
   - install
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
 
+# run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: gradle-run-adapter
   args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
   dir: import
+  waitFor: ['-']
+
+# delete dicom store if it already exists, ignore exit code
+- name: 'google/cloud-sdk:250.0.0'
+  id: cleanup-dicom-store
+  args:
+  - bash
+  - integration_test/store_delete_ignore_result.sh
+  - ${_LOCATION}
+  - ${_DATASET}
+  - ${_STORE_NAME}
   waitFor: ['-']
 
 - name: 'google/cloud-sdk:250.0.0'
@@ -41,7 +53,8 @@
   - "--dataset=${_DATASET}"
   - "--location=${_LOCATION}"  
   - "--quiet"
-  waitFor: ['-']
+  waitFor: 
+  - cleanup-dicom-store
 
 
 - name: 'busybox:latest'
