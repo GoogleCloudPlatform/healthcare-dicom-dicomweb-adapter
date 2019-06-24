@@ -26,7 +26,7 @@
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: gradle-run-adapter
-  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_STAGE}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
+  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
   dir: import
   waitFor: ['-']
 
@@ -97,7 +97,7 @@
   args:
   - bash
   - integration_test/curl-dcm.sh
-  - "https://healthcare.googleapis.com/${_STAGE}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/1.3.6.1.4.1.5962.1.167.1174395400.11033.0/series/1.3.6.1.4.1.5962.1.176.1174395403.11033.0/instances/1.3.6.1.4.1.5962.1.178.1174395404.11033.0"
+  - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/1.3.6.1.4.1.5962.1.167.1174395400.11033.0/series/1.3.6.1.4.1.5962.1.176.1174395403.11033.0/instances/1.3.6.1.4.1.5962.1.178.1174395404.11033.0"
   - integration_test/downloaded.dcm
   waitFor:
   - run-store-scu
@@ -127,7 +127,7 @@
   - diff-dcm
 
 substitutions:
-  _STAGE: v1beta1
+  _VERSION: v1beta1
   _PROJECT: healthcare-api-215503
   _LOCATION: europe-west2
   _DATASET: example-west
