@@ -77,7 +77,7 @@
   - mvn
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@step_3:${_ADAPTER_PORT} ../../../integration_test/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} ../../../integration_test/example.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter
