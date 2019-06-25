@@ -19,6 +19,7 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -69,6 +70,12 @@ public class ImportAdapter {
     CStoreService cStoreService =
         new CStoreService(flags.dicomwebAddr, flags.dicomwebStowPath, requestFactory);
     serviceRegistry.addDicomService(cStoreService);
+
+    // Handle C-FIND
+    DicomWebClient dicomWebClient =
+        new DicomWebClient(requestFactory, flags.dicomwebAddr);
+    CFindService cFindService = new CFindService(dicomWebClient);
+    serviceRegistry.addDicomService(cFindService);
 
     // Start DICOM server
     Device device = DeviceUtil.createServerDevice(flags.dimseAET, flags.dimsePort, serviceRegistry);
