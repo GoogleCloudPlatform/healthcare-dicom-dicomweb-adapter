@@ -90,5 +90,11 @@ public class Flags {
   )
   public static boolean verbose = false;
 
+  @Parameter(
+      names = {"--gcp_project_id"},
+      description = "Google cloud platform project id"
+  )
+  String gcpProjectId = "";
+
   public Flags() {}
 }

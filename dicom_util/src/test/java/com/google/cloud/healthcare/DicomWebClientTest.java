@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.github.danieln.multipart.MultipartInput;
 import com.github.danieln.multipart.PartInput;
 import com.google.api.client.testing.http.HttpTesting;
+import com.google.cloud.healthcare.util.FakeWebServer;
+import com.google.cloud.healthcare.util.TestUtils;
 import com.google.common.io.ByteStreams;
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
@@ -66,7 +68,7 @@ public final class DicomWebClientTest {
   @Test
   public void testDicomWebClient_WadoError() throws Exception {
     fakeDicomWebServer.addResponseWithStatusCode(404);
-    assertThrows(DicomWebClient.DicomWebException.class, () -> client.wadoRs("instanceName"));
+    assertThrows(IDicomWebClient.DicomWebException.class, () -> client.wadoRs("instanceName"));
   }
 
   @Test
@@ -86,19 +88,19 @@ public final class DicomWebClientTest {
   @Test
   public void testDicomWebClient_QidoError() throws Exception {
     fakeDicomWebServer.addResponseWithStatusCode(404);
-    assertThrows(DicomWebClient.DicomWebException.class, () -> client.qidoRs("query"));
+    assertThrows(IDicomWebClient.DicomWebException.class, () -> client.qidoRs("query"));
   }
 
   @Test
   public void testDicomWebClient_NothingInjected() throws Exception {
-    assertThrows(DicomWebClient.DicomWebException.class, () -> client.qidoRs("query"));
+    assertThrows(IDicomWebClient.DicomWebException.class, () -> client.qidoRs("query"));
   }
 
   @Test
   public void testDicomWebClient_StowError() throws Exception {
     fakeDicomWebServer.addResponseWithStatusCode(404);
     assertThrows(
-        DicomWebClient.DicomWebException.class,
+        IDicomWebClient.DicomWebException.class,
         () -> client.stowRs("stowPath", new ByteArrayInputStream(new byte[0])));
   }
 }

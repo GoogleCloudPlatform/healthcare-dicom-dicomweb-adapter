@@ -16,31 +16,41 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import org.dcm4che3.data.Tag;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.Connection;
 import org.dcm4che3.net.DimseRSPHandler;
+import org.dcm4che3.net.FutureDimseRSP;
+import org.dcm4che3.net.IncompatibleConnectionException;
 import org.dcm4che3.net.InputStreamDataWriter;
+import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 
-/** DicomClient is used to handle client-side legacy DICOM requests on given association. */
+/**
+ * DicomClient is used to handle client-side legacy DICOM requests on given association.
+ */
 public class DicomClient {
+
   private Association association;
 
   public DicomClient(Association association) {
     this.association = association;
   }
 
-  /** Creates a new DicomClient by creating an association to the given peer. */
+  /**
+   * Creates a new DicomClient by creating an association to the given peer.
+   */
   public static DicomClient associatePeer(
       ApplicationEntity clientAE,
       String peerAET,
       String peerHostname,
       int peerPort,
       PresentationContext pc)
-      throws Exception {
+      throws IOException, InterruptedException, IncompatibleConnectionException, GeneralSecurityException {
     AAssociateRQ rq = new AAssociateRQ();
     rq.addPresentationContext(pc);
     rq.setCalledAET(peerAET);
@@ -51,18 +61,57 @@ public class DicomClient {
     return new DicomClient(association);
   }
 
-  public void cstore(
-      String sopClassUID,
-      String sopInstanceUID,
+  public static void cstore(
+      String sopClassUid,
+      String sopInstanceUid,
+      String transferSyntaxUid,
       InputStream in,
-      String transferSyntaxUID,
+      ApplicationEntity applicationEntity,
+      String dimsePeerAet,
+      String dimsePeerHost,
+      int dimsePeerPort) throws IOException, InterruptedException {
+    PresentationContext pc = new PresentationContext(1, sopClassUid, transferSyntaxUid);
+    DicomClient dicomClient;
+    try {
+      dicomClient = DicomClient.associatePeer(applicationEntity,
+          dimsePeerAet, dimsePeerHost, dimsePeerPort, pc);
+    } catch (IOException | IncompatibleConnectionException | GeneralSecurityException e) {
+      throw new IOException(e);
+    }
+
+    Association association = dicomClient.getAssociation();
+    try {
+      FutureDimseRSP handler = new FutureDimseRSP(association.nextMessageID());
+      dicomClient.cstore(
+          sopClassUid, sopInstanceUid, transferSyntaxUid, in, handler);
+      handler.next();
+      int dimseStatus = handler.getCommand().getInt(Tag.Status, /* default status */ -1);
+      if (dimseStatus != Status.Success) {
+        throw new IllegalArgumentException("C-STORE failed with status code: " + dimseStatus);
+      }
+    } finally {
+      try {
+        association.release();
+        association.waitForSocketClose();
+      } catch (Exception e) {
+        System.err.println("Send C-STORE successfully, but failed to close association");
+        e.printStackTrace();
+      }
+    }
+  }
+
+  public void cstore(
+      String sopClassUid,
+      String sopInstanceUid,
+      String transferSyntaxUid,
+      InputStream in,
       DimseRSPHandler responseHandler)
       throws IOException, InterruptedException {
     DicomInputStream din = new DicomInputStream(in);
     din.readFileMetaInformation();
     InputStreamDataWriter data = new InputStreamDataWriter(din);
     association.cstore(
-        sopClassUID, sopInstanceUID, /* priority */ 1, data, transferSyntaxUID, responseHandler);
+        sopClassUid, sopInstanceUid, /* priority */ 1, data, transferSyntaxUid, responseHandler);
   }
 
   public Association getAssociation() {

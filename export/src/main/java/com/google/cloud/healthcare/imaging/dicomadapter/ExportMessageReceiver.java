@@ -14,6 +14,8 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.pubsub.v1.PubsubMessage;
@@ -28,10 +30,11 @@ public class ExportMessageReceiver implements MessageReceiver {
   @Override
   public void receiveMessage(PubsubMessage message, AckReplyConsumer consumer) {
     try {
+      MonitoringService.addEvent(Event.REQUEST);
       dicomSender.send(message);
       consumer.ack();
     } catch (Exception e) {
-      // TODO(b/73251955): Expose failures through cloud monitoring.
+      MonitoringService.addEvent(Event.ERROR);
       e.printStackTrace();
       consumer.nack();
     }

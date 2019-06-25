@@ -18,9 +18,13 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
-import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpResponseException;
+import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
+import com.google.common.io.CountingInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
@@ -33,10 +37,15 @@ import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCStoreSCP;
 import org.dcm4che3.net.service.DicomServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** Class to handle server-side C-STORE DICOM requests. */
+/**
+ * Class to handle server-side C-STORE DICOM requests.
+ */
 public class CStoreService extends BasicCStoreSCP {
-  private static final int C_STORE_SUCCESS_STATUS = 0;
+
+  private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
   private String apiAddr;
   private String path;
@@ -56,43 +65,61 @@ public class CStoreService extends BasicCStoreSCP {
       PDVInputStream inDicomStream,
       Attributes response)
       throws DicomServiceException, IOException {
-    String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
-    String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
-    String transferSyntax = presentationContext.getTransferSyntax();
-    String remoteAeTitle = association.getCallingAET();
-
-    InputStream inBuffer =
-        DicomStreamUtil.dicomStreamWithFileMetaHeader(
-            sopInstanceUID, sopClassUID, transferSyntax, inDicomStream);
-
-    MultipartContent content = new MultipartContent();
-    content.setMediaType(new HttpMediaType("multipart/related; type=\"application/dicom\""));
-    content.setBoundary(UUID.randomUUID().toString());
-    InputStreamContent dicomStream = new InputStreamContent("application/dicom", inBuffer);
-    content.addPart(new MultipartContent.Part(dicomStream));
-
-    HttpResponse httpResponse = null;
-    GenericUrl url = new GenericUrl(apiAddr + path);
     try {
-      HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
-      httpResponse = httpRequest.execute();
-    } catch (IOException e) {
-      e.printStackTrace();
-      throw new DicomServiceException(Status.ProcessingFailure, e);
-    }
+      MonitoringService.addEvent(Event.CSTORE_REQUEST);
 
-    if (!httpResponse.isSuccessStatusCode()) {
-      String errorMessage = String.format(
-              "Got error response code for STOW-RS POST: %d, %s",
-              httpResponse.getStatusCode(), httpResponse.getStatusMessage());
-      System.err.println(errorMessage);
-      throw new DicomServiceException(Status.ProcessingFailure, errorMessage);
-    }
+      String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
+      String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
+      String transferSyntax = presentationContext.getTransferSyntax();
+      String remoteAeTitle = association.getCallingAET();
 
-    System.out.printf(
-        "Received C-STORE for association %s, SOP class %s, TS %s, remote AE %s\n",
-        association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
-    response.setInt(Tag.Status, VR.US, C_STORE_SUCCESS_STATUS);
+      validateParam(sopClassUID, "AffectedSOPClassUID");
+      validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
+
+      CountingInputStream countingStream = new CountingInputStream(inDicomStream);
+      InputStream inBuffer =
+          DicomStreamUtil.dicomStreamWithFileMetaHeader(
+              sopInstanceUID, sopClassUID, transferSyntax, countingStream);
+
+      MultipartContent content = new MultipartContent();
+      content.setMediaType(new HttpMediaType("multipart/related; type=\"application/dicom\""));
+      content.setBoundary(UUID.randomUUID().toString());
+      InputStreamContent dicomStream = new InputStreamContent("application/dicom", inBuffer);
+      content.addPart(new MultipartContent.Part(dicomStream));
+
+      GenericUrl url = new GenericUrl(apiAddr + path);
+      try {
+        HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
+        httpRequest.execute();
+      } catch (IOException e) {
+        if (e instanceof HttpResponseException &&
+            ((HttpResponseException) e).getStatusCode() ==
+                HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE) {
+          throw new DicomServiceException(Status.OutOfResources, e);
+        } else {
+          throw e;
+        }
+      }
+
+      log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
+          association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
+      response.setInt(Tag.Status, VR.US, Status.Success);
+
+      MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
+    } catch (Throwable e) {
+      MonitoringService.addEvent(Event.CSTORE_ERROR);
+      if (e instanceof DicomServiceException) {
+        throw e;
+      } else {
+        throw new DicomServiceException(Status.ProcessingFailure, e);
+      }
+    }
+  }
+
+  private void validateParam(String value, String name) throws DicomServiceException {
+    if (value == null || value.trim().length() == 0) {
+      throw new DicomServiceException(Status.CannotUnderstand, "Mandatory tag empty: " + name);
+    }
   }
 
   @Override
@@ -100,10 +127,10 @@ public class CStoreService extends BasicCStoreSCP {
     // Handle any exceptions that may have been caused by aborts or C-Store request processing.
     String associationName = association.toString();
     if (association.getException() != null) {
-      System.err.printf("Exception while handling association %s.\n", associationName);
-      association.getException().printStackTrace();
+      log.error("Exception while handling association " + associationName,
+          association.getException());
     } else {
-      System.out.printf("Association %s finished successfully.\n", associationName);
+      log.info("Association {} finished successfully.", associationName);
     }
   }
 }
