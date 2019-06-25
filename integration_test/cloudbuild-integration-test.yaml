@@ -97,7 +97,7 @@
   args:
   - bash
   - integration_test/curl-dcm.sh
-  - "https://healthcare.googleapis.com/${_VERSION}/projects/${PROJECT_ID}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/1.3.6.1.4.1.5962.1.167.1174395400.11033.0/series/1.3.6.1.4.1.5962.1.176.1174395403.11033.0/instances/1.3.6.1.4.1.5962.1.178.1174395404.11033.0"
+  - "https://healthcare.googleapis.com/${_VERSION}/projects/${PROJECT_ID}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/111/series/111/instances/111"
   - integration_test/downloaded.dcm
   waitFor:
   - run-store-scu
