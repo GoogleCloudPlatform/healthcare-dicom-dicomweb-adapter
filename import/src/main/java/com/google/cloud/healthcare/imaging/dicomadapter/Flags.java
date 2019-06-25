@@ -26,6 +26,12 @@ public class Flags {
   String dimseAET = "";
 
   @Parameter(
+    names = {"--dimse_cmove_aet"},
+    description = "(Optional) Separate AET used for C-STORE calls within context of C-MOVE."
+  )
+  String dimseCmoveAET = "";
+
+  @Parameter(
     names = {"--dimse_port"},
     description = "Port the server is listening to for incoming DIMSE requests."
   )
@@ -55,6 +61,12 @@ public class Flags {
     description = "Prints out debug messages."
   )
   boolean verbose = false;
+
+  @Parameter(
+      names = {"--aet_dictionary"},
+      description = "Path to json containing aet definitions (array containing name/host/port per element)"
+  )
+  String aetDictionaryPath = "";
 
   @Parameter(
       names = {"--gcp_project_id"},
