@@ -30,31 +30,16 @@
   dir: import
   waitFor: ['-']
 
-# delete dicom store if it already exists, ignore exit code
+# create dataset if not exists, re-create store (delete if exists, then create)
 - name: 'google/cloud-sdk:250.0.0'
-  id: cleanup-dicom-store
+  id: setup-dataset-and-dicom-store
   args:
   - bash
-  - integration_test/store_delete_ignore_result.sh
+  - integration_test/setup_dataset_and_store.sh
   - ${_LOCATION}
   - ${_DATASET}
   - ${_STORE_NAME}
   waitFor: ['-']
-
-- name: 'google/cloud-sdk:250.0.0'
-  id: create-dicom-store
-  args:
-  - gcloud
-  - alpha
-  - healthcare
-  - dicom-stores
-  - create
-  - ${_STORE_NAME}
-  - "--dataset=${_DATASET}"
-  - "--location=${_LOCATION}"  
-  - "--quiet"
-  waitFor: 
-  - cleanup-dicom-store
 
 # busybox is a compact utility image
 - name: 'busybox:latest'
@@ -66,7 +51,7 @@
   - ${_ADAPTER_PORT}
   waitFor:
   - build-store-scu
-  - create-dicom-store
+  - setup-dataset-and-dicom-store
 
 - name: "maven:3.6.0-jdk-8"
   id: run-store-scu
@@ -129,8 +114,8 @@
 substitutions:
   _VERSION: v1beta1
   _LOCATION: europe-west2
-  _DATASET: example-west
-  _STORE_NAME: IntegrationTestStore
+  _DATASET: integration-test-dataset
+  _STORE_NAME: integration-test-store
   _ADAPTER_PORT: '2575'
   _CLOSE_ADAPTER_PORT: '3000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
