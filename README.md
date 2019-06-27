@@ -8,25 +8,6 @@ two components, namely import and export adapter.
 
 The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests:
 - C-STORE to STOW-RS
-- C-FIND to QIDO-RS (multi-modality C-FIND queries result in 1 QIDO-RS query per modality) and passes converted results back to DIMSE client
-- C-MOVE uses QIDO-RS to determine instances to be transfered, then (per instance) executes WADO-RS to obtain instance data stream and passes it to C-STORE (to C-MOVE destination). 
-
-AET resolution for C-MOVE is configured via AET dictionary json file ("--aet_dictionary" command line parameter or "ENV_AETS_JSON" environment variable). Format: JSON array of objects containing name, host and port.
-
-
-```shell
-kubectl create configmap aet-dictionary --from-file=AETs.json
-```
-
-Relevant part of yaml:
-```yaml
-env:
-- name: ENV_AETS_JSON
-  valueFrom:
-    configMapKeyRef:
-      name: aet-dictionary
-      key: AETs.json
-```
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 

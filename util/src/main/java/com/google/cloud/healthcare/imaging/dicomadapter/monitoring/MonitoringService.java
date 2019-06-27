@@ -89,12 +89,12 @@ public class MonitoringService {
     log.info("monitoredResource = {}", monitoredResource);
   }
 
-  public static void initialize(String gcpProjectId, IMonitoringEvent[] monitoredEvents,
+  public static void initialize(String projectId, IMonitoringEvent[] monitoredEvents,
       HttpRequestFactory requestFactory) {
     if (INSTANCE != null) {
       throw new IllegalStateException("Already initialized");
     }
-    INSTANCE = new MonitoringService(gcpProjectId, monitoredEvents, requestFactory);
+    INSTANCE = new MonitoringService(projectId, monitoredEvents, requestFactory);
   }
 
   public static void addEvent(IMonitoringEvent eventType, long value) {

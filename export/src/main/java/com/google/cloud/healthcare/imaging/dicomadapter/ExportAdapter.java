@@ -60,9 +60,8 @@ public class ExportAdapter {
         new DicomWebClient(createHttpRequestFactory(credentials), flags.dicomwebAddr);
 
     // Initialize Monitoring
-    // TODO will this actually work outside gcp?
     HttpRequestFactory monitoringRequestFactory = createHttpRequestFactory(credentials);
-    MonitoringService.initialize(flags.gcpProjectId, Event.values(), monitoringRequestFactory);
+    MonitoringService.initialize(flags.monitoringProjectId, Event.values(), monitoringRequestFactory);
     MonitoringService.addEvent(Event.STARTED);
 
     // Use either C-STORE or STOW-RS to send DICOM, based on flags.

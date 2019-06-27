@@ -57,10 +57,10 @@ public class Flags {
   boolean verbose = false;
 
   @Parameter(
-      names = {"--gcp_project_id"},
-      description = "Google cloud platform project id"
+      names = {"--monitoring_project_id"},
+      description = "Stackdriver monitoring project id"
   )
-  String gcpProjectId = "";
+  String monitoringProjectId = "";
 
   public Flags() {}
 }
