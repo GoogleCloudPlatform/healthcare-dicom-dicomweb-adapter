@@ -83,6 +83,7 @@ public class DicomWebClient implements IDicomWebClient {
             String.format(
                 "QidoRs: %d, %s", httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
       }
+      // dcm4che server can return 204 responses.
       if (httpResponse.getStatusCode() == HttpStatusCodes.STATUS_CODE_NO_CONTENT) {
         return new JSONArray();
       }

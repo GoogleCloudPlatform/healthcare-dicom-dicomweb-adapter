@@ -32,7 +32,7 @@ public class GcpMetadataUtil {
 
       if (!httpResponse.isSuccessStatusCode()
           || httpResponse.getStatusCode() == HttpStatusCodes.STATUS_CODE_NO_CONTENT) {
-        log.error("Failed to get metadate for {} with response {}:{}",
+        log.error("Failed to get metadata for {} with response {}:{}",
             path, httpResponse.getStatusCode(), httpResponse.getStatusMessage());
         return null;
       }
@@ -40,7 +40,7 @@ public class GcpMetadataUtil {
       return CharStreams.toString(new InputStreamReader(
           httpResponse.getContent(), StandardCharsets.UTF_8));
     } catch (IOException | IllegalArgumentException e) {
-      log.error("Failed to get metadate for {} with exception {}", path, e);
+      log.error("Failed to get metadata for {} with exception {}", path, e);
       return null;
     }
   }

@@ -78,6 +78,8 @@ public class MonitoringService {
       resourceLabels.put("container_name", env.get("ENV_CONTAINER_NAME"));
       resourceLabels.put("cluster_name", GcpMetadataUtil.get(requestFactory, META_CLUSTER_NAME));
       String location = GcpMetadataUtil.get(requestFactory, META_LOCATION);
+      // GCPMetadata returns locations as "projects/[NUMERIC_PROJECT_ID]/zones/[ZONE]"
+      // Only last part is necessary here.
       location = location.substring(location.lastIndexOf('/') + 1);
       resourceLabels.put("location", location);
       resourceBuilder.setType("k8s_container");

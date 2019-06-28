@@ -6,8 +6,7 @@ two components, namely import and export adapter.
 
 ## Import Adapter
 
-The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests:
-- C-STORE to STOW-RS
+The Import Adapter converts incoming DIMSE (C-STORE) requests to DICOMWeb (STOW-RS) and sends them to peer.
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
@@ -24,8 +23,8 @@ For the list of command line flags, see [here](export/src/main/java/com/google/c
 
 ## Stackdriver Monitoring
 
-Both Import and Export adapter include Stackdriver Monitoring. Export adapter [events](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java), Import adapter [events](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java).
-Monitored resource is configured as k8s_container, with values set from combination of environment variables configured via DownwardAPI(pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to global resource, if k8s_container can't be configured.
+Both the Import and Export adapter include support for Stackdriver Monitoring. Export adapter [events](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java), Import adapter [events](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java).
+The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API(pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
 
 Relevant part of yaml configuration:
 ```yaml
