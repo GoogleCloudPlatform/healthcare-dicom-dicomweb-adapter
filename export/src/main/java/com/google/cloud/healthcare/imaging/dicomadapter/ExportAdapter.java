@@ -60,9 +60,14 @@ public class ExportAdapter {
         new DicomWebClient(createHttpRequestFactory(credentials), flags.dicomwebAddr);
 
     // Initialize Monitoring
-    HttpRequestFactory monitoringRequestFactory = createHttpRequestFactory(credentials);
-    MonitoringService.initialize(flags.monitoringProjectId, Event.values(), monitoringRequestFactory);
-    MonitoringService.addEvent(Event.STARTED);
+    if (!flags.monitoringProjectId.isEmpty()) {
+      HttpRequestFactory monitoringRequestFactory = createHttpRequestFactory(credentials);
+      MonitoringService
+          .initialize(flags.monitoringProjectId, Event.values(), monitoringRequestFactory);
+      MonitoringService.addEvent(Event.STARTED);
+    } else {
+      MonitoringService.disable();
+    }
 
     // Use either C-STORE or STOW-RS to send DICOM, based on flags.
     boolean isStowRs = !flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty();

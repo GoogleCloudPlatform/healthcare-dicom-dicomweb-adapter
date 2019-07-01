@@ -35,6 +35,7 @@ public class MonitoringService {
 
   private static Logger log = LoggerFactory.getLogger(MonitoringService.class);
   private static MonitoringService INSTANCE;
+  private static boolean ENABLED = true;
 
   private final MetricServiceClient client;
   private final ScheduledExecutorService service;
@@ -45,17 +46,10 @@ public class MonitoringService {
   private String projectId;
 
   private MonitoringService(String projectId, IMonitoringEvent[] monitoredEvents,
-      HttpRequestFactory requestFactory) {
-    try {
-      client = MetricServiceClient.create();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+      HttpRequestFactory requestFactory) throws IOException {
+    client = MetricServiceClient.create();
 
     aggregateEvents = new HashMap<>();
-    service = Executors.newSingleThreadScheduledExecutor();
-    service.scheduleWithFixedDelay(MonitoringService.this::flush,
-        DELAY, DELAY, TimeUnit.SECONDS);
 
     if (projectId != null && projectId.length() > 0) {
       this.projectId = projectId;
@@ -89,19 +83,34 @@ public class MonitoringService {
 
     this.monitoredResource = resourceBuilder.putAllLabels(resourceLabels).build();
     log.info("monitoredResource = {}", monitoredResource);
+
+    service = Executors.newSingleThreadScheduledExecutor();
+    service.scheduleWithFixedDelay(MonitoringService.this::flush,
+        DELAY, DELAY, TimeUnit.SECONDS);
   }
 
   public static void initialize(String projectId, IMonitoringEvent[] monitoredEvents,
-      HttpRequestFactory requestFactory) {
+      HttpRequestFactory requestFactory) throws IOException {
     if (INSTANCE != null) {
       throw new IllegalStateException("Already initialized");
     }
     INSTANCE = new MonitoringService(projectId, monitoredEvents, requestFactory);
   }
 
+  public static void disable() {
+    if (INSTANCE != null) {
+      INSTANCE.shutdown();
+      INSTANCE = null;
+    }
+    ENABLED = false;
+  }
+
   public static void addEvent(IMonitoringEvent eventType, long value) {
     if (INSTANCE == null) {
-      log.warn("MonitoringService not initialized, skipping: {}={}", eventType, value);
+      if (ENABLED) {
+        log.warn("MonitoringService enabled, but not initialized. Skipping: {}={}",
+            eventType, value);
+      }
     } else {
       INSTANCE._addEvent(eventType, value);
     }
@@ -109,6 +118,11 @@ public class MonitoringService {
 
   public static void addEvent(IMonitoringEvent eventType) {
     addEvent(eventType, 1L);
+  }
+
+  private void shutdown() {
+    service.shutdown();
+    client.shutdown();
   }
 
   private void _addEvent(IMonitoringEvent eventType, long value) {

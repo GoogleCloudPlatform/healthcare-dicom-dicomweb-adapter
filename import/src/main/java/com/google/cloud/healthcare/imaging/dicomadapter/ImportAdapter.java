@@ -56,8 +56,12 @@ public class ImportAdapter {
         new NetHttpTransport().createRequestFactory(new HttpCredentialsAdapter(credentials));
 
     // Initialize Monitoring
-    MonitoringService.initialize(flags.monitoringProjectId, Event.values(), requestFactory);
-    MonitoringService.addEvent(Event.STARTED);
+    if (!flags.monitoringProjectId.isEmpty()) {
+      MonitoringService.initialize(flags.monitoringProjectId, Event.values(), requestFactory);
+      MonitoringService.addEvent(Event.STARTED);
+    } else {
+      MonitoringService.disable();
+    }
 
     // Dicom service handlers.
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();

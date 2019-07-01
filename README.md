@@ -23,8 +23,11 @@ For the list of command line flags, see [here](export/src/main/java/com/google/c
 
 ## Stackdriver Monitoring
 
-Both the Import and Export adapter include support for Stackdriver Monitoring. Export adapter [events](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java), Import adapter [events](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java).
-The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API(pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
+Both the Import and Export adapter include support for Stackdriver Monitoring. 
+For the list of events logged to Stackdriver for the Export Adapter, see [here](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java). 
+For the list of events logged to Stackdriver for the Import Adapter, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java).
+
+The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API (pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
 
 Relevant part of yaml configuration:
 ```yaml
