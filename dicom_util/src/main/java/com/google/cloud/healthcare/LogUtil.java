@@ -16,8 +16,14 @@ package com.google.cloud.healthcare;
 import java.util.Properties;
 import org.apache.log4j.PropertyConfigurator;
 
-/** LogUtil contains utilities for logging. */
+/**
+ * LogUtil contains utilities for logging.
+ */
 public class LogUtil {
+
+  private LogUtil() {
+  }
+
   // Print all logs emitted by log4j (as low as DEBUG level) to stdout. This
   // is useful for seeing dcm4che errors in verbose mode.
   public static void Log4jToStdout() {
@@ -27,8 +33,8 @@ public class LogUtil {
     log4jProperties.setProperty("log4j.appender.console.layout", "org.apache.log4j.PatternLayout");
     log4jProperties.setProperty(
         "log4j.appender.console.layout.ConversionPattern", "%-5p %c %x - %m%n");
+    // to prevent log spam by stackdriver monitoring
+    log4jProperties.setProperty("log4j.logger.io.grpc.netty.shaded.io", "WARN");
     PropertyConfigurator.configure(log4jProperties);
   }
-
-  private LogUtil() {}
 }

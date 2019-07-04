@@ -19,6 +19,7 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
 import com.google.common.io.CharStreams;
@@ -29,18 +30,10 @@ import java.util.UUID;
 import javax.inject.Inject;
 import org.json.JSONArray;
 
-/** A client for communicating with the Cloud Healthcare API. */
-public class DicomWebClient {
-  /** An exception for errors returned by the DicomWeb server. */
-  public static class DicomWebException extends Exception {
-    public DicomWebException(String message) {
-      super(message);
-    }
-
-    public DicomWebException(Throwable cause) {
-      super(cause);
-    }
-  };
+/**
+ * A client for communicating with the Cloud Healthcare API.
+ */
+public class DicomWebClient implements IDicomWebClient {
 
   // Factory to create HTTP requests with proper credentials.
   private final HttpRequestFactory requestFactory;
@@ -56,40 +49,48 @@ public class DicomWebClient {
     this.serviceUrlPrefix = serviceUrlPrefix;
   }
 
-  /** Makes a WADO-RS call and returns the multipart response. */
-  public MultipartInput wadoRs(String path) throws DicomWebException {
+  /**
+   * Makes a WADO-RS call and returns the multipart response.
+   */
+  public MultipartInput wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
       HttpResponse httpResponse = httpRequest.execute();
 
       if (!httpResponse.isSuccessStatusCode()) {
-        throw new DicomWebException(
+        throw new IDicomWebClient.DicomWebException(
             String.format(
                 "WadoRs: %d, %s", httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
       }
       return new MultipartInput(httpResponse.getContent(), httpResponse.getContentType());
     } catch (IOException | IllegalArgumentException e) {
-      throw new DicomWebException(e);
+      throw new IDicomWebClient.DicomWebException(e);
     }
   }
 
-  /** Makes a QIDO-RS call and returns a JSON array. */
-  public JSONArray qidoRs(String path) throws DicomWebException {
+  /**
+   * Makes a QIDO-RS call and returns a JSON array.
+   */
+  public JSONArray qidoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
       HttpResponse httpResponse = httpRequest.execute();
 
       if (!httpResponse.isSuccessStatusCode()) {
-        throw new DicomWebException(
+        throw new IDicomWebClient.DicomWebException(
             String.format(
                 "QidoRs: %d, %s", httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
+      }
+      // dcm4che server can return 204 responses.
+      if (httpResponse.getStatusCode() == HttpStatusCodes.STATUS_CODE_NO_CONTENT) {
+        return new JSONArray();
       }
       return new JSONArray(
           CharStreams.toString(new InputStreamReader(httpResponse.getContent(), "UTF-8")));
     } catch (IOException | IllegalArgumentException e) {
-      throw new DicomWebException(e);
+      throw new IDicomWebClient.DicomWebException(e);
     }
   }
 
@@ -99,7 +100,7 @@ public class DicomWebClient {
    * @param path The resource path for the STOW-RS request.
    * @param in The DICOM input stream.
    */
-  public void stowRs(String path, InputStream in) throws DicomWebException {
+  public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
     GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + path);
     MultipartContent content = new MultipartContent();
 
@@ -115,13 +116,13 @@ public class DicomWebClient {
       HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
       httpResponse = httpRequest.execute();
     } catch (IOException e) {
-      throw new DicomWebException(e);
+      throw new IDicomWebClient.DicomWebException(e);
     }
 
     if (!httpResponse.isSuccessStatusCode()) {
-      throw new DicomWebException(
+      throw new IDicomWebClient.DicomWebException(
           String.format("StowRs: %d, %s.",
-                        httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
+              httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
     }
   }
 }

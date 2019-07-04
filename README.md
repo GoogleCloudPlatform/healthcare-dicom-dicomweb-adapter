@@ -21,6 +21,30 @@ To use [Google Cloud Pub/Sub](https://cloud.google.com/pubsub/), you require a [
 
 For the list of command line flags, see [here](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
+## Stackdriver Monitoring
+
+Both the Import and Export adapter include support for Stackdriver Monitoring.
+It is enabled by specifying the --monitoring_project_id parameter, which must be the same project in which the adapter is running.
+For the list of events logged to Stackdriver for the Export Adapter, see [here](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java). 
+For the list of events logged to Stackdriver for the Import Adapter, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java).
+
+The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API (pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
+
+Relevant part of yaml configuration:
+```yaml
+env:
+- name: ENV_POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: ENV_POD_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: ENV_CONTAINER_NAME
+  value: *containerName # referencing earlier anchor in same yaml
+```
+
 ## Deployment using Kubernetes
 
 The adapters can be deployed to Google Cloud Platform using [GKE] (https://cloud.google.com/kubernetes-engine/). We have published prebuilt Docker images for the both adapters to [Google Container Registry](https://cloud.google.com/container-registry/).

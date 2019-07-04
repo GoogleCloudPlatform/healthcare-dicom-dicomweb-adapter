@@ -90,5 +90,11 @@ public class Flags {
   )
   public static boolean verbose = false;
 
+  @Parameter(
+      names = {"--monitoring_project_id"},
+      description = "Stackdriver monitoring project id, must be the same as the project id in which the adapter is running"
+  )
+  String monitoringProjectId = "";
+
   public Flags() {}
 }

@@ -22,6 +22,8 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.SubscriptionName;
@@ -56,6 +58,16 @@ public class ExportAdapter {
     }
     DicomWebClient dicomWebClient =
         new DicomWebClient(createHttpRequestFactory(credentials), flags.dicomwebAddr);
+
+    // Initialize Monitoring
+    if (!flags.monitoringProjectId.isEmpty()) {
+      HttpRequestFactory monitoringRequestFactory = createHttpRequestFactory(credentials);
+      MonitoringService
+          .initialize(flags.monitoringProjectId, Event.values(), monitoringRequestFactory);
+      MonitoringService.addEvent(Event.STARTED);
+    } else {
+      MonitoringService.disable();
+    }
 
     // Use either C-STORE or STOW-RS to send DICOM, based on flags.
     boolean isStowRs = !flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty();

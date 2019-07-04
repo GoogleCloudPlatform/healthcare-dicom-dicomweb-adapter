@@ -17,7 +17,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.api.client.util.IOUtils;
-import com.google.cloud.healthcare.TestUtils;
+import com.google.cloud.healthcare.util.TestUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,9 +32,26 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class DicomStreamUtilTest {
+
+  @Test
+  public void testDicomStreamWithFileMetaHeader_correctTransferSyntax() throws Exception {
+    FakePDVInputStream streamNoHeader =
+        new FakePDVInputStream(TestUtils.streamDICOMStripHeaders(TestUtils.TEST_MR_FILE));
+    String sopClassUID = UID.MRImageStorage;
+    String sopInstanceUID = "1.0.0.0";
+    String transferSyntax = UID.ExplicitVRLittleEndian;
+    InputStream streamWithHeader =
+        DicomStreamUtil.dicomStreamWithFileMetaHeader(
+            sopInstanceUID, sopClassUID, transferSyntax, streamNoHeader);
+    DicomInputStream dicomInputStream = new DicomInputStream(streamWithHeader);
+    Attributes attrs = dicomInputStream.getFileMetaInformation();
+    assertThat(attrs.getString(Tag.TransferSyntaxUID)).isEqualTo(transferSyntax);
+  }
+
   // FakePDVInputStream is an implementation that reads from injected input stream, instead of
   // reading from network for DICOM.
   private class FakePDVInputStream extends PDVInputStream {
+
     private InputStream in;
 
     FakePDVInputStream(InputStream in) {
@@ -52,7 +69,8 @@ public final class DicomStreamUtilTest {
     }
 
     @Override
-    public void copyTo(OutputStream out, int length) {}
+    public void copyTo(OutputStream out, int length) {
+    }
 
     @Override
     public void copyTo(OutputStream out) throws IOException {
@@ -63,20 +81,5 @@ public final class DicomStreamUtilTest {
     public long skipAll() throws IOException {
       return -1;
     }
-  }
-
-  @Test
-  public void testDicomStreamWithFileMetaHeader_correctTransferSyntax() throws Exception {
-    FakePDVInputStream streamNoHeader =
-        new FakePDVInputStream(TestUtils.streamDICOMStripHeaders(TestUtils.TEST_MR_FILE));
-    String sopClassUID = UID.MRImageStorage;
-    String sopInstanceUID = "1.0.0.0";
-    String transferSyntax = UID.ExplicitVRLittleEndian;
-    InputStream streamWithHeader =
-        DicomStreamUtil.dicomStreamWithFileMetaHeader(
-            sopInstanceUID, sopClassUID, transferSyntax, streamNoHeader);
-    DicomInputStream dicomInputStream = new DicomInputStream(streamWithHeader);
-    Attributes attrs = dicomInputStream.getFileMetaInformation();
-    assertThat(attrs.getString(Tag.TransferSyntaxUID)).isEqualTo(transferSyntax);
   }
 }

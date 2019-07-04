@@ -17,14 +17,14 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import com.github.danieln.multipart.MultipartInput;
 import com.github.danieln.multipart.PartInput;
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
+import com.google.common.io.CountingInputStream;
 import com.google.pubsub.v1.PubsubMessage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.net.ApplicationEntity;
-import org.dcm4che3.net.Association;
-import org.dcm4che3.net.FutureDimseRSP;
-import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.util.TagUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,16 +32,14 @@ import org.json.JSONObject;
 
 // CStoreSender sends DICOM to peer using DIMSE C-STORE protocol.
 public class CStoreSender implements DicomSender {
+  private static final String TRANSFER_SYNTAX_UID_TAG = TagUtils.toHexString(Tag.TransferSyntaxUID);
+  private static final String SOP_CLASS_UID_TAG = TagUtils.toHexString(Tag.SOPClassUID);
+  private static final String SOP_INSTANCE_UID_TAG = TagUtils.toHexString(Tag.SOPInstanceUID);
   private final ApplicationEntity applicationEntity;
   private final String dimsePeerAET;
   private final String dimsePeerIP;
   private final int dimsePeerPort;
   private final DicomWebClient dicomWebClient;
-
-  private static final String TRANSFER_SYNTAX_UID_TAG = TagUtils.toHexString(Tag.TransferSyntaxUID);
-  private static final String SOP_CLASS_UID_TAG = TagUtils.toHexString(Tag.SOPClassUID);
-  private static final String SOP_INSTANCE_UID_TAG = TagUtils.toHexString(Tag.SOPInstanceUID);
-  private static final int SUCCESS_DIMSE_STATUS_CODE = 0;
 
   CStoreSender(
       ApplicationEntity applicationEntity,
@@ -78,26 +76,10 @@ public class CStoreSender implements DicomSender {
       throw new IllegalArgumentException("WadoRS response has no parts");
     }
 
-    // Invoke a C-Store to send DICOM.
-    PresentationContext pc = new PresentationContext(1, sopClassUid, transferSyntaxUid);
-    DicomClient dicomClient =
-        DicomClient.associatePeer(applicationEntity, dimsePeerAET, dimsePeerIP, dimsePeerPort, pc);
-    Association association = dicomClient.getAssociation();
-    FutureDimseRSP handler = new FutureDimseRSP(association.nextMessageID());
-    dicomClient.cstore(
-        sopClassUid, sopInstanceUid, part.getInputStream(), transferSyntaxUid, handler);
-    handler.next();
-    int dimseStatus = handler.getCommand().getInt(Tag.Status, /* default status */ -1);
-    if (dimseStatus != SUCCESS_DIMSE_STATUS_CODE) {
-      throw new IllegalArgumentException("C-STORE failed with status code: " + dimseStatus);
-    }
-    try {
-      association.release();
-      association.waitForSocketClose();
-    } catch (Exception e) {
-      System.err.println("Send C-STORE successfully, but failed to close association");
-      e.printStackTrace();
-    }
+    CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
+    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
+        applicationEntity, dimsePeerAET, dimsePeerIP, dimsePeerPort);
+    MonitoringService.addEvent(Event.BYTES, countingStream.getCount());
   }
 
   // Derives a QIDO-RS path using a WADO-RS path.

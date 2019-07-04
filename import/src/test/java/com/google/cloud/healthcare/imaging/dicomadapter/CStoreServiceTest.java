@@ -14,8 +14,6 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import static com.google.common.truth.Truth.assertThat;
-
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.LowLevelHttpRequest;
@@ -23,19 +21,18 @@ import com.google.api.client.http.LowLevelHttpResponse;
 import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
-import com.google.cloud.healthcare.TestUtils;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
+import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
+import com.google.cloud.healthcare.util.TestUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.Executors;
-import org.dcm4che3.data.Attributes;
-import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.Connection;
 import org.dcm4che3.net.Device;
-import org.dcm4che3.net.DimseRSPHandler;
 import org.dcm4che3.net.InputStreamDataWriter;
 import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.AAssociateRQ;
@@ -49,24 +46,13 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class CStoreServiceTest {
+
   // Server properties.
-  String serverAET = "SERVER";
-  String serverHostname = "localhost";
+  private static String serverAET = "SERVER";
+  private static String serverHostname = "localhost";
 
   // Client properties.
   ApplicationEntity clientAE;
-
-  // Creates the client-side C-STORE response handler.
-  private static DimseRSPHandler createDimseRSPHandler(Association association, int wantStatus) {
-    return new DimseRSPHandler(association.nextMessageID()) {
-      @Override
-      public void onDimseRSP(Association association, Attributes cmd, Attributes data) {
-        super.onDimseRSP(association, cmd, data);
-        int gotStatus = cmd.getInt(Tag.Status, /* default status */ -1);
-        assertThat(gotStatus).isEqualTo(wantStatus);
-      }
-    };
-  }
 
   // Creates a HTTP request factory that returns given response code.
   private HttpRequestFactory createHttpRequestFactory(boolean connectError, int responseCode) {
@@ -128,107 +114,93 @@ public final class CStoreServiceTest {
   }
 
   @Test
-  public void testCStoreService_basicCStore() throws Exception {
-    InputStream in =
-        new DicomInputStream(TestUtils.streamDICOMStripHeaders(TestUtils.TEST_MR_FILE));
-    InputStreamDataWriter data = new InputStreamDataWriter(in);
-
-    // Properties of the DICOM image.
-    String sopClassUID = UID.MRImageStorage;
-    String sopInstanceUID = "1.0.0.0";
-
-    // Create C-STORE DICOM server.
-    int serverPort = createDicomServer(/*connect error*/ false, HttpStatusCodes.STATUS_CODE_OK);
-
-    // Associate with peer AE.
-    Association association =
-        associate(serverHostname, serverPort, sopClassUID, UID.ExplicitVRLittleEndian);
-
-    // Send the DICOM file.
-    int wantStatus = Status.Success;
-    association.cstore(
-        sopClassUID,
-        sopInstanceUID,
-        1,
-        data,
-        UID.ExplicitVRLittleEndian,
-        createDimseRSPHandler(association, wantStatus));
-    association.waitForOutstandingRSP();
-
-    // Close the association.
-    association.release();
-    association.waitForSocketClose();
+  public void testCStoreService_success() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.Success);
   }
 
   @Test
   public void testCStoreService_connectionError() throws Exception {
-    InputStream in =
-        new DicomInputStream(TestUtils.streamDICOMStripHeaders(TestUtils.TEST_MR_FILE));
-    InputStreamDataWriter data = new InputStreamDataWriter(in);
-
-    // Properties of the DICOM image.
-    String sopClassUID = UID.MRImageStorage;
-    String sopInstanceUID = "1.0.0.0";
-
-    // Create C-STORE DICOM server.
-    // The server is unable to get the response for the STOW-RS post (e.g. connection error).
-    int serverPort =
-        createDicomServer(/*connect error*/ true, HttpStatusCodes.STATUS_CODE_UNAUTHORIZED);
-
-    // Associate with peer AE.
-    Association association =
-        associate(serverHostname, serverPort, sopClassUID, UID.ExplicitVRLittleEndian);
-
-    // Send the DICOM file.
-    int wantStatus = Status.ProcessingFailure;
-    association.cstore(
-        sopClassUID,
-        sopInstanceUID,
-        1,
-        data,
-        UID.ExplicitVRLittleEndian,
-        createDimseRSPHandler(association, wantStatus));
-    association.waitForOutstandingRSP();
-
-    // Close the association.
-    association.release();
-    association.waitForSocketClose();
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_OK, // won't be returned due to connectionError
+        Status.ProcessingFailure);
   }
 
   @Test
-  public void testCStoreService_basicCStoreUnauthorized() throws Exception {
+  public void testCStoreService_unauthorized() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_UNAUTHORIZED,
+        Status.ProcessingFailure);
+  }
+
+  @Test
+  public void testCStoreService_serviceUnavailable() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE,
+        Status.OutOfResources);
+  }
+
+  @Test
+  public void testCStoreService_noSopInstanceUid() throws Exception {
+    basicCStoreServiceTest(
+        true, // no stow-rs request will be made
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.CannotUnderstand,
+        UID.MRImageStorage,
+        null);
+  }
+
+  private void basicCStoreServiceTest(
+      boolean connectionError,
+      int httpStatus,
+      int expectedDimseStatus) throws Exception {
+    basicCStoreServiceTest(
+        connectionError,
+        httpStatus,
+        expectedDimseStatus,
+        UID.MRImageStorage,
+        "1.0.0.0");
+  }
+
+  private void basicCStoreServiceTest(
+      boolean connectionError,
+      int httpStatus,
+      int expectedDimseStatus,
+      String sopClassUID,
+      String sopInstanceUID) throws Exception {
     InputStream in =
         new DicomInputStream(TestUtils.streamDICOMStripHeaders(TestUtils.TEST_MR_FILE));
     InputStreamDataWriter data = new InputStreamDataWriter(in);
 
-    // Properties of the DICOM image.
-    String sopClassUID = UID.MRImageStorage;
-    String sopInstanceUID = "1.0.0.0";
-
     // Create C-STORE DICOM server.
-    // The server gets an unauthorized error upon invoking STOW-RS POST (which for now causes a
-    // client error).
     int serverPort =
-        createDicomServer(/*connect error*/ false, HttpStatusCodes.STATUS_CODE_UNAUTHORIZED);
+        createDicomServer(connectionError, httpStatus);
 
     // Associate with peer AE.
     Association association =
         associate(serverHostname, serverPort, sopClassUID, UID.ExplicitVRLittleEndian);
 
     // Send the DICOM file.
-    int wantStatus = Status.ProcessingFailure;
+    DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedDimseStatus);
     association.cstore(
         sopClassUID,
         sopInstanceUID,
         1,
         data,
         UID.ExplicitVRLittleEndian,
-        createDimseRSPHandler(association, wantStatus));
+        rspAssert);
     association.waitForOutstandingRSP();
 
     // Close the association.
     association.release();
     association.waitForSocketClose();
+
+    rspAssert.assertResult();
   }
 
   // TODO(b/73252285): increase test coverage.
