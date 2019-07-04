@@ -24,7 +24,7 @@ For the list of command line flags, see [here](export/src/main/java/com/google/c
 ## Stackdriver Monitoring
 
 Both the Import and Export adapter include support for Stackdriver Monitoring.
-It is enabled by passing --monitoring_project_id parameter (must be the same project in which the adapter is running)
+It is enabled by specifying the --monitoring_project_id parameter, which must be the same project in which the adapter is running.
 For the list of events logged to Stackdriver for the Export Adapter, see [here](export/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java). 
 For the list of events logged to Stackdriver for the Import Adapter, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/monitoring/Event.java).
 
