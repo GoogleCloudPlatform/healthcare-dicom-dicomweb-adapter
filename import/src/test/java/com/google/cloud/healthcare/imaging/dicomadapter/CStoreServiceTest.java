@@ -178,8 +178,6 @@ public final class CStoreServiceTest {
     InputStreamDataWriter data = new InputStreamDataWriter(in);
 
     // Create C-STORE DICOM server.
-    // The server gets an unauthorized error upon invoking STOW-RS POST (which for now causes a
-    // client error).
     int serverPort =
         createDicomServer(connectionError, httpStatus);
 
