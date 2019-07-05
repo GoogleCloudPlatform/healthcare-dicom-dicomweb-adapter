@@ -19,6 +19,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class AttributesUtil {
+  private static final String PN_ALPHABETIC = "Alphabetic";
+  private static final String PN_IDEOGRAPHIC = "Ideographic";
+  private static final String PN_PHONETIC = "Phonetic";
+  private static final String PN_DELIMITER = "=";
 
   public static String getTagValue(JSONObject json, String tag) throws JSONException {
     JSONObject jsonTag = json.getJSONObject(tag);
@@ -169,7 +173,9 @@ public class AttributesUtil {
 
   private static void setAttributeValue(Attributes attrs, int tag, VR vr, JSONArray jsonValues)
       throws DicomServiceException {
-    if (vr.isStringType() || vr == VR.AT) {
+    if (vr == VR.PN) {
+      setPatientNames(attrs, tag, jsonValues);
+    } else if (vr.isStringType() || vr == VR.AT) {
       String[] values = jsonValues.toList().stream().map(Object::toString)
           .collect(Collectors.toList()).toArray(new String[]{});
       attrs.setString(tag, vr, values);
@@ -196,5 +202,28 @@ public class AttributesUtil {
               "Unsupported VR " + vr.toString());
       }
     }
+  }
+
+  private static void setPatientNames(Attributes attrs, int tag, JSONArray jsonValues){
+    List<String> results = new ArrayList<>();
+    for(Object itemObj : jsonValues){
+      JSONObject item = (JSONObject) itemObj;
+      String alphabetic = item.has(PN_ALPHABETIC)? item.getString(PN_ALPHABETIC) : "";
+      String ideographic = item.has(PN_IDEOGRAPHIC)? item.getString(PN_IDEOGRAPHIC) : "";
+      String phonetic = item.has(PN_PHONETIC)? item.getString(PN_PHONETIC) : "";
+      StringBuilder result = new StringBuilder();
+      result.append(alphabetic);
+      if(ideographic.length() > 0 || phonetic.length() > 0){
+        result.append(PN_DELIMITER);
+      }
+      result.append(ideographic);
+      if(phonetic.length() > 0){
+        result.append(PN_DELIMITER);
+      }
+      result.append(phonetic);
+      results.add(result.toString());
+    }
+
+    attrs.setString(tag, VR.PN, results.toArray(new String[0]));
   }
 }

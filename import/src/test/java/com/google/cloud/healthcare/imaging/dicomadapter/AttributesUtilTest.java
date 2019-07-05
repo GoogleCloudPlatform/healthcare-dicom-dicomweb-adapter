@@ -156,6 +156,23 @@ public class AttributesUtilTest {
   }
 
   @Test
+  public void testJsonToAttributes_patientName() throws Exception {
+    JSONObject jsonObj = new JSONObject("{\""
+        + TagUtils.toHexString(Tag.PatientName)
+        + "\": {\"vr\": \"PN\",\"Value\": [{"
+        + "\"Alphabetic\": \"Yamada^Tarou\", "
+        + "\"Ideographic\": \"山田^太郎\", "
+        + "\"Phonetic\": \"やまだ^たろう\", "
+        + "}]}}");
+
+    Attributes attrs = AttributesUtil.jsonToAttributes(jsonObj);
+
+    Attributes expected = new Attributes();
+    expected.setString(Tag.PatientName, VR.PN, "Yamada^Tarou=山田^太郎=やまだ^たろう");
+    assertThat(attrs).isEqualTo(expected);
+  }
+
+  @Test
   public void testJsonToAttributes_double() throws Exception {
     // is it reliable (double equality comparison)?
     JSONObject jsonObj = new JSONObject("{\""
