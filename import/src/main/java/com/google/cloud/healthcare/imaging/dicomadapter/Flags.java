@@ -69,10 +69,10 @@ public class Flags {
   String aetDictionaryPath = "";
 
   @Parameter(
-      names = {"--gcp_project_id"},
-      description = "Google cloud platform project id"
+      names = {"--monitoring_project_id"},
+      description = "Stackdriver monitoring project id, must be the same as the project id in which the adapter is running"
   )
-  String gcpProjectId = "";
+  String monitoringProjectId = "";
 
   public Flags() {}
 }

@@ -26,35 +26,21 @@
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: gradle-run-adapter
-  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${PROJECT_ID}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
+  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
   dir: import
   waitFor: ['-']
 
-# delete dicom store if it already exists, ignore exit code
+# create dataset if not exists, re-create store (delete if exists, then create)
 - name: 'google/cloud-sdk:250.0.0'
-  id: cleanup-dicom-store
+  id: setup-dataset-and-dicom-store
   args:
   - bash
-  - integration_test/store_delete_ignore_result.sh
+  - integration_test/setup_dataset_and_store.sh
+  - ${_PROJECT}
   - ${_LOCATION}
   - ${_DATASET}
   - ${_STORE_NAME}
   waitFor: ['-']
-
-- name: 'google/cloud-sdk:250.0.0'
-  id: create-dicom-store
-  args:
-  - gcloud
-  - alpha
-  - healthcare
-  - dicom-stores
-  - create
-  - ${_STORE_NAME}
-  - "--dataset=${_DATASET}"
-  - "--location=${_LOCATION}"  
-  - "--quiet"
-  waitFor: 
-  - cleanup-dicom-store
 
 # busybox is a compact utility image
 - name: 'busybox:latest'
@@ -66,7 +52,7 @@
   - ${_ADAPTER_PORT}
   waitFor:
   - build-store-scu
-  - create-dicom-store
+  - setup-dataset-and-dicom-store
 
 - name: "maven:3.6.0-jdk-8"
   id: run-store-scu
@@ -97,7 +83,7 @@
   args:
   - bash
   - integration_test/curl-dcm.sh
-  - "https://healthcare.googleapis.com/${_VERSION}/projects/${PROJECT_ID}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/1.3.6.1.4.1.5962.1.167.1174395400.11033.0/series/1.3.6.1.4.1.5962.1.176.1174395403.11033.0/instances/1.3.6.1.4.1.5962.1.178.1174395404.11033.0"
+  - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/111/series/111/instances/111"
   - integration_test/downloaded.dcm
   waitFor:
   - run-store-scu
@@ -120,6 +106,7 @@
   - dicom-stores
   - delete
   - ${_STORE_NAME}
+  - "--project=${_PROJECT}"
   - "--dataset=${_DATASET}"
   - "--location=${_LOCATION}"  
   - "--quiet"
@@ -128,9 +115,10 @@
 
 substitutions:
   _VERSION: v1beta1
-  _LOCATION: europe-west2
-  _DATASET: example-west
-  _STORE_NAME: IntegrationTestStore
+  _PROJECT: gcp-healthcare-oss-test
+  _LOCATION: us-central1
+  _DATASET: healthcare-dicom-dicomweb-adapter-test
+  _STORE_NAME: integration-test-store
   _ADAPTER_PORT: '2575'
   _CLOSE_ADAPTER_PORT: '3000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.

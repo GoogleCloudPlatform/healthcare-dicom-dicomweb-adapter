@@ -61,7 +61,7 @@ public class DicomClient {
     return new DicomClient(association);
   }
 
-  public static void cstore(
+  public static void connectAndCstore(
       String sopClassUid,
       String sopInstanceUid,
       String transferSyntaxUid,
@@ -76,6 +76,7 @@ public class DicomClient {
       dicomClient = DicomClient.associatePeer(applicationEntity,
           dimsePeerAet, dimsePeerHost, dimsePeerPort, pc);
     } catch (IOException | IncompatibleConnectionException | GeneralSecurityException e) {
+      // calling code doesn't need to distinguish these
       throw new IOException(e);
     }
 

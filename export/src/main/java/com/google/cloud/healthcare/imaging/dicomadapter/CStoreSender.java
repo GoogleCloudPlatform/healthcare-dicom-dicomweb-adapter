@@ -77,7 +77,7 @@ public class CStoreSender implements DicomSender {
     }
 
     CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
-    DicomClient.cstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
+    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
         applicationEntity, dimsePeerAET, dimsePeerIP, dimsePeerPort);
     MonitoringService.addEvent(Event.BYTES, countingStream.getCount());
   }

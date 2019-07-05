@@ -29,12 +29,12 @@ public class MonitoringService {
 
   private static final int DELAY = 60;
 
-  private static final String META_PROJECT_ID = "project/project-id";
   private static final String META_LOCATION = "instance/zone";
   private static final String META_CLUSTER_NAME = "instance/attributes/cluster-name";
 
   private static Logger log = LoggerFactory.getLogger(MonitoringService.class);
   private static MonitoringService INSTANCE;
+  private static boolean ENABLED = true;
 
   private final MetricServiceClient client;
   private final ScheduledExecutorService service;
@@ -45,23 +45,12 @@ public class MonitoringService {
   private String projectId;
 
   private MonitoringService(String projectId, IMonitoringEvent[] monitoredEvents,
-      HttpRequestFactory requestFactory) {
-    try {
-      client = MetricServiceClient.create();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+      HttpRequestFactory requestFactory) throws IOException {
+    client = MetricServiceClient.create();
 
     aggregateEvents = new HashMap<>();
-    service = Executors.newSingleThreadScheduledExecutor();
-    service.scheduleWithFixedDelay(MonitoringService.this::flush,
-        DELAY, DELAY, TimeUnit.SECONDS);
 
-    if (projectId != null && projectId.length() > 0) {
-      this.projectId = projectId;
-    } else {
-      this.projectId = GcpMetadataUtil.get(requestFactory, META_PROJECT_ID);
-    }
+    this.projectId = projectId;
     this.monitoredEvents = monitoredEvents;
 
     // configure Resource
@@ -70,15 +59,23 @@ public class MonitoringService {
     resourceLabels.put("project_id", this.projectId);
 
     Map<String, String> env = System.getenv();
-    if (env.containsKey("ENV_POD_NAME")
-        && env.containsKey("ENV_POD_NAMESPACE")
-        && env.containsKey("ENV_CONTAINER_NAME")) {
-      resourceLabels.put("pod_name", env.get("ENV_POD_NAME"));
-      resourceLabels.put("namespace_name", env.get("ENV_POD_NAMESPACE"));
-      resourceLabels.put("container_name", env.get("ENV_CONTAINER_NAME"));
-      resourceLabels.put("cluster_name", GcpMetadataUtil.get(requestFactory, META_CLUSTER_NAME));
-      String location = GcpMetadataUtil.get(requestFactory, META_LOCATION);
+    String podName = env.get("ENV_POD_NAME");
+    String namespaceName = env.get("ENV_POD_NAMESPACE");
+    String containerName = env.get("ENV_CONTAINER_NAME");
+    String clusterName = GcpMetadataUtil.get(requestFactory, META_CLUSTER_NAME);
+    String location = GcpMetadataUtil.get(requestFactory, META_LOCATION);
+    if (location != null) {
+      // GCPMetadata returns locations as "projects/[NUMERIC_PROJECT_ID]/zones/[ZONE]"
+      // Only last part is necessary here.
       location = location.substring(location.lastIndexOf('/') + 1);
+    }
+
+    if (podName != null && namespaceName != null && containerName != null &&
+        clusterName != null && location != null) {
+      resourceLabels.put("pod_name", podName);
+      resourceLabels.put("namespace_name", namespaceName);
+      resourceLabels.put("container_name", containerName);
+      resourceLabels.put("cluster_name", clusterName);
       resourceLabels.put("location", location);
       resourceBuilder.setType("k8s_container");
     } else {
@@ -87,19 +84,34 @@ public class MonitoringService {
 
     this.monitoredResource = resourceBuilder.putAllLabels(resourceLabels).build();
     log.info("monitoredResource = {}", monitoredResource);
+
+    service = Executors.newSingleThreadScheduledExecutor();
+    service.scheduleWithFixedDelay(MonitoringService.this::flush,
+        DELAY, DELAY, TimeUnit.SECONDS);
   }
 
-  public static void initialize(String gcpProjectId, IMonitoringEvent[] monitoredEvents,
-      HttpRequestFactory requestFactory) {
+  public static void initialize(String projectId, IMonitoringEvent[] monitoredEvents,
+      HttpRequestFactory requestFactory) throws IOException {
     if (INSTANCE != null) {
       throw new IllegalStateException("Already initialized");
     }
-    INSTANCE = new MonitoringService(gcpProjectId, monitoredEvents, requestFactory);
+    INSTANCE = new MonitoringService(projectId, monitoredEvents, requestFactory);
+  }
+
+  public static void disable() {
+    if (INSTANCE != null) {
+      INSTANCE.shutdown();
+      INSTANCE = null;
+    }
+    ENABLED = false;
   }
 
   public static void addEvent(IMonitoringEvent eventType, long value) {
     if (INSTANCE == null) {
-      log.warn("MonitoringService not initialized, skipping: {}={}", eventType, value);
+      if (ENABLED) {
+        log.warn("MonitoringService enabled, but not initialized. Skipping: {}={}",
+            eventType, value);
+      }
     } else {
       INSTANCE._addEvent(eventType, value);
     }
@@ -107,6 +119,11 @@ public class MonitoringService {
 
   public static void addEvent(IMonitoringEvent eventType) {
     addEvent(eventType, 1L);
+  }
+
+  private void shutdown() {
+    service.shutdown();
+    client.shutdown();
   }
 
   private void _addEvent(IMonitoringEvent eventType, long value) {
