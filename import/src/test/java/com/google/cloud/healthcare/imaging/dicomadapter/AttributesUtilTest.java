@@ -200,19 +200,4 @@ public class AttributesUtilTest {
     sequence.add(sequenceElement);
     assertThat(attrs).isEqualTo(expected);
   }
-
-  @Test
-  public void testJsonToAttributes_binary() throws Exception {
-    byte[] expectedBytes = new byte[]{1, 2, 3, 4, 5};
-    String base64Expected = StringUtils.newStringUtf8(Base64.getEncoder().encode(expectedBytes));
-
-    JSONObject jsonObj = new JSONObject("{\"" + TagUtils.toHexString(Tag.PrivateInformation)
-        + "\": {\"vr\": \"OB\",\"DataFragment\": [{\"InlineBinary\":\"" + base64Expected
-        + "\"}]}}");
-
-    Attributes attrs = AttributesUtil.jsonToAttributes(jsonObj);
-    Attributes expected = new Attributes();
-    expected.setBytes(Tag.PrivateInformation, VR.OB, expectedBytes);
-    assertThat(attrs).isEqualTo(expected);
-  }
 }

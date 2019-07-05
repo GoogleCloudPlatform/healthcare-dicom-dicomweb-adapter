@@ -3,9 +3,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -143,10 +141,11 @@ public class AttributesUtil {
       JSONObject element = jsonDataset.getJSONObject(tag);
       int tagInt = TagUtils.forName(tag);
       VR vr = VR.valueOf(element.getString("vr"));
-      if (element.has("Value")) {
+      if (isBinaryVr(vr)) {
+        throw new DicomServiceException(Status.ProcessingFailure,
+            "Binary VR not supported: " + vr.toString());
+      } else if (element.has("Value")) {
         setAttributeValue(attributes, tagInt, vr, (JSONArray) element.get("Value"));
-      } else if (element.has("DataFragment") && isBinaryVr(vr)) {
-        setAttributeDataFragment(attributes, tagInt, vr, element);
       } else {
         attributes.setValue(tagInt, vr, null);
       }
@@ -196,21 +195,6 @@ public class AttributesUtil {
           throw new DicomServiceException(Status.ProcessingFailure,
               "Unsupported VR " + vr.toString());
       }
-    }
-  }
-
-  private static void setAttributeDataFragment(Attributes attrs, int tag, VR vr, JSONObject element)
-      throws DicomServiceException {
-    //"DataFragment":[{"InlineBinary":"..."}] instead of "Value":[...]
-    //"InlineBinary" is part of standard, but "DataFragment" is not explicitly mentioned. Is it dcm4che-specific?
-    try {
-      String base64String = element.getJSONArray("DataFragment").getJSONObject(0)
-          .getString("InlineBinary");
-      byte[] decodedBytes = Base64.getDecoder()
-          .decode(base64String.getBytes(StandardCharsets.UTF_8));
-      attrs.setBytes(tag, vr, decodedBytes);
-    } catch (JSONException e) {
-      throw new DicomServiceException(Status.ProcessingFailure, e);
     }
   }
 }
