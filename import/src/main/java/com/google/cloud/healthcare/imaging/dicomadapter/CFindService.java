@@ -105,11 +105,11 @@ public class CFindService extends BasicCFindSCP {
           }
           log.info("CFind QidoPath: " + qidoPath);
           try {
-            MonitoringService.addEvent(Event.CFIND_SUB_QIDORS_REQUEST);
+            MonitoringService.addEvent(Event.CFIND_QIDORS_REQUEST);
             JSONArray qidoResult = dicomWebClient.qidoRs(qidoPath);
             qidoResults.add(qidoResult);
           } catch (IDicomWebClient.DicomWebException e) {
-            MonitoringService.addEvent(Event.CFIND_SUB_QIDORS_ERROR);
+            MonitoringService.addEvent(Event.CFIND_QIDORS_ERROR);
             if (e.getCause() instanceof HttpResponseException &&
                 ((HttpResponseException) e.getCause()).getStatusCode() ==
                     HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE) {

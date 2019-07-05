@@ -88,9 +88,6 @@ public class AttributesUtil {
     StringBuilder qidoPath = new StringBuilder();
     if (nonEmptyKeys.contains(Tag.QueryRetrieveLevel)) {
       switch (attrs.getString(Tag.QueryRetrieveLevel)) {
-        case "PATIENT":
-          qidoPath.append("patients");
-          break;
         case "STUDY":
           qidoPath.append("studies");
           break;
