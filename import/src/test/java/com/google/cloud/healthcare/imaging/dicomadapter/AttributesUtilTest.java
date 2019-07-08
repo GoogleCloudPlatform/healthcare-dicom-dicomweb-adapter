@@ -156,6 +156,23 @@ public class AttributesUtilTest {
   }
 
   @Test
+  public void testJsonToAttributes_patientName() throws Exception {
+    JSONObject jsonObj = new JSONObject("{\""
+        + TagUtils.toHexString(Tag.PatientName)
+        + "\": {\"vr\": \"PN\",\"Value\": [{"
+        + "\"Alphabetic\": \"Yamada^Tarou\", "
+        + "\"Ideographic\": \"山田^太郎\", "
+        + "\"Phonetic\": \"やまだ^たろう\", "
+        + "}]}}");
+
+    Attributes attrs = AttributesUtil.jsonToAttributes(jsonObj);
+
+    Attributes expected = new Attributes();
+    expected.setString(Tag.PatientName, VR.PN, "Yamada^Tarou=山田^太郎=やまだ^たろう");
+    assertThat(attrs).isEqualTo(expected);
+  }
+
+  @Test
   public void testJsonToAttributes_double() throws Exception {
     // is it reliable (double equality comparison)?
     JSONObject jsonObj = new JSONObject("{\""
@@ -198,21 +215,6 @@ public class AttributesUtilTest {
     Attributes sequenceElement = new Attributes();
     sequenceElement.setInt(Tag.DimensionIndexValues, VR.UL, 1, 1);
     sequence.add(sequenceElement);
-    assertThat(attrs).isEqualTo(expected);
-  }
-
-  @Test
-  public void testJsonToAttributes_binary() throws Exception {
-    byte[] expectedBytes = new byte[]{1, 2, 3, 4, 5};
-    String base64Expected = StringUtils.newStringUtf8(Base64.getEncoder().encode(expectedBytes));
-
-    JSONObject jsonObj = new JSONObject("{\"" + TagUtils.toHexString(Tag.PrivateInformation)
-        + "\": {\"vr\": \"OB\",\"DataFragment\": [{\"InlineBinary\":\"" + base64Expected
-        + "\"}]}}");
-
-    Attributes attrs = AttributesUtil.jsonToAttributes(jsonObj);
-    Attributes expected = new Attributes();
-    expected.setBytes(Tag.PrivateInformation, VR.OB, expectedBytes);
     assertThat(attrs).isEqualTo(expected);
   }
 }

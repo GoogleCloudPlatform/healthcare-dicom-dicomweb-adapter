@@ -3,9 +3,8 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +20,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class AttributesUtil {
+
+  private static final String PN_ALPHABETIC = "Alphabetic";
+  private static final String PN_IDEOGRAPHIC = "Ideographic";
+  private static final String PN_PHONETIC = "Phonetic";
+  private static final String PN_DELIMITER = "=";
 
   public static String getTagValue(JSONObject json, String tag) throws JSONException {
     JSONObject jsonTag = json.getJSONObject(tag);
@@ -52,6 +56,7 @@ public class AttributesUtil {
 
   /**
    * Returns array of QIDO-RS paths (more than 1 if multiple ModalitiesInStudy are present)
+   *
    * @param attrs dcm4che Attributes to convert
    * @param includeFields additonal includeFields for QIDO-RS
    */
@@ -73,24 +78,27 @@ public class AttributesUtil {
 
   /**
    * Returns corresponding QIDO-RS path
+   *
    * @param attrs dcm4che Attributes to convert
    * @param includeFields additonal includeFields for QIDO-RS
    */
   public static String attributesToQidoPath(Attributes attrs, String... includeFields)
       throws DicomServiceException {
     HashSet<Integer> nonEmptyKeys = new HashSet<>();
+    HashSet<String> includeFieldSet = new HashSet<>(Arrays.asList(includeFields));
+    // SpecificCharacterSet is not supported, and passing it as param or include would be wrong
+    attrs.remove(Tag.SpecificCharacterSet);
     for (int tag : attrs.tags()) {
       if (attrs.containsValue(tag)) {
         nonEmptyKeys.add(tag);
+      } else {
+        includeFieldSet.add(TagUtils.toHexString(tag));
       }
     }
 
     StringBuilder qidoPath = new StringBuilder();
     if (nonEmptyKeys.contains(Tag.QueryRetrieveLevel)) {
       switch (attrs.getString(Tag.QueryRetrieveLevel)) {
-        case "PATIENT":
-          qidoPath.append("patients");
-          break;
         case "STUDY":
           qidoPath.append("studies");
           break;
@@ -109,12 +117,12 @@ public class AttributesUtil {
       throw new DicomServiceException(Status.ProcessingFailure, "No QueryRetrieveLevel specified");
     }
 
-    if (nonEmptyKeys.size() > 0 || includeFields.length > 0) {
+    if (nonEmptyKeys.size() > 0 || includeFieldSet.size() > 0) {
       qidoPath.append("?");
     }
 
-    if (includeFields.length > 0) {
-      for (String includeField : includeFields) {
+    if (includeFieldSet.size() > 0) {
+      for (String includeField : includeFieldSet) {
         qidoPath.append("includefield=" + includeField + "&");
       }
     }
@@ -138,7 +146,6 @@ public class AttributesUtil {
 
   /**
    * Converts QIDO_RS json reply to dcm4che Attributes
-   * @param jsonDataset
    */
   public static Attributes jsonToAttributes(JSONObject jsonDataset) throws DicomServiceException {
     Attributes attributes = new Attributes();
@@ -146,10 +153,11 @@ public class AttributesUtil {
       JSONObject element = jsonDataset.getJSONObject(tag);
       int tagInt = TagUtils.forName(tag);
       VR vr = VR.valueOf(element.getString("vr"));
-      if (element.has("Value")) {
+      if (isBinaryVr(vr)) {
+        throw new DicomServiceException(Status.ProcessingFailure,
+            "Binary VR not supported: " + vr.toString());
+      } else if (element.has("Value")) {
         setAttributeValue(attributes, tagInt, vr, (JSONArray) element.get("Value"));
-      } else if (element.has("DataFragment") && isBinaryVr(vr)) {
-        setAttributeDataFragment(attributes, tagInt, vr, element);
       } else {
         attributes.setValue(tagInt, vr, null);
       }
@@ -173,7 +181,9 @@ public class AttributesUtil {
 
   private static void setAttributeValue(Attributes attrs, int tag, VR vr, JSONArray jsonValues)
       throws DicomServiceException {
-    if (vr.isStringType() || vr == VR.AT) {
+    if (vr == VR.PN) {
+      setPatientNames(attrs, tag, jsonValues);
+    } else if (vr.isStringType() || vr == VR.AT) {
       String[] values = jsonValues.toList().stream().map(Object::toString)
           .collect(Collectors.toList()).toArray(new String[]{});
       attrs.setString(tag, vr, values);
@@ -202,18 +212,26 @@ public class AttributesUtil {
     }
   }
 
-  private static void setAttributeDataFragment(Attributes attrs, int tag, VR vr, JSONObject element)
-      throws DicomServiceException {
-    //"DataFragment":[{"InlineBinary":"..."}] instead of "Value":[...]
-    //"InlineBinary" is part of standard, but "DataFragment" is not explicitly mentioned. Is it dcm4che-specific?
-    try {
-      String base64String = element.getJSONArray("DataFragment").getJSONObject(0)
-          .getString("InlineBinary");
-      byte[] decodedBytes = Base64.getDecoder()
-          .decode(base64String.getBytes(StandardCharsets.UTF_8));
-      attrs.setBytes(tag, vr, decodedBytes);
-    } catch (JSONException e) {
-      throw new DicomServiceException(Status.ProcessingFailure, e);
+  private static void setPatientNames(Attributes attrs, int tag, JSONArray jsonValues) {
+    List<String> results = new ArrayList<>();
+    for (Object itemObj : jsonValues) {
+      JSONObject item = (JSONObject) itemObj;
+      String alphabetic = item.has(PN_ALPHABETIC) ? item.getString(PN_ALPHABETIC) : "";
+      String ideographic = item.has(PN_IDEOGRAPHIC) ? item.getString(PN_IDEOGRAPHIC) : "";
+      String phonetic = item.has(PN_PHONETIC) ? item.getString(PN_PHONETIC) : "";
+      StringBuilder result = new StringBuilder();
+      result.append(alphabetic);
+      if (ideographic.length() > 0 || phonetic.length() > 0) {
+        result.append(PN_DELIMITER);
+      }
+      result.append(ideographic);
+      if (phonetic.length() > 0) {
+        result.append(PN_DELIMITER);
+      }
+      result.append(phonetic);
+      results.add(result.toString());
     }
+
+    attrs.setString(tag, VR.PN, results.toArray(new String[0]));
   }
 }
