@@ -65,9 +65,12 @@ public class CStoreSender implements DicomSender {
       throw new IllegalArgumentException(
           "Invalid QidoRS JSON array length for response: " + qidoResponse.toString());
     }
-    String transferSyntaxUid = getTagValue(qidoResponse.getJSONObject(0), TRANSFER_SYNTAX_UID_TAG);
-    String sopClassUid = getTagValue(qidoResponse.getJSONObject(0), SOP_CLASS_UID_TAG);
-    String sopInstanceUid = getTagValue(qidoResponse.getJSONObject(0), SOP_INSTANCE_UID_TAG);
+    String transferSyntaxUid = AttributesUtil.getTagValue(qidoResponse.getJSONObject(0),
+        TRANSFER_SYNTAX_UID_TAG);
+    String sopClassUid = AttributesUtil.getTagValue(qidoResponse.getJSONObject(0),
+        SOP_CLASS_UID_TAG);
+    String sopInstanceUid = AttributesUtil.getTagValue(qidoResponse.getJSONObject(0),
+        SOP_INSTANCE_UID_TAG);
 
     // Invoke WADO-RS to get bulk DICOM.
     MultipartInput resp = dicomWebClient.wadoRs(wadoUri);
@@ -93,19 +96,5 @@ public class CStoreSender implements DicomSender {
             "%s?%s=%s&includefield=%s",
             wadoParentPath.toString(), SOP_INSTANCE_UID_TAG, instanceUid, TRANSFER_SYNTAX_UID_TAG);
     return qidoUri;
-  }
-
-  // Gets a DICOM tag from given JSONObject (a QIDO response).
-  private String getTagValue(JSONObject json, String tag) throws JSONException {
-    JSONObject jsonTag = json.getJSONObject(tag);
-    JSONArray valueArray = jsonTag.getJSONArray("Value");
-    if (valueArray.length() != 1) {
-      throw new JSONException(
-          "Expected one value in QIDO response for tag: "
-              + tag
-              + " in JSON:\n"
-              + valueArray.toString());
-    }
-    return valueArray.getString(0);
   }
 }

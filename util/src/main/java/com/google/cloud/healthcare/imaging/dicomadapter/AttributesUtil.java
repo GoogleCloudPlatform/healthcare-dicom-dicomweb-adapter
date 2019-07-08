@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class AttributesUtil {
+
   private static final String PN_ALPHABETIC = "Alphabetic";
   private static final String PN_IDEOGRAPHIC = "Ideographic";
   private static final String PN_PHONETIC = "Phonetic";
@@ -54,6 +56,7 @@ public class AttributesUtil {
 
   /**
    * Returns array of QIDO-RS paths (more than 1 if multiple ModalitiesInStudy are present)
+   *
    * @param attrs dcm4che Attributes to convert
    * @param includeFields additonal includeFields for QIDO-RS
    */
@@ -75,15 +78,21 @@ public class AttributesUtil {
 
   /**
    * Returns corresponding QIDO-RS path
+   *
    * @param attrs dcm4che Attributes to convert
    * @param includeFields additonal includeFields for QIDO-RS
    */
   public static String attributesToQidoPath(Attributes attrs, String... includeFields)
       throws DicomServiceException {
     HashSet<Integer> nonEmptyKeys = new HashSet<>();
+    HashSet<String> includeFieldSet = new HashSet<>(Arrays.asList(includeFields));
+    // SpecificCharacterSet is not supported, and passing it as param or include would be wrong
+    attrs.remove(Tag.SpecificCharacterSet);
     for (int tag : attrs.tags()) {
       if (attrs.containsValue(tag)) {
         nonEmptyKeys.add(tag);
+      } else {
+        includeFieldSet.add(TagUtils.toHexString(tag));
       }
     }
 
@@ -108,12 +117,12 @@ public class AttributesUtil {
       throw new DicomServiceException(Status.ProcessingFailure, "No QueryRetrieveLevel specified");
     }
 
-    if (nonEmptyKeys.size() > 0 || includeFields.length > 0) {
+    if (nonEmptyKeys.size() > 0 || includeFieldSet.size() > 0) {
       qidoPath.append("?");
     }
 
-    if (includeFields.length > 0) {
-      for (String includeField : includeFields) {
+    if (includeFieldSet.size() > 0) {
+      for (String includeField : includeFieldSet) {
         qidoPath.append("includefield=" + includeField + "&");
       }
     }
@@ -137,7 +146,6 @@ public class AttributesUtil {
 
   /**
    * Converts QIDO_RS json reply to dcm4che Attributes
-   * @param jsonDataset
    */
   public static Attributes jsonToAttributes(JSONObject jsonDataset) throws DicomServiceException {
     Attributes attributes = new Attributes();
@@ -204,20 +212,20 @@ public class AttributesUtil {
     }
   }
 
-  private static void setPatientNames(Attributes attrs, int tag, JSONArray jsonValues){
+  private static void setPatientNames(Attributes attrs, int tag, JSONArray jsonValues) {
     List<String> results = new ArrayList<>();
-    for(Object itemObj : jsonValues){
+    for (Object itemObj : jsonValues) {
       JSONObject item = (JSONObject) itemObj;
-      String alphabetic = item.has(PN_ALPHABETIC)? item.getString(PN_ALPHABETIC) : "";
-      String ideographic = item.has(PN_IDEOGRAPHIC)? item.getString(PN_IDEOGRAPHIC) : "";
-      String phonetic = item.has(PN_PHONETIC)? item.getString(PN_PHONETIC) : "";
+      String alphabetic = item.has(PN_ALPHABETIC) ? item.getString(PN_ALPHABETIC) : "";
+      String ideographic = item.has(PN_IDEOGRAPHIC) ? item.getString(PN_IDEOGRAPHIC) : "";
+      String phonetic = item.has(PN_PHONETIC) ? item.getString(PN_PHONETIC) : "";
       StringBuilder result = new StringBuilder();
       result.append(alphabetic);
-      if(ideographic.length() > 0 || phonetic.length() > 0){
+      if (ideographic.length() > 0 || phonetic.length() > 0) {
         result.append(PN_DELIMITER);
       }
       result.append(ideographic);
-      if(phonetic.length() > 0){
+      if (phonetic.length() > 0) {
         result.append(PN_DELIMITER);
       }
       result.append(phonetic);
