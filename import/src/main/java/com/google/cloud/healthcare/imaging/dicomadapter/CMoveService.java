@@ -137,13 +137,13 @@ public class CMoveService extends BasicCMoveSCP {
           }
 
           try {
-            MonitoringService.addEvent(Event.CMOVE_SUB_CSTORE_REQUEST);
+            MonitoringService.addEvent(Event.CMOVE_CSTORE_REQUEST);
             long bytesSent = cstoreSender.cstore(cstoreTarget, studyUid, seriesUid,
                 instanceUid, classUid, tsuid);
             successfullInstances++;
-            MonitoringService.addEvent(Event.CMOVE_SUB_CSTORE_BYTES, bytesSent);
+            MonitoringService.addEvent(Event.CMOVE_CSTORE_BYTES, bytesSent);
           } catch (IDicomWebClient.DicomWebException | IOException e) {
-            MonitoringService.addEvent(Event.CMOVE_SUB_CSTORE_ERROR);
+            MonitoringService.addEvent(Event.CMOVE_CSTORE_ERROR);
             log.error("Failed CStore within CMove", e);
             failedInstanceUids.add(instanceUid);
           }

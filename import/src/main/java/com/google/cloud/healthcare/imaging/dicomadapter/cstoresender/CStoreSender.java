@@ -43,7 +43,7 @@ public class CStoreSender implements ICStoreSender {
     }
 
     CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
-    DicomClient.cstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
+    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
         applicationEntity, target.getName(), target.getHost(), target.getPort());
     return countingStream.getCount();
   }
