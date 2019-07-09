@@ -26,7 +26,7 @@
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: gradle-run-adapter
-  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${PROJECT_ID}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
+  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
   dir: import
   waitFor: ['-']
 
@@ -36,6 +36,7 @@
   args:
   - bash
   - integration_test/setup_dataset_and_store.sh
+  - ${_PROJECT}
   - ${_LOCATION}
   - ${_DATASET}
   - ${_STORE_NAME}
@@ -82,7 +83,7 @@
   args:
   - bash
   - integration_test/curl-dcm.sh
-  - "https://healthcare.googleapis.com/${_VERSION}/projects/${PROJECT_ID}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/111/series/111/instances/111"
+  - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/111/series/111/instances/111"
   - integration_test/downloaded.dcm
   waitFor:
   - run-store-scu
@@ -105,6 +106,7 @@
   - dicom-stores
   - delete
   - ${_STORE_NAME}
+  - "--project=${_PROJECT}"
   - "--dataset=${_DATASET}"
   - "--location=${_LOCATION}"  
   - "--quiet"
@@ -113,8 +115,9 @@
 
 substitutions:
   _VERSION: v1beta1
-  _LOCATION: europe-west2
-  _DATASET: integration-test-dataset
+  _PROJECT: gcp-healthcare-oss-test
+  _LOCATION: us-central1
+  _DATASET: healthcare-dicom-dicomweb-adapter-test
   _STORE_NAME: integration-test-store
   _ADAPTER_PORT: '2575'
   _CLOSE_ADAPTER_PORT: '3000'
