@@ -2,8 +2,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.api.client.util.StringUtils;
-import java.util.Base64;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Sequence;
 import org.dcm4che3.data.Tag;
@@ -108,16 +106,33 @@ public class AttributesUtilTest {
   }
 
   @Test
-  public void testJsonToAttributes_integerString() throws Exception {
-    // can be parsed as either string or int.
-    JSONObject jsonObj = new JSONObject("{\"" + TagUtils.toHexString(Tag.InstanceNumber)
-        + "\": {\"vr\": \"IS\",\"Value\": [1]}}");
+  public void testJsonToAttributes_decimalString() throws Exception {
+    String value = "12345678901234567890.1234567890";
+    JSONObject jsonObj = new JSONObject("{\"" + TagUtils.toHexString(Tag.DecimalVisualAcuity)
+        + "\": {\"vr\": \"DS\",\"Value\": [" + value + "]}}");
 
     Attributes attrs = AttributesUtil.jsonToAttributes(jsonObj);
 
     Attributes expected = new Attributes();
-    expected.setInt(Tag.InstanceNumber, VR.IS, 1);
+    expected.setString(Tag.DecimalVisualAcuity, VR.DS, value);
     assertThat(attrs).isEqualTo(expected);
+  }
+
+  @Test
+  public void testJsonToAttributes_integerString() throws Exception {
+    // can be parsed as either string or int.
+    JSONObject jsonObj = new JSONObject("{\"" + TagUtils.toHexString(Tag.InstanceNumber)
+        + "\": {\"vr\": \"IS\",\"Value\": [" + Integer.MAX_VALUE + "]}}");
+
+    Attributes attrs = AttributesUtil.jsonToAttributes(jsonObj);
+
+    Attributes expectedAsInt = new Attributes();
+    expectedAsInt.setInt(Tag.InstanceNumber, VR.IS, Integer.MAX_VALUE);
+    assertThat(attrs).isEqualTo(expectedAsInt);
+
+    Attributes expectedAsString = new Attributes();
+    expectedAsString.setString(Tag.InstanceNumber, VR.IS, String.valueOf(Integer.MAX_VALUE));
+    assertThat(attrs).isEqualTo(expectedAsString);
   }
 
   @Test
@@ -174,7 +189,6 @@ public class AttributesUtilTest {
 
   @Test
   public void testJsonToAttributes_double() throws Exception {
-    // is it reliable (double equality comparison)?
     JSONObject jsonObj = new JSONObject("{\""
         + TagUtils.toHexString(Tag.EventTimeOffset)
         + "\": {\"vr\": \"FD\",\"Value\": [1.25]}}");
@@ -188,7 +202,6 @@ public class AttributesUtilTest {
 
   @Test
   public void testJsonToAttributes_float() throws Exception {
-    // is it reliable (float equality comparison)?
     JSONObject jsonObj = new JSONObject("{\""
         + TagUtils.toHexString(Tag.DisplayedZValue)
         + "\": {\"vr\": \"FL\",\"Value\": [1.25]}}");

@@ -6,9 +6,11 @@ two components, namely import and export adapter.
 
 ## Import Adapter
 
-The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests:
+The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests and passes the converted results back to the DIMSE client. The following requests are supported:
 - C-STORE to STOW-RS
-- C-FIND to QIDO-RS (multi-modality C-FIND queries result in 1 QIDO-RS query per modality) and passes converted results back to DIMSE client
+- C-FIND to QIDO-RS
+
+Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
