@@ -164,7 +164,7 @@ public final class CFindServiceTest {
     Attributes findData = new Attributes();
     findData.setString(Tag.QueryRetrieveLevel, VR.CS, "IMAGE");
 
-    // Issue CMOVE
+    // Issue CFIND
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
     association.cfind(
         UID.StudyRootQueryRetrieveInformationModelFIND,

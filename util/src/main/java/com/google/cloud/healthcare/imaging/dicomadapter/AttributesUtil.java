@@ -129,8 +129,14 @@ public class AttributesUtil {
 
     for (int keyTag : nonEmptyKeys) {
       // non-string type search keys don't seem to exist
-      // pass-through multiple values (valid for UID lists, ignored for rest)
-      for (String value : attrs.getStrings(keyTag)) {
+      // multiple values are valid for UID lists, but unsupported by api. Invalid for other VRs.
+      String[] values = attrs.getStrings(keyTag);
+      if (values.length > 1) {
+        throw new DicomServiceException(Status.ProcessingFailure,
+            "Multiple values per tag not supported, tag: " + TagUtils.toHexString(keyTag));
+      }
+
+      for (String value : values) {
         String encodedValue;
         try {
           encodedValue = URLEncoder.encode(value, "UTF-8");
