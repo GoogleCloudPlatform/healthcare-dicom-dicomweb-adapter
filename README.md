@@ -9,6 +9,23 @@ two components, namely import and export adapter.
 The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests and passes the converted results back to the DIMSE client. The following requests are supported:
 - C-STORE to STOW-RS
 - C-FIND to QIDO-RS
+- C-MOVE uses QIDO-RS to determine instances to be transfered, then (per instance) executes WADO-RS to obtain instance data stream and passes it to C-STORE (to C-MOVE destination). 
+
+AET resolution for C-MOVE is configured via AET dictionary json file ("--aet_dictionary" command line parameter or "ENV_AETS_JSON" environment variable). Format: JSON array of objects containing name, host and port.
+
+```shell
+kubectl create configmap aet-dictionary --from-file=AETs.json
+```
+
+Relevant part of yaml:
+```yaml
+env:
+- name: ENV_AETS_JSON
+  valueFrom:
+    configMapKeyRef:
+      name: aet-dictionary
+      key: AETs.json
+```
 
 Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
 

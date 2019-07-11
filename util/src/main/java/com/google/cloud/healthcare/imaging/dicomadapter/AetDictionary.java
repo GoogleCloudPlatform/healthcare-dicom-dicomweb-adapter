@@ -94,7 +94,7 @@ public class AetDictionary {
           "name='" + name + '\'' +
           ", host='" + host + '\'' +
           ", port=" + port +
-          '}';
+          "}";
     }
   }
 }
