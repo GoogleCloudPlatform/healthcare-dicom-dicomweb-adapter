@@ -89,8 +89,7 @@ public class CMoveService extends BasicCMoveSCP {
         keysCopy.setString(Tag.QueryRetrieveLevel, VR.CS, "IMAGE");
         String qidoPath;
         try {
-          qidoPath = AttributesUtil.attributesToQidoPath(keysCopy,
-              TagUtils.toHexString(Tag.TransferSyntaxUID));
+          qidoPath = AttributesUtil.attributesToQidoPath(keysCopy);
           log.info("CMove QidoPath: " + qidoPath);
         } catch (DicomServiceException e) {
           log.error("CMove QidoPath error");
@@ -132,16 +131,11 @@ public class CMoveService extends BasicCMoveSCP {
               TagUtils.toHexString(Tag.SOPInstanceUID));
           String classUid = AttributesUtil.getTagValue(instanceJson,
               TagUtils.toHexString(Tag.SOPClassUID));
-          String tsuid = AttributesUtil.getTagValueOrNull(instanceJson,
-              TagUtils.toHexString(Tag.TransferSyntaxUID));
-          if (tsuid == null) {
-            tsuid = UID.ExplicitVRLittleEndian;
-          }
 
           try {
             MonitoringService.addEvent(Event.CMOVE_CSTORE_REQUEST);
             long bytesSent = cstoreSender.cstore(cstoreTarget, studyUid, seriesUid,
-                instanceUid, classUid, tsuid);
+                instanceUid, classUid);
             successfullInstances++;
             MonitoringService.addEvent(Event.CMOVE_CSTORE_BYTES, bytesSent);
           } catch (IDicomWebClient.DicomWebException | IOException e) {

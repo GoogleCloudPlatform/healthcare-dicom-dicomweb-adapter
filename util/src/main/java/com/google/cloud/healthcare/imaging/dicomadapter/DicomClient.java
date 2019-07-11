@@ -64,13 +64,15 @@ public class DicomClient {
   public static void connectAndCstore(
       String sopClassUid,
       String sopInstanceUid,
-      String transferSyntaxUid,
       InputStream in,
       ApplicationEntity applicationEntity,
       String dimsePeerAet,
       String dimsePeerHost,
       int dimsePeerPort) throws IOException, InterruptedException {
-    PresentationContext pc = new PresentationContext(1, sopClassUid, transferSyntaxUid);
+    DicomInputStream din = new DicomInputStream(in);
+    din.readFileMetaInformation();
+
+    PresentationContext pc = new PresentationContext(1, sopClassUid, din.getTransferSyntax());
     DicomClient dicomClient;
     try {
       dicomClient = DicomClient.associatePeer(applicationEntity,
@@ -84,7 +86,7 @@ public class DicomClient {
     try {
       FutureDimseRSP handler = new FutureDimseRSP(association.nextMessageID());
       dicomClient.cstore(
-          sopClassUid, sopInstanceUid, transferSyntaxUid, in, handler);
+          sopClassUid, sopInstanceUid, din.getTransferSyntax(), din, handler);
       handler.next();
       int dimseStatus = handler.getCommand().getInt(Tag.Status, /* default status */ -1);
       if (dimseStatus != Status.Success) {
@@ -105,11 +107,9 @@ public class DicomClient {
       String sopClassUid,
       String sopInstanceUid,
       String transferSyntaxUid,
-      InputStream in,
+      DicomInputStream din,
       DimseRSPHandler responseHandler)
       throws IOException, InterruptedException {
-    DicomInputStream din = new DicomInputStream(in);
-    din.readFileMetaInformation();
     InputStreamDataWriter data = new InputStreamDataWriter(din);
     association.cstore(
         sopClassUid, sopInstanceUid, /* priority */ 1, data, transferSyntaxUid, responseHandler);

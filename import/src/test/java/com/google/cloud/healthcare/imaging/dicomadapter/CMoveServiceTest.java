@@ -164,7 +164,7 @@ public final class CMoveServiceTest {
         () -> new ICStoreSender() {
           @Override
           public long cstore(AetDictionary.Aet target, String studyUid, String seriesUid,
-              String sopInstanceUid, String sopClassUid, String transferSyntaxUid)
+              String sopInstanceUid, String sopClassUid)
               throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
             throw new IDicomWebClient.DicomWebException("CStore Fail");
           }
@@ -198,8 +198,7 @@ public final class CMoveServiceTest {
               String studyUid,
               String seriesUid,
               String sopInstanceUid,
-              String sopClassUid,
-              String transferSyntaxUid)
+              String sopClassUid)
               throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
             if (++attempts >= 2) {
               throw new IDicomWebClient.DicomWebException("CStore Fail");
@@ -230,7 +229,7 @@ public final class CMoveServiceTest {
         () -> new ICStoreSender() {
           @Override
           public long cstore(AetDictionary.Aet target, String studyUid, String seriesUid,
-              String sopInstanceUid, String sopClassUid, String transferSyntaxUid)
+              String sopInstanceUid, String sopClassUid)
               throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
             throw new InterruptedException();
           }
@@ -333,7 +332,7 @@ public final class CMoveServiceTest {
 
     @Override
     public long cstore(AetDictionary.Aet target, String studyUid, String seriesUid,
-        String sopInstanceUid, String sopClassUid, String transferSyntaxUid)
+        String sopInstanceUid, String sopClassUid)
         throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
       return 0;
     }

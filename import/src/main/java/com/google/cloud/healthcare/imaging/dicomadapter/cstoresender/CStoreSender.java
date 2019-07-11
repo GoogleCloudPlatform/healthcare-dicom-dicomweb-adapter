@@ -29,8 +29,7 @@ public class CStoreSender implements ICStoreSender {
       String studyUid,
       String seriesUid,
       String sopInstanceUid,
-      String sopClassUid,
-      String transferSyntaxUid)
+      String sopClassUid)
       throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
     String wadoUri =
         String.format("studies/%s/series/%s/instances/%s", studyUid, seriesUid, sopInstanceUid);
@@ -43,7 +42,7 @@ public class CStoreSender implements ICStoreSender {
     }
 
     CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
-    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
+    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, countingStream,
         applicationEntity, target.getName(), target.getHost(), target.getPort());
     return countingStream.getCount();
   }

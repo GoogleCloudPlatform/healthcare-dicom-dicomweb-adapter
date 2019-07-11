@@ -15,7 +15,6 @@ public interface ICStoreSender extends Closeable {
       String studyUid,
       String seriesUid,
       String sopInstanceUid,
-      String sopClassUid,
-      String transferSyntaxUid)
+      String sopClassUid)
       throws IDicomWebClient.DicomWebException, IOException, InterruptedException;
 }
