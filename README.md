@@ -9,15 +9,41 @@ two components, namely import and export adapter.
 The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests and passes the converted results back to the DIMSE client. The following requests are supported:
 - C-STORE to STOW-RS
 - C-FIND to QIDO-RS
-- C-MOVE uses QIDO-RS to determine instances to be transfered, then (per instance) executes WADO-RS to obtain instance data stream and passes it to C-STORE (to C-MOVE destination). 
+- C-MOVE uses QIDO-RS to determine which instances to transfer, then for each instance executes a 
+WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination 
 
-AET resolution for C-MOVE is configured via AET dictionary json file ("--aet_dictionary" command line parameter or "ENV_AETS_JSON" environment variable). Format: JSON array of objects containing name, host and port.
+Available AET destinations for C-MOVE are configured via an AET dictionary json file, 
+which can be specified either by using the "--aet_dictionary" command line parameter or 
+specifying the "ENV_AETS_JSON" environment variable.
+
+Here is an example JSON dictionary:
+```shell
+[
+	{
+		"name": "WEASIS", 
+		"host": "localhost", 
+		"port": 11113
+	},
+	{
+		"name": "AESKULAP", 
+		"host": "192.168.0.1", 
+		"port": 11114
+	},
+	{
+		"name": "GINKGO_001",
+		"host": "some.domain.name.com",
+		"port": 6666
+	},
+	...
+]
+```
 
 ```shell
 kubectl create configmap aet-dictionary --from-file=AETs.json
 ```
 
-Relevant part of yaml:
+The following configuration needs to be added to the dicom-adapter.yaml file to use CMOVE. 
+Please see the (link)[Deployment using Kubernetes] section for more information.
 ```yaml
 env:
 - name: ENV_AETS_JSON
@@ -51,7 +77,9 @@ For the list of events logged to Stackdriver for the Import Adapter, see [here](
 
 The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API (pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
 
-Relevant part of yaml configuration:
+The following configuration needs to be added to the dicom-adapter.yaml file to configure the 
+stackdriver monitoring resource. Please see the (link)[Deployment using Kubernetes] section 
+for more information.
 ```yaml
 env:
 - name: ENV_POD_NAME

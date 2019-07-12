@@ -93,7 +93,7 @@ public class CMoveService extends BasicCMoveSCP {
           log.info("CMove QidoPath: " + qidoPath);
         } catch (DicomServiceException e) {
           log.error("CMove QidoPath error");
-          sendErrorResponse(e.getStatus(), e.getMessage(), e.getDataset(), null);
+          sendErrorResponse(e.getStatus(), e.getMessage(), null);
           return;
         }
 
@@ -197,15 +197,14 @@ public class CMoveService extends BasicCMoveSCP {
     }
 
     private void sendErrorResponse(int status, String message) {
-      sendErrorResponse(status, message, null, null);
+      sendErrorResponse(status, message, null);
     }
 
     private void sendErrorResponse(int status, List<String> failedInstanceUids) {
-      sendErrorResponse(status, null, null, failedInstanceUids);
+      sendErrorResponse(status, null, failedInstanceUids);
     }
 
-    private void sendErrorResponse(int status, String message, Attributes dataset,
-        List<String> failedInstanceUids) {
+    private void sendErrorResponse(int status, String message, List<String> failedInstanceUids) {
       switch (status) {
         case Status.Cancel:
           MonitoringService.addEvent(Event.CMOVE_CANCEL);
@@ -222,7 +221,7 @@ public class CMoveService extends BasicCMoveSCP {
         return;
       }
 
-      Attributes attributes = dataset == null ? new Attributes() : dataset;
+      Attributes attributes = new Attributes();
       if (message != null) {
         attributes.setString(Tag.ErrorComment, VR.LO, message);
       }
