@@ -9,6 +9,46 @@ two components, namely import and export adapter.
 The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb requests and passes the converted results back to the DIMSE client. The following requests are supported:
 - C-STORE to STOW-RS
 - C-FIND to QIDO-RS
+- C-MOVE uses QIDO-RS to determine which instances to transfer, then for each instance executes a 
+WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination 
+
+Available AET destinations for C-MOVE are configured via an AET dictionary json file, 
+which can be specified either by using the "--aet_dictionary" command line parameter or 
+specifying the "ENV_AETS_JSON" environment variable.
+
+The following configuration needs to be added to the dicom-adapter.yaml file to use CMOVE. 
+Please see the [Deployment using Kubernetes](#deployment-using-kubernetes) section for more information.
+```yaml
+env:
+- name: ENV_AETS_JSON
+  valueFrom:
+    configMapKeyRef:
+      name: aet-dictionary
+      key: AETs.json
+```
+
+Here is an example JSON dictionary:
+```shell
+[
+	{
+		"name": "DEVICE_A", 
+		"host": "localhost", 
+		"port": 11113
+	},
+	{
+		"name": "DEVICE_B", 
+		"host": "192.168.0.1", 
+		"port": 11114
+	},
+	...
+]
+```
+
+And command to create configmap from it:
+
+```shell
+kubectl create configmap aet-dictionary --from-file=AETs.json
+```
 
 Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
 
@@ -34,7 +74,9 @@ For the list of events logged to Stackdriver for the Import Adapter, see [here](
 
 The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API (pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
 
-Relevant part of yaml configuration:
+The following configuration needs to be added to the dicom-adapter.yaml file to configure the 
+stackdriver monitoring resource. Please see the [Deployment using Kubernetes](#deployment-using-kubernetes) section 
+for more information.
 ```yaml
 env:
 - name: ENV_POD_NAME

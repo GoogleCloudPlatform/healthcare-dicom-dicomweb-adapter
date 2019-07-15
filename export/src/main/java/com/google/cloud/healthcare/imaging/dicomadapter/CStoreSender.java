@@ -32,7 +32,6 @@ import org.json.JSONObject;
 
 // CStoreSender sends DICOM to peer using DIMSE C-STORE protocol.
 public class CStoreSender implements DicomSender {
-  private static final String TRANSFER_SYNTAX_UID_TAG = TagUtils.toHexString(Tag.TransferSyntaxUID);
   private static final String SOP_CLASS_UID_TAG = TagUtils.toHexString(Tag.SOPClassUID);
   private static final String SOP_INSTANCE_UID_TAG = TagUtils.toHexString(Tag.SOPInstanceUID);
   private final ApplicationEntity applicationEntity;
@@ -65,8 +64,6 @@ public class CStoreSender implements DicomSender {
       throw new IllegalArgumentException(
           "Invalid QidoRS JSON array length for response: " + qidoResponse.toString());
     }
-    String transferSyntaxUid = AttributesUtil.getTagValue(qidoResponse.getJSONObject(0),
-        TRANSFER_SYNTAX_UID_TAG);
     String sopClassUid = AttributesUtil.getTagValue(qidoResponse.getJSONObject(0),
         SOP_CLASS_UID_TAG);
     String sopInstanceUid = AttributesUtil.getTagValue(qidoResponse.getJSONObject(0),
@@ -80,7 +77,7 @@ public class CStoreSender implements DicomSender {
     }
 
     CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
-    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, transferSyntaxUid, countingStream,
+    DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, countingStream,
         applicationEntity, dimsePeerAET, dimsePeerIP, dimsePeerPort);
     MonitoringService.addEvent(Event.BYTES, countingStream.getCount());
   }
@@ -93,8 +90,8 @@ public class CStoreSender implements DicomSender {
     Path wadoParentPath = wadoPath.getParent();
     String qidoUri =
         String.format(
-            "%s?%s=%s&includefield=%s",
-            wadoParentPath.toString(), SOP_INSTANCE_UID_TAG, instanceUid, TRANSFER_SYNTAX_UID_TAG);
+            "%s?%s=%s",
+            wadoParentPath.toString(), SOP_INSTANCE_UID_TAG, instanceUid);
     return qidoUri;
   }
 }

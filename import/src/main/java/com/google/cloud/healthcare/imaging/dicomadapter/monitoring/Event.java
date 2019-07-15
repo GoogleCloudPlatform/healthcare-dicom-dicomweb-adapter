@@ -11,7 +11,17 @@ public enum Event implements IMonitoringEvent {
   CFIND_ERROR(Constants.prefix + "cfind_errors"),
   CFIND_CANCEL(Constants.prefix + "cfind_cancels"),
   CFIND_QIDORS_REQUEST(Constants.prefix + "cfind_qidors_requests"),
-  CFIND_QIDORS_ERROR(Constants.prefix + "cfind_qidors_errors");
+  CFIND_QIDORS_ERROR(Constants.prefix + "cfind_qidors_errors"),
+
+  CMOVE_REQUEST(Constants.prefix + "cmove_requests"),
+  CMOVE_ERROR(Constants.prefix + "cmove_errors"),
+  CMOVE_WARNING(Constants.prefix + "cmove_warnings"),
+  CMOVE_CANCEL(Constants.prefix + "cmove_cancels"),
+  CMOVE_QIDORS_REQUEST(Constants.prefix + "cmove_qidors_requests"),
+  CMOVE_QIDORS_ERROR(Constants.prefix + "cmove_qidors_errors"),
+  CMOVE_CSTORE_REQUEST(Constants.prefix + "cmove_cstore_requests"),
+  CMOVE_CSTORE_ERROR(Constants.prefix + "cmove_cstore_errors"),
+  CMOVE_CSTORE_BYTES(Constants.prefix + "cmove_cstore_bytes");
 
   private final String metricName;
 

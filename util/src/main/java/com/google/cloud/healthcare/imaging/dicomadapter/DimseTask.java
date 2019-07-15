@@ -37,6 +37,10 @@ abstract class DimseTask implements Runnable, CancelRQHandler {
       canceled = true;
       synchronized (this) {
         if (runThread != null) {
+          // Note that interrupt does not kill the thread and instead leads to InterruptedException
+          // being thrown by most long duration methods (if used in subclasses).
+          // Subclasses need to make sure to set runThread, provide response even if interrupted
+          // (catch clause) and cleanup cancelRQHandler (finally clause)
           runThread.interrupt();
         }
       }
