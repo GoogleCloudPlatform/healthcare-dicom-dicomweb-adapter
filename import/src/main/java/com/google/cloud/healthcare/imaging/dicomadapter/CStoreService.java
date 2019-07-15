@@ -92,13 +92,16 @@ public class CStoreService extends BasicCStoreSCP {
         HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
         httpRequest.execute();
       } catch (IOException e) {
-        if (e instanceof HttpResponseException &&
-            ((HttpResponseException) e).getStatusCode() ==
-                HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE) {
-          throw new DicomServiceException(Status.OutOfResources, e);
-        } else {
-          throw e;
+        if (e instanceof HttpResponseException) {
+          int status_code = ((HttpResponseException) e).getStatusCode();
+          switch (status_code) {
+            case HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE:
+              throw new DicomServiceException(Status.OutOfResources, e);
+            case HttpStatusCodes.STATUS_CODE_UNAUTHORIZED:
+              throw new DicomServiceException(Status.NotAuthorized, e);
+          }
         }
+        throw e;
       }
 
       log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",

@@ -134,7 +134,7 @@ public final class CStoreServiceTest {
     basicCStoreServiceTest(
         false,
         HttpStatusCodes.STATUS_CODE_UNAUTHORIZED,
-        Status.ProcessingFailure);
+        Status.NotAuthorized);
   }
 
   @Test
