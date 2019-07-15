@@ -16,34 +16,8 @@ Available AET destinations for C-MOVE are configured via an AET dictionary json 
 which can be specified either by using the "--aet_dictionary" command line parameter or 
 specifying the "ENV_AETS_JSON" environment variable.
 
-Here is an example JSON dictionary:
-```shell
-[
-	{
-		"name": "WEASIS", 
-		"host": "localhost", 
-		"port": 11113
-	},
-	{
-		"name": "AESKULAP", 
-		"host": "192.168.0.1", 
-		"port": 11114
-	},
-	{
-		"name": "GINKGO_001",
-		"host": "some.domain.name.com",
-		"port": 6666
-	},
-	...
-]
-```
-
-```shell
-kubectl create configmap aet-dictionary --from-file=AETs.json
-```
-
 The following configuration needs to be added to the dicom-adapter.yaml file to use CMOVE. 
-Please see the (link)[Deployment using Kubernetes] section for more information.
+Please see the [Deployment using Kubernetes](#deployment-using-kubernetes) section for more information.
 ```yaml
 env:
 - name: ENV_AETS_JSON
@@ -51,6 +25,29 @@ env:
     configMapKeyRef:
       name: aet-dictionary
       key: AETs.json
+```
+
+Here is an example JSON dictionary:
+```shell
+[
+	{
+		"name": "DEVICE_A", 
+		"host": "localhost", 
+		"port": 11113
+	},
+	{
+		"name": "DEVICE_B", 
+		"host": "192.168.0.1", 
+		"port": 11114
+	},
+	...
+]
+```
+
+And command to create configmap from it:
+
+```shell
+kubectl create configmap aet-dictionary --from-file=AETs.json
 ```
 
 Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
@@ -78,7 +75,7 @@ For the list of events logged to Stackdriver for the Import Adapter, see [here](
 The monitored resource is configured as k8s_container, with values set from a combination of environment variables configured via Downward API (pod name, pod namespace and container name) and GCP Metadata (project id, cluster name and location). Defaults to the global resource, if k8s_container can't be configured.
 
 The following configuration needs to be added to the dicom-adapter.yaml file to configure the 
-stackdriver monitoring resource. Please see the (link)[Deployment using Kubernetes] section 
+stackdriver monitoring resource. Please see the [Deployment using Kubernetes](#deployment-using-kubernetes) section 
 for more information.
 ```yaml
 env:
