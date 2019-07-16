@@ -155,7 +155,7 @@ public class CMoveService extends BasicCMoveSCP {
         MonitoringService.addEvent(Event.CMOVE_QIDORS_ERROR);
         log.error("CMove qido-rs error", e);
         sendErrorResponse(e.getStatus(), e.getMessage());
-      }catch (Throwable e) {
+      } catch (Throwable e) {
         log.error("Failure processing CMove", e);
         sendErrorResponse(Status.ProcessingFailure, e.getMessage());
       } finally {
