@@ -98,17 +98,11 @@ public class CMoveService extends BasicCMoveSCP {
         }
 
         JSONArray qidoResult;
-        try {
-          MonitoringService.addEvent(Event.CMOVE_QIDORS_REQUEST);
-          qidoResult = dicomWebClient.qidoRs(qidoPath);
-          if (qidoResult == null || qidoResult.length() == 0) {
-            throw new IDicomWebClient.DicomWebException("No instances to move");
-          }
-        } catch (IDicomWebClient.DicomWebException e) {
-          MonitoringService.addEvent(Event.CMOVE_QIDORS_ERROR);
-          log.error("Failed QidoRs for CMove", e);
-          sendErrorResponse(Status.UnableToCalculateNumberOfMatches, e.getMessage());
-          return;
+        MonitoringService.addEvent(Event.CMOVE_QIDORS_REQUEST);
+        qidoResult = dicomWebClient.qidoRs(qidoPath);
+        if (qidoResult == null || qidoResult.length() == 0) {
+          throw new IDicomWebClient.DicomWebException("No instances to move",
+              Status.UnableToCalculateNumberOfMatches);
         }
 
         cstoreSender = cstoreSenderFactory.create();
@@ -157,7 +151,11 @@ public class CMoveService extends BasicCMoveSCP {
       } catch (CancellationException | InterruptedException e) {
         log.info("Canceled CMove", e);
         sendErrorResponse(Status.Cancel, failedInstanceUids);
-      } catch (Throwable e) {
+      } catch (IDicomWebClient.DicomWebException e) {
+        MonitoringService.addEvent(Event.CMOVE_QIDORS_ERROR);
+        log.error("CMove qido-rs error", e);
+        sendErrorResponse(e.getStatus(), e.getMessage());
+      }catch (Throwable e) {
         log.error("Failure processing CMove", e);
         sendErrorResponse(Status.ProcessingFailure, e.getMessage());
       } finally {

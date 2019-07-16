@@ -130,25 +130,19 @@ public final class CFindServiceTest {
     basicCFindServiceTest(new DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
-        // this got needlessly complicated, but I see no other way around
-        HttpResponseException.Builder builder = new HttpResponseException.Builder(
-            HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE,
-            "test-generated exception",
-            new HttpHeaders()
-        );
-        try {
-          Constructor<?> ctor = HttpResponseException.class.getDeclaredConstructor(
-              HttpResponseException.Builder.class);
-          ctor.setAccessible(true);
-          HttpResponseException responseException = (HttpResponseException)
-              ctor.newInstance(builder);
-          throw new DicomWebException(responseException);
-        } catch (NoSuchMethodException | InstantiationException
-            | IllegalAccessException | InvocationTargetException e) {
-          throw new DicomWebException(e);
-        }
+          throw new DicomWebException("test-generated exception", Status.OutOfResources);
       }
     }, Status.OutOfResources);
+  }
+
+  @Test
+  public void testCFindService_notAuthorized() throws Exception {
+    basicCFindServiceTest(new DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+        throw new DicomWebException("test-generated exception", Status.NotAuthorized);
+      }
+    }, Status.NotAuthorized);
   }
 
   public void basicCFindServiceTest(IDicomWebClient serverDicomWebClient,

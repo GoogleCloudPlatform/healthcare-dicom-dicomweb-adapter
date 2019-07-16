@@ -19,6 +19,7 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.UUID;
 import javax.inject.Inject;
+import org.dcm4che3.net.Status;
 import org.json.JSONArray;
 
 /**
@@ -78,17 +80,26 @@ public class DicomWebClient implements IDicomWebClient {
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
       HttpResponse httpResponse = httpRequest.execute();
 
-      if (!httpResponse.isSuccessStatusCode()) {
-        throw new IDicomWebClient.DicomWebException(
-            String.format(
-                "QidoRs: %d, %s", httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
-      }
       // dcm4che server can return 204 responses.
       if (httpResponse.getStatusCode() == HttpStatusCodes.STATUS_CODE_NO_CONTENT) {
         return new JSONArray();
       }
       return new JSONArray(
           CharStreams.toString(new InputStreamReader(httpResponse.getContent(), "UTF-8")));
+    } catch (HttpResponseException e) {
+      int dicomStatus = Status.UnableToCalculateNumberOfMatches;
+      switch (e.getStatusCode()) {
+        case HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE:
+          dicomStatus = Status.OutOfResources;
+          break;
+        case HttpStatusCodes.STATUS_CODE_UNAUTHORIZED:
+          dicomStatus = Status.NotAuthorized;
+          break;
+      }
+      throw new IDicomWebClient.DicomWebException(
+          String.format(
+              "QidoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
+          dicomStatus);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
