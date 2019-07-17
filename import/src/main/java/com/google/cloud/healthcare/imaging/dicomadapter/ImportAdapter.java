@@ -72,13 +72,13 @@ public class ImportAdapter {
     serviceRegistry.addDicomService(new BasicCEchoSCP());
 
     // Handle C-STORE
+    DicomWebClient dicomWebClient =
+        new DicomWebClient(requestFactory, flags.dicomwebAddr);
     CStoreService cStoreService =
-        new CStoreService(flags.dicomwebAddr, flags.dicomwebStowPath, requestFactory);
+        new CStoreService(flags.dicomwebStowPath, dicomWebClient);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
-    DicomWebClient dicomWebClient =
-        new DicomWebClient(requestFactory, flags.dicomwebAddr);
     CFindService cFindService = new CFindService(dicomWebClient);
     serviceRegistry.addDicomService(cFindService);
 

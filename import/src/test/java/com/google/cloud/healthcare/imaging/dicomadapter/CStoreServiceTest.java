@@ -21,6 +21,7 @@ import com.google.api.client.http.LowLevelHttpResponse;
 import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
+import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import com.google.cloud.healthcare.util.TestUtils;
@@ -91,8 +92,10 @@ public final class CStoreServiceTest {
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
     HttpRequestFactory httpRequestFactory = createHttpRequestFactory(connectError, responseCode);
+    DicomWebClient dicomWebClient =
+        new DicomWebClient(httpRequestFactory, "https://doesnotexist");
     CStoreService cStoreService =
-        new CStoreService("https://localhost:443", "/studies", httpRequestFactory);
+        new CStoreService("/studies", dicomWebClient);
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();

@@ -30,7 +30,7 @@ public class CFindService extends BasicCFindSCP {
 
   private static Logger log = LoggerFactory.getLogger(CFindService.class);
 
-  private IDicomWebClient dicomWebClient;
+  private final IDicomWebClient dicomWebClient;
 
   CFindService(IDicomWebClient dicomWebClient) {
     super(UID.StudyRootQueryRetrieveInformationModelFIND);
@@ -121,7 +121,7 @@ public class CFindService extends BasicCFindSCP {
         MonitoringService.addEvent(Event.CFIND_CANCEL);
         as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.Cancel));
       } catch (IDicomWebClient.DicomWebException e) {
-        log.error("CFind qido-rs error:", e);
+        log.error("CFind qido-rs error", e);
         MonitoringService.addEvent(Event.CFIND_QIDORS_ERROR);
         as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, e.getStatus()), e.getAttributes());
       } catch (Throwable e) {
