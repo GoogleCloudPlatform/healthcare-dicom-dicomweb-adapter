@@ -72,7 +72,7 @@ public class CStoreService extends BasicCStoreSCP {
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
-      dicomWebClient.stowRs( path, inBuffer);
+      dicomWebClient.stowRs(path, inBuffer);
 
       log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
           association.toString(), sopClassUID, transferSyntax, remoteAeTitle);

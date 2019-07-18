@@ -5,8 +5,8 @@ import java.io.InputStream;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
-import org.json.JSONArray;
 import org.dcm4che3.net.Status;
+import org.json.JSONArray;
 
 public interface IDicomWebClient {
 
@@ -41,11 +41,11 @@ public interface IDicomWebClient {
       super(cause);
     }
 
-    public int getStatus(){
+    public int getStatus() {
       return status;
     }
 
-    public Attributes getAttributes(){
+    public Attributes getAttributes() {
       Attributes attrs = new Attributes();
       attrs.setString(Tag.ErrorComment, VR.LO, getMessage());
       return attrs;
