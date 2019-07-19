@@ -21,7 +21,10 @@ public enum Event implements IMonitoringEvent {
   CMOVE_QIDORS_ERROR(Constants.prefix + "cmove_qidors_errors"),
   CMOVE_CSTORE_REQUEST(Constants.prefix + "cmove_cstore_requests"),
   CMOVE_CSTORE_ERROR(Constants.prefix + "cmove_cstore_errors"),
-  CMOVE_CSTORE_BYTES(Constants.prefix + "cmove_cstore_bytes");
+  CMOVE_CSTORE_BYTES(Constants.prefix + "cmove_cstore_bytes"),
+
+  COMMITMENT_REQUEST(Constants.prefix + "commitment_requests"),
+  COMMITMENT_ERROR(Constants.prefix + "commitment_errors");
 
   private final String metricName;
 

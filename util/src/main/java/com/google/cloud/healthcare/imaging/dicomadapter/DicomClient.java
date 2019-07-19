@@ -54,6 +54,15 @@ public class DicomClient {
     AAssociateRQ rq = new AAssociateRQ();
     rq.addPresentationContext(pc);
     rq.setCalledAET(peerAET);
+    return associatePeer(clientAE, peerHostname, peerPort, rq);
+  }
+
+  public static DicomClient associatePeer(
+      ApplicationEntity clientAE,
+      String peerHostname,
+      int peerPort,
+      AAssociateRQ rq)
+      throws IOException, InterruptedException, IncompatibleConnectionException, GeneralSecurityException {
     Connection remoteConn = new Connection();
     remoteConn.setHostname(peerHostname);
     remoteConn.setPort(peerPort);
