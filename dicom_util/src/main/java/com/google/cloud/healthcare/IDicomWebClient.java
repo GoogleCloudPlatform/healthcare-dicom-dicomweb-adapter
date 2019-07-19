@@ -33,6 +33,11 @@ public interface IDicomWebClient {
       this.status = status;
     }
 
+    public DicomWebException(String message, Throwable cause, int status) {
+      super(message, cause);
+      this.status = status;
+    }
+
     public DicomWebException(String message) {
       super(message);
     }

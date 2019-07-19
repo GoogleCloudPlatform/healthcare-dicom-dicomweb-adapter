@@ -24,6 +24,7 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
+import com.google.common.base.CharMatcher;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,7 +51,7 @@ public class DicomWebClient implements IDicomWebClient {
       HttpRequestFactory requestFactory,
       @Annotations.DicomwebAddr String serviceUrlPrefix) {
     this.requestFactory = requestFactory;
-    this.serviceUrlPrefix = serviceUrlPrefix;
+    this.serviceUrlPrefix = trim(serviceUrlPrefix);
   }
 
   /**
@@ -59,7 +60,8 @@ public class DicomWebClient implements IDicomWebClient {
   public MultipartInput wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
+          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
+              + trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       return new MultipartInput(httpResponse.getContent(), httpResponse.getContentType());
@@ -78,7 +80,8 @@ public class DicomWebClient implements IDicomWebClient {
   public JSONArray qidoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
+          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
+              + trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       // dcm4che server can return 204 responses.
@@ -104,7 +107,7 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
-    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + path);
+    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + trim(path));
 
     // DICOM "Type" parameter:
     // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
@@ -139,6 +142,10 @@ public class DicomWebClient implements IDicomWebClient {
         dicomStatus = Status.NotAuthorized;
         break;
     }
-    return new IDicomWebClient.DicomWebException(message, dicomStatus);
+    return new IDicomWebClient.DicomWebException(message, httpException, dicomStatus);
+  }
+
+  private String trim(String value) {
+    return CharMatcher.is('/').trimFrom(value);
   }
 }
