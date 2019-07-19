@@ -15,16 +15,11 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.github.danieln.multipart.MultipartInput;
-import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.http.HttpResponseException;
-import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
 import org.dcm4che3.data.Attributes;
@@ -130,25 +125,19 @@ public final class CFindServiceTest {
     basicCFindServiceTest(new DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
-        // this got needlessly complicated, but I see no other way around
-        HttpResponseException.Builder builder = new HttpResponseException.Builder(
-            HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE,
-            "test-generated exception",
-            new HttpHeaders()
-        );
-        try {
-          Constructor<?> ctor = HttpResponseException.class.getDeclaredConstructor(
-              HttpResponseException.Builder.class);
-          ctor.setAccessible(true);
-          HttpResponseException responseException = (HttpResponseException)
-              ctor.newInstance(builder);
-          throw new DicomWebException(responseException);
-        } catch (NoSuchMethodException | InstantiationException
-            | IllegalAccessException | InvocationTargetException e) {
-          throw new DicomWebException(e);
-        }
+        throw new DicomWebException("test-generated exception", Status.OutOfResources);
       }
     }, Status.OutOfResources);
+  }
+
+  @Test
+  public void testCFindService_notAuthorized() throws Exception {
+    basicCFindServiceTest(new DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+        throw new DicomWebException("test-generated exception", Status.NotAuthorized);
+      }
+    }, Status.NotAuthorized);
   }
 
   public void basicCFindServiceTest(IDicomWebClient serverDicomWebClient,

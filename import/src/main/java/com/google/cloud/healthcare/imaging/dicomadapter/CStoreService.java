@@ -14,20 +14,13 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpMediaType;
-import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpRequestFactory;
-import com.google.api.client.http.HttpResponseException;
-import com.google.api.client.http.HttpStatusCodes;
-import com.google.api.client.http.InputStreamContent;
-import com.google.api.client.http.MultipartContent;
+import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.UUID;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -47,14 +40,12 @@ public class CStoreService extends BasicCStoreSCP {
 
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
-  private String apiAddr;
-  private String path;
-  private HttpRequestFactory requestFactory;
+  private final String path;
+  private final IDicomWebClient dicomWebClient;
 
-  CStoreService(String apiAddr, String path, HttpRequestFactory requestFactory) {
-    this.apiAddr = apiAddr;
+  CStoreService(String path, IDicomWebClient dicomWebClient) {
     this.path = path;
-    this.requestFactory = requestFactory;
+    this.dicomWebClient = dicomWebClient;
   }
 
   @Override
@@ -81,38 +72,22 @@ public class CStoreService extends BasicCStoreSCP {
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
-      MultipartContent content = new MultipartContent();
-      content.setMediaType(new HttpMediaType("multipart/related; type=\"application/dicom\""));
-      content.setBoundary(UUID.randomUUID().toString());
-      InputStreamContent dicomStream = new InputStreamContent("application/dicom", inBuffer);
-      content.addPart(new MultipartContent.Part(dicomStream));
-
-      GenericUrl url = new GenericUrl(apiAddr + path);
-      try {
-        HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
-        httpRequest.execute();
-      } catch (IOException e) {
-        if (e instanceof HttpResponseException &&
-            ((HttpResponseException) e).getStatusCode() ==
-                HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE) {
-          throw new DicomServiceException(Status.OutOfResources, e);
-        } else {
-          throw e;
-        }
-      }
+      dicomWebClient.stowRs(path, inBuffer);
 
       log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
           association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
       response.setInt(Tag.Status, VR.US, Status.Success);
 
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
+    } catch (DicomWebException e) {
+      MonitoringService.addEvent(Event.CSTORE_ERROR);
+      throw new DicomServiceException(e.getStatus(), e.getMessage(), e);
+    } catch (DicomServiceException e) {
+      MonitoringService.addEvent(Event.CSTORE_ERROR);
+      throw e;
     } catch (Throwable e) {
       MonitoringService.addEvent(Event.CSTORE_ERROR);
-      if (e instanceof DicomServiceException) {
-        throw e;
-      } else {
-        throw new DicomServiceException(Status.ProcessingFailure, e);
-      }
+      throw new DicomServiceException(Status.ProcessingFailure, e);
     }
   }
 

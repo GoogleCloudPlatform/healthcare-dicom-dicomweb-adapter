@@ -131,13 +131,24 @@ public final class CMoveServiceTest {
   }
 
   @Test
-  public void testCMoveService_qidoRsFail() throws Exception {
+  public void testCMoveService_qidoRs_genericFail() throws Exception {
     basicCMoveServiceTest(new DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
-        throw new IDicomWebClient.DicomWebException("QidoRs Fail");
+        throw new IDicomWebClient.DicomWebException("QidoRs Fail",
+            Status.UnableToCalculateNumberOfMatches);
       }
     }, Status.UnableToCalculateNumberOfMatches);
+  }
+
+  @Test
+  public void testCMoveService_qidoRs_notAuthorized() throws Exception {
+    basicCMoveServiceTest(new DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+        throw new IDicomWebClient.DicomWebException("QidoRs Fail", Status.NotAuthorized);
+      }
+    }, Status.NotAuthorized);
   }
 
   @Test

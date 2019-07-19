@@ -102,12 +102,13 @@ public class CMoveService extends BasicCMoveSCP {
           MonitoringService.addEvent(Event.CMOVE_QIDORS_REQUEST);
           qidoResult = dicomWebClient.qidoRs(qidoPath);
           if (qidoResult == null || qidoResult.length() == 0) {
-            throw new IDicomWebClient.DicomWebException("No instances to move");
+            throw new IDicomWebClient.DicomWebException("No instances to move",
+                Status.UnableToCalculateNumberOfMatches);
           }
         } catch (IDicomWebClient.DicomWebException e) {
           MonitoringService.addEvent(Event.CMOVE_QIDORS_ERROR);
-          log.error("Failed QidoRs for CMove", e);
-          sendErrorResponse(Status.UnableToCalculateNumberOfMatches, e.getMessage());
+          log.error("CMove qido-rs error", e);
+          sendErrorResponse(e.getStatus(), e.getMessage());
           return;
         }
 

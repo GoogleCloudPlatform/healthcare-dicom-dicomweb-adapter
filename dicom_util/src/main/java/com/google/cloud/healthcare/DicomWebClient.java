@@ -16,18 +16,23 @@ package com.google.cloud.healthcare;
 
 import com.github.danieln.multipart.MultipartInput;
 import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
+import com.google.common.base.CharMatcher;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import javax.inject.Inject;
+import org.dcm4che3.net.Status;
 import org.json.JSONArray;
 
 /**
@@ -46,7 +51,7 @@ public class DicomWebClient implements IDicomWebClient {
       HttpRequestFactory requestFactory,
       @Annotations.DicomwebAddr String serviceUrlPrefix) {
     this.requestFactory = requestFactory;
-    this.serviceUrlPrefix = serviceUrlPrefix;
+    this.serviceUrlPrefix = trim(serviceUrlPrefix);
   }
 
   /**
@@ -55,15 +60,15 @@ public class DicomWebClient implements IDicomWebClient {
   public MultipartInput wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
+          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
+              + trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
-      if (!httpResponse.isSuccessStatusCode()) {
-        throw new IDicomWebClient.DicomWebException(
-            String.format(
-                "WadoRs: %d, %s", httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
-      }
       return new MultipartInput(httpResponse.getContent(), httpResponse.getContentType());
+    } catch (HttpResponseException e) {
+      throw httpToDicomWebException(e,
+          String.format("WadoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
+          Status.ProcessingFailure);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
@@ -75,20 +80,21 @@ public class DicomWebClient implements IDicomWebClient {
   public JSONArray qidoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/" + path));
+          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
+              + trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
-      if (!httpResponse.isSuccessStatusCode()) {
-        throw new IDicomWebClient.DicomWebException(
-            String.format(
-                "QidoRs: %d, %s", httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
-      }
       // dcm4che server can return 204 responses.
       if (httpResponse.getStatusCode() == HttpStatusCodes.STATUS_CODE_NO_CONTENT) {
         return new JSONArray();
       }
       return new JSONArray(
-          CharStreams.toString(new InputStreamReader(httpResponse.getContent(), "UTF-8")));
+          CharStreams
+              .toString(new InputStreamReader(httpResponse.getContent(), StandardCharsets.UTF_8)));
+    } catch (HttpResponseException e) {
+      throw httpToDicomWebException(e,
+          String.format("QidoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
+          Status.UnableToCalculateNumberOfMatches);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
@@ -101,28 +107,45 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
-    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + path);
-    MultipartContent content = new MultipartContent();
+    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + trim(path));
 
     // DICOM "Type" parameter:
     // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
-    content.setMediaType(content.getMediaType().setParameter("type", "\"application/dicom\""));
+    MultipartContent content = new MultipartContent();
+    content.setMediaType(new HttpMediaType("multipart/related; type=\"application/dicom\""));
     content.setBoundary(UUID.randomUUID().toString());
     InputStreamContent dicomStream = new InputStreamContent("application/dicom", in);
     content.addPart(new MultipartContent.Part(dicomStream));
 
-    HttpResponse httpResponse = null;
     try {
       HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
-      httpResponse = httpRequest.execute();
+      httpRequest.execute();
+    } catch (HttpResponseException e) {
+      throw httpToDicomWebException(e,
+          String.format("StowRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
+          Status.ProcessingFailure);
     } catch (IOException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
+  }
 
-    if (!httpResponse.isSuccessStatusCode()) {
-      throw new IDicomWebClient.DicomWebException(
-          String.format("StowRs: %d, %s.",
-              httpResponse.getStatusCode(), httpResponse.getStatusMessage()));
+  private IDicomWebClient.DicomWebException httpToDicomWebException(
+      HttpResponseException httpException,
+      String message,
+      int defaultStatus) {
+    int dicomStatus = defaultStatus;
+    switch (httpException.getStatusCode()) {
+      case HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE:
+        dicomStatus = Status.OutOfResources;
+        break;
+      case HttpStatusCodes.STATUS_CODE_UNAUTHORIZED:
+        dicomStatus = Status.NotAuthorized;
+        break;
     }
+    return new IDicomWebClient.DicomWebException(message, httpException, dicomStatus);
+  }
+
+  private String trim(String value) {
+    return CharMatcher.is('/').trimFrom(value);
   }
 }

@@ -1,7 +1,5 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.google.api.client.http.HttpResponseException;
-import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -32,7 +30,7 @@ public class CFindService extends BasicCFindSCP {
 
   private static Logger log = LoggerFactory.getLogger(CFindService.class);
 
-  private IDicomWebClient dicomWebClient;
+  private final IDicomWebClient dicomWebClient;
 
   CFindService(IDicomWebClient dicomWebClient) {
     super(UID.StudyRootQueryRetrieveInformationModelFIND);
@@ -104,22 +102,9 @@ public class CFindService extends BasicCFindSCP {
             throw new CancellationException();
           }
           log.info("CFind QidoPath: " + qidoPath);
-          try {
-            MonitoringService.addEvent(Event.CFIND_QIDORS_REQUEST);
-            JSONArray qidoResult = dicomWebClient.qidoRs(qidoPath);
-            qidoResults.add(qidoResult);
-          } catch (IDicomWebClient.DicomWebException e) {
-            MonitoringService.addEvent(Event.CFIND_QIDORS_ERROR);
-            if (e.getCause() instanceof HttpResponseException &&
-                ((HttpResponseException) e.getCause()).getStatusCode() ==
-                    HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE) {
-              MonitoringService.addEvent(Event.CFIND_ERROR);
-              as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.OutOfResources));
-              return;
-            } else {
-              throw e;
-            }
-          }
+          MonitoringService.addEvent(Event.CFIND_QIDORS_REQUEST);
+          JSONArray qidoResult = dicomWebClient.qidoRs(qidoPath);
+          qidoResults.add(qidoResult);
         }
         HashMap<String, JSONObject> uniqueResults = uniqueResults(qidoResults);
 
@@ -135,6 +120,10 @@ public class CFindService extends BasicCFindSCP {
         log.info("Canceled CFind", e);
         MonitoringService.addEvent(Event.CFIND_CANCEL);
         as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.Cancel));
+      } catch (IDicomWebClient.DicomWebException e) {
+        log.error("CFind qido-rs error", e);
+        MonitoringService.addEvent(Event.CFIND_QIDORS_ERROR);
+        as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, e.getStatus()), e.getAttributes());
       } catch (Throwable e) {
         log.error("Failure processing CFind", e);
         MonitoringService.addEvent(Event.CFIND_ERROR);
