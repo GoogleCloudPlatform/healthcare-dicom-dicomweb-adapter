@@ -191,9 +191,6 @@ public class StorageCommitmentService extends AbstractDicomService {
       AAssociateRQ aarq = new AAssociateRQ();
       aarq.setCallingAET(applicationEntity.getAETitle());
       aarq.setCalledAET(remoteAet.getName());
-      TransferCapability tc = applicationEntity.getTransferCapabilityFor(
-          UID.StorageCommitmentPushModelSOPClass,
-          TransferCapability.Role.SCP);
       aarq.addPresentationContext(
           new PresentationContext(
               1,
