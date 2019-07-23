@@ -19,7 +19,6 @@ import org.dcm4che3.net.Commands;
 import org.dcm4che3.net.Dimse;
 import org.dcm4che3.net.FutureDimseRSP;
 import org.dcm4che3.net.Status;
-import org.dcm4che3.net.TransferCapability;
 import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.pdu.RoleSelection;
