@@ -45,11 +45,19 @@ public class StorageCommitmentService extends AbstractDicomService {
   @Override
   protected void onDimseRQ(Association as, PresentationContext pc, Dimse dimse, Attributes cmd,
       Attributes data) throws IOException {
-    if (dimse != Dimse.N_ACTION_RQ ||
-        !cmd.getString(Tag.RequestedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass) ||
-        !cmd.getString(Tag.RequestedSOPInstanceUID)
-            .equals(UID.StorageCommitmentPushModelSOPInstance)) {
+    if (dimse != Dimse.N_ACTION_RQ) {
       throw new DicomServiceException(Status.UnrecognizedOperation);
+    }
+    if (!cmd.getString(Tag.RequestedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass)) {
+      throw new DicomServiceException(Status.NoSuchSOPclass);
+    }
+    if (!cmd.getString(Tag.RequestedSOPInstanceUID)
+        .equals(UID.StorageCommitmentPushModelSOPInstance)) {
+      throw new DicomServiceException(Status.NoSuchObjectInstance);
+    }
+    int eventTypeID = cmd.getInt(Tag.EventTypeID, 0);
+    if (eventTypeID != 1) {
+      throw new DicomServiceException(Status.NoSuchEventType).setEventTypeID(eventTypeID);
     }
 
     MonitoringService.addEvent(Event.COMMITMENT_REQUEST);
