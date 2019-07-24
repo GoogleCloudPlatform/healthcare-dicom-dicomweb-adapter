@@ -55,7 +55,7 @@ public class StorageCommitmentService extends AbstractDicomService {
         .equals(UID.StorageCommitmentPushModelSOPInstance)) {
       throw new DicomServiceException(Status.NoSuchObjectInstance);
     }
-    int eventTypeID = cmd.getInt(Tag.EventTypeID, 0);
+    int eventTypeID = cmd.getInt(Tag.ActionTypeID, 0);
     if (eventTypeID != 1) {
       throw new DicomServiceException(Status.NoSuchEventType).setEventTypeID(eventTypeID);
     }
