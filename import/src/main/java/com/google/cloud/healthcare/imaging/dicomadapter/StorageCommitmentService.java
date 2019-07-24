@@ -237,8 +237,9 @@ public class StorageCommitmentService extends AbstractDicomService {
         Sequence sequence = attrs.newSequence(tag, items.size());
         for (CommitmentItem item : items) {
           Attributes seqElementAttributes = new Attributes();
-          seqElementAttributes.setString(Tag.SOPInstanceUID, VR.UI, item.getInstanceUid());
-          seqElementAttributes.setString(Tag.SOPClassUID, VR.UI, item.getClassUid());
+          seqElementAttributes
+              .setString(Tag.ReferencedSOPInstanceUID, VR.UI, item.getInstanceUid());
+          seqElementAttributes.setString(Tag.ReferencedSOPClassUID, VR.UI, item.getClassUid());
           if (item.getFailureReason() != null) {
             seqElementAttributes.setInt(Tag.FailureReason, VR.US, item.getFailureReason());
           }
