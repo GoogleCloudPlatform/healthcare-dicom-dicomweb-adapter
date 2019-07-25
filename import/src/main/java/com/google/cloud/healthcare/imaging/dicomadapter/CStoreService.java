@@ -96,16 +96,4 @@ public class CStoreService extends BasicCStoreSCP {
       throw new DicomServiceException(Status.CannotUnderstand, "Mandatory tag empty: " + name);
     }
   }
-
-  @Override
-  public void onClose(Association association) {
-    // Handle any exceptions that may have been caused by aborts or C-Store request processing.
-    String associationName = association.toString();
-    if (association.getException() != null) {
-      log.error("Exception while handling association " + associationName,
-          association.getException());
-    } else {
-      log.info("Association {} finished successfully.", associationName);
-    }
-  }
 }

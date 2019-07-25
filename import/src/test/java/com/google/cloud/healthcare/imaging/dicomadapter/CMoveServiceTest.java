@@ -14,7 +14,6 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.github.danieln.multipart.MultipartInput;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.ICStoreSender;
@@ -22,7 +21,6 @@ import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.ICStoreSend
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.concurrent.Executors;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
@@ -37,9 +35,7 @@ import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
-import org.dcm4che3.util.TagUtils;
 import org.json.JSONArray;
-import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,23 +56,6 @@ public final class CMoveServiceTest {
   // Client properties.
   ApplicationEntity clientAE;
 
-  private static JSONObject dummyQidorsInstance() {
-    JSONObject instance = new JSONObject();
-    instance.put(TagUtils.toHexString(Tag.StudyInstanceUID), dummyQidorsTag());
-    instance.put(TagUtils.toHexString(Tag.SeriesInstanceUID), dummyQidorsTag());
-    instance.put(TagUtils.toHexString(Tag.SOPInstanceUID), dummyQidorsTag());
-    instance.put(TagUtils.toHexString(Tag.SOPClassUID), dummyQidorsTag());
-    return instance;
-  }
-
-  private static JSONObject dummyQidorsTag() {
-    JSONObject tagContents = new JSONObject();
-    JSONArray tagValues = new JSONArray();
-    tagValues.put("1");
-    tagContents.put("Value", tagValues);
-    return tagContents;
-  }
-
   @Before
   public void setUp() throws Exception {
     LogUtil.Log4jToStdout();
@@ -94,11 +73,11 @@ public final class CMoveServiceTest {
 
   @Test
   public void testCMoveService_success() throws Exception {
-    basicCMoveServiceTest(new DicomWebClientTestBase() {
+    basicCMoveServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
         JSONArray instances = new JSONArray();
-        instances.put(dummyQidorsInstance());
+        instances.put(TestUtils.dummyQidorsInstance());
         return instances;
       }
     }, Status.Success);
@@ -106,7 +85,7 @@ public final class CMoveServiceTest {
 
   @Test
   public void testCMoveService_processingFailure() throws Exception {
-    basicCMoveServiceTest(new DicomWebClientTestBase() {
+    basicCMoveServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
         throw new NullPointerException();
@@ -117,11 +96,11 @@ public final class CMoveServiceTest {
   @Test
   public void testCMoveService_unknownDestinationAet() throws Exception {
     basicCMoveServiceTest(
-        new DicomWebClientTestBase() {
+        new TestUtils.DicomWebClientTestBase() {
           @Override
           public JSONArray qidoRs(String path) throws DicomWebException {
             JSONArray instances = new JSONArray();
-            instances.put(dummyQidorsInstance());
+            instances.put(TestUtils.dummyQidorsInstance());
             return instances;
           }
         },
@@ -132,7 +111,7 @@ public final class CMoveServiceTest {
 
   @Test
   public void testCMoveService_qidoRs_genericFail() throws Exception {
-    basicCMoveServiceTest(new DicomWebClientTestBase() {
+    basicCMoveServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
         throw new IDicomWebClient.DicomWebException("QidoRs Fail",
@@ -143,7 +122,7 @@ public final class CMoveServiceTest {
 
   @Test
   public void testCMoveService_qidoRs_notAuthorized() throws Exception {
-    basicCMoveServiceTest(new DicomWebClientTestBase() {
+    basicCMoveServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
         throw new IDicomWebClient.DicomWebException("QidoRs Fail", Status.NotAuthorized);
@@ -153,7 +132,7 @@ public final class CMoveServiceTest {
 
   @Test
   public void testCMoveService_noInstancesToMove() throws Exception {
-    basicCMoveServiceTest(new DicomWebClientTestBase() {
+    basicCMoveServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
         return new JSONArray();
@@ -164,11 +143,11 @@ public final class CMoveServiceTest {
   @Test
   public void testCMoveService_cstoreFail() throws Exception {
     basicCMoveServiceTest(
-        new DicomWebClientTestBase() {
+        new TestUtils.DicomWebClientTestBase() {
           @Override
           public JSONArray qidoRs(String path) throws DicomWebException {
             JSONArray instances = new JSONArray();
-            instances.put(dummyQidorsInstance());
+            instances.put(TestUtils.dummyQidorsInstance());
             return instances;
           }
         },
@@ -192,12 +171,12 @@ public final class CMoveServiceTest {
   @Test
   public void testCMoveService_cstorePartialFail() throws Exception {
     basicCMoveServiceTest(
-        new DicomWebClientTestBase() {
+        new TestUtils.DicomWebClientTestBase() {
           @Override
           public JSONArray qidoRs(String path) throws DicomWebException {
             JSONArray instances = new JSONArray();
-            instances.put(dummyQidorsInstance());
-            instances.put(dummyQidorsInstance());
+            instances.put(TestUtils.dummyQidorsInstance());
+            instances.put(TestUtils.dummyQidorsInstance());
             return instances;
           }
         },
@@ -229,11 +208,11 @@ public final class CMoveServiceTest {
   @Test
   public void testCMoveService_cancel() throws Exception {
     basicCMoveServiceTest(
-        new DicomWebClientTestBase() {
+        new TestUtils.DicomWebClientTestBase() {
           @Override
           public JSONArray qidoRs(String path) throws DicomWebException {
             JSONArray instances = new JSONArray();
-            instances.put(dummyQidorsInstance());
+            instances.put(TestUtils.dummyQidorsInstance());
             return instances;
           }
         },
@@ -324,19 +303,6 @@ public final class CMoveServiceTest {
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
     return serverPort;
-  }
-
-  private abstract class DicomWebClientTestBase implements IDicomWebClient {
-
-    @Override
-    public MultipartInput wadoRs(String path) throws DicomWebException {
-      return null;
-    }
-
-    @Override
-    public void stowRs(String path, InputStream in) throws DicomWebException {
-
-    }
   }
 
   private class CStoreSenderTest implements ICStoreSender {

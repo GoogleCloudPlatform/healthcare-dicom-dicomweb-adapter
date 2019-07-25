@@ -89,6 +89,9 @@ public class ImportAdapter {
     CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cStoreSenderFactory);
     serviceRegistry.addDicomService(cMoveService);
 
+    // Handle Storage Commitment N-ACTION
+    serviceRegistry.addDicomService(new StorageCommitmentService(dicomWebClient, aetDict));
+
     // Start DICOM server
     Device device = DeviceUtil.createServerDevice(flags.dimseAET, flags.dimsePort, serviceRegistry);
     device.bindConnections();
