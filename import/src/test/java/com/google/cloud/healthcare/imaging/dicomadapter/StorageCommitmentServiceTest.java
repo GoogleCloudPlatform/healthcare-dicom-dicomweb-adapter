@@ -225,14 +225,39 @@ public final class StorageCommitmentServiceTest {
     protected void onDimseRQ(Association as, PresentationContext pc, Dimse dimse, Attributes cmd,
         Attributes data) throws IOException {
 
+      // Throwing exceptions here is only meaningful in sense that it prevents checkFuture
+      // completion. Might as well checkFuture.complete(false) instead.
+
       if (dimse != Dimse.N_EVENT_REPORT_RQ) {
         throw new DicomServiceException(Status.UnrecognizedOperation);
       }
 
+      if (!cmd.getString(Tag.AffectedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass)) {
+        throw new DicomServiceException(Status.NoSuchSOPclass);
+      }
+
+      if (!cmd.getString(Tag.AffectedSOPInstanceUID)
+          .equals(UID.StorageCommitmentPushModelSOPInstance)) {
+        throw new DicomServiceException(Status.NoSuchObjectInstance);
+      }
+
       int eventTypeID = cmd.getInt(Tag.EventTypeID, 0);
-      if (eventTypeID != 1 && eventTypeID != 2) {
-        throw new DicomServiceException(Status.NoSuchEventType)
-            .setEventTypeID(eventTypeID);
+      Sequence presentSeq = data.getSequence(Tag.ReferencedSOPSequence);
+      Sequence absentSeq = data.getSequence(Tag.FailedSOPSequence);
+      switch (eventTypeID) {
+        case 1:
+          if (presentSeq == null || presentSeq.size() == 0 || absentSeq != null) {
+            throw new DicomServiceException(Status.ProcessingFailure);
+          }
+          break;
+        case 2:
+          if (absentSeq == null || absentSeq.size() == 0) {
+            throw new DicomServiceException(Status.ProcessingFailure);
+          }
+          break;
+        default:
+          throw new DicomServiceException(Status.NoSuchEventType)
+              .setEventTypeID(eventTypeID);
       }
       try {
         checkFuture.complete(data.equals(expectReportAttrs));

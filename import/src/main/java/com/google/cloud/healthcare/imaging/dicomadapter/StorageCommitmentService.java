@@ -1,3 +1,17 @@
+// Copyright 2018 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.google.cloud.healthcare.IDicomWebClient;
@@ -45,37 +59,40 @@ public class StorageCommitmentService extends AbstractDicomService {
   @Override
   protected void onDimseRQ(Association as, PresentationContext pc, Dimse dimse, Attributes cmd,
       Attributes data) throws IOException {
-    if (dimse != Dimse.N_ACTION_RQ) {
-      throw new DicomServiceException(Status.UnrecognizedOperation);
-    }
-    if (!cmd.getString(Tag.RequestedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass)) {
-      throw new DicomServiceException(Status.NoSuchSOPclass);
-    }
-    if (!cmd.getString(Tag.RequestedSOPInstanceUID)
-        .equals(UID.StorageCommitmentPushModelSOPInstance)) {
-      throw new DicomServiceException(Status.NoSuchObjectInstance);
-    }
-    int eventTypeID = cmd.getInt(Tag.ActionTypeID, 0);
-    if (eventTypeID != 1) {
-      throw new DicomServiceException(Status.NoSuchEventType).setEventTypeID(eventTypeID);
-    }
+    try {
+      if (dimse != Dimse.N_ACTION_RQ) {
+        throw new DicomServiceException(Status.UnrecognizedOperation);
+      }
+      if (!cmd.getString(Tag.RequestedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass)) {
+        throw new DicomServiceException(Status.NoSuchSOPclass);
+      }
+      if (!cmd.getString(Tag.RequestedSOPInstanceUID)
+          .equals(UID.StorageCommitmentPushModelSOPInstance)) {
+        throw new DicomServiceException(Status.NoSuchObjectInstance);
+      }
+      int actionTypeID = cmd.getInt(Tag.ActionTypeID, 0);
+      if (actionTypeID != 1) {
+        throw new DicomServiceException(Status.NoSuchActionType).setActionTypeID(actionTypeID);
+      }
 
-    MonitoringService.addEvent(Event.COMMITMENT_REQUEST);
+      MonitoringService.addEvent(Event.COMMITMENT_REQUEST);
 
-    Aet remoteAet = aets.getAet(as.getRemoteAET());
-    if (remoteAet == null) {
-      MonitoringService.addEvent(Event.COMMITMENT_ERROR);
+      Aet remoteAet = aets.getAet(as.getRemoteAET());
+      if (remoteAet == null) {
+        MonitoringService.addEvent(Event.COMMITMENT_ERROR);
 
-      Attributes rspAttrs = new Attributes();
-      rspAttrs.setString(Tag.ErrorComment, VR.LO, "Unknown AET: " + as.getRemoteAET());
-      as.writeDimseRSP(pc, Commands.mkNActionRSP(cmd, Status.ProcessingFailure), rspAttrs);
-      return;
+        throw new DicomServiceException(Status.ProcessingFailure,
+            "Unknown AET: " + as.getRemoteAET());
+      }
+
+      CommitmentReportTask task = new CommitmentReportTask(as.getApplicationEntity(),
+          data, remoteAet);
+      as.getApplicationEntity().getDevice().execute(task);
+
+      as.writeDimseRSP(pc, Commands.mkNActionRSP(cmd, Status.Success));
+    } catch (RuntimeException e) {
+      throw new DicomServiceException(Status.ProcessingFailure, e);
     }
-
-    CommitmentReportTask task = new CommitmentReportTask(as.getApplicationEntity(),
-        data, remoteAet);
-    as.getApplicationEntity().getDevice().execute(task);
-    as.writeDimseRSP(pc, Commands.mkNActionRSP(cmd, Status.Success));
   }
 
   private static class CommitmentItem {
