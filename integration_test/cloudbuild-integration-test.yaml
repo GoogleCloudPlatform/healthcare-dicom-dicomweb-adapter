@@ -23,6 +23,18 @@
   - install
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
 
+- name: "maven:3.6.0-jdk-8"
+  id: build-find-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - install
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
+  waitFor:
+  - build-store-scu
+
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: gradle-run-adapter
@@ -68,6 +80,20 @@
   waitFor:
   - wait-for-adapter
 
+- name: "maven:3.6.0-jdk-8"
+  id: run-find-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.findscu.FindSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L IMAGE -X --out-cat --out-file findscu-result.xml --out-dir ../../../integration_test/'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
+  waitFor:
+  - run-store-scu
+
 - name: 'busybox:latest'
   id: close-adapter
   args:
@@ -76,7 +102,7 @@
   - ${_ADAPTER_RUN_STEP}
   - ${_CLOSE_ADAPTER_PORT}
   waitFor:
-  - run-store-scu
+  - run-find-scu
 
 - name: 'google/cloud-sdk:250.0.0'
   id: curl-dcm
@@ -97,6 +123,15 @@
   waitFor:
   - curl-dcm
 
+- name: 'busybox:latest'
+  id: diff-find
+  args:
+  - diff
+  - 'integration_test/findscu-result1.xml'
+  - 'integration_test/findscu-expected.xml'
+  waitFor:
+  - run-find-scu
+
 - name: 'google/cloud-sdk:250.0.0'
   id: delete-dicom-store
   args:
@@ -111,7 +146,8 @@
   - "--location=${_LOCATION}"  
   - "--quiet"
   waitFor:
-  - diff-dcm
+  - curl-dcm
+  - run-find-scu
 
 substitutions:
   _VERSION: v1beta1
@@ -123,4 +159,4 @@ substitutions:
   _CLOSE_ADAPTER_PORT: '3000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
-  _ADAPTER_RUN_STEP: 'step_3'
+  _ADAPTER_RUN_STEP: 'step_4'
