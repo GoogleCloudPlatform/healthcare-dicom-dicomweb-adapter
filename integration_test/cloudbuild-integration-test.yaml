@@ -23,10 +23,10 @@
   - integration_test/mvn-install-tools.sh
 
 - name: "maven:3.6.0-jdk-8"
-  id: cstore-scp-run
+  id: store-scp
   args:
   - bash
-  - integration_test/run_store_scp_and_wait.sh
+  - integration_test/run-store-scp-and-wait.sh
   - ${_STORE_SCP_RUN_STEP}
   - ${_STORE_SCP_PORT}
   - ${_CLOSE_STORE_SCP_PORT}
@@ -34,7 +34,7 @@
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: adapter-main
-  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}']
+  args: [ 'bash', '../integration_test/run-adapter-and-wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}']
   dir: import
   waitFor: ['-']
 
@@ -43,7 +43,7 @@
   id: setup-dataset-and-dicom-store
   args:
   - bash
-  - integration_test/setup_dataset_and_store.sh
+  - integration_test/setup-dataset-and-store.sh
   - ${_PROJECT}
   - ${_LOCATION}
   - ${_DATASET}
@@ -55,7 +55,7 @@
   id: wait-for-adapter
   args:
   - ash
-  - integration_test/wait_for_port.sh
+  - integration_test/wait-for-port.sh
   - ${_ADAPTER_RUN_STEP}
   - ${_ADAPTER_PORT}
   waitFor:
@@ -66,7 +66,7 @@
   id: wait-for-storescp
   args:
   - ash
-  - integration_test/wait_for_port.sh
+  - integration_test/wait-for-port.sh
   - ${_STORE_SCP_RUN_STEP}
   - ${_STORE_SCP_PORT}
   waitFor:
