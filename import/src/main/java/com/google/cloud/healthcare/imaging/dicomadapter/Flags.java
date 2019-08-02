@@ -69,6 +69,12 @@ public class Flags {
   String aetDictionaryPath = "";
 
   @Parameter(
+      names = {"--aet_dictionary_inline"},
+      description = "Json array containing aet definitions (name/host/port per element)"
+  )
+  String aetDictionaryInline = "";
+
+  @Parameter(
       names = {"--monitoring_project_id"},
       description = "Stackdriver monitoring project id, must be the same as the project id in which the adapter is running"
   )
