@@ -37,18 +37,26 @@ public class Flags {
   )
   Integer dimsePort = 0;
 
+  @Deprecated
   @Parameter(
-    names = {"--dicomweb_addr"},
-    description = "Address for DicomWeb service."
+      names = {"--dicomweb_addr"},
+      description = "Address for DicomWeb service."
   )
   String dicomwebAddr = "";
 
+  @Deprecated
   @Parameter(
-    names = {"--dicomweb_stow_path"},
-    description =
-        "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag."
+      names = {"--dicomweb_stow_path"},
+      description =
+          "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag."
   )
   String dicomwebStowPath = "";
+
+  @Parameter(
+      names = {"--dicomweb_address"},
+      description = "Address for DicomWeb service. Must be a full path (including /dicomWeb in case of healthcare api)."
+  )
+  String dicomwebAddress = "";
 
   @Parameter(
     names = {"--oauth_scopes"},
