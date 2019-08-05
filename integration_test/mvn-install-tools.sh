@@ -7,3 +7,5 @@ cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-findscu
 mvn install
 cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-storescp
 mvn install
+cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu
+mvn install

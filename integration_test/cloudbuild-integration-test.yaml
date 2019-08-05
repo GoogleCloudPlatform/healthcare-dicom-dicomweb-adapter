@@ -34,7 +34,7 @@
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
   id: adapter-main
-  args: [ 'bash', '../integration_test/run-adapter-and-wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}']
+  args: [ 'bash', '../integration_test/run-adapter-and-wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}', '${_COMMITMENT_SCU_STEP}', '${_COMMITMENT_SCU_PORT}']
   dir: import
   waitFor: ['-']
 
@@ -101,6 +101,21 @@
   - run-store-scu
 
 - name: "maven:3.6.0-jdk-8"
+  id: run-commitment-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr /workspace/integration_test/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
+  waitFor:
+  - run-find-scu
+  timeout: 30s
+
+- name: "maven:3.6.0-jdk-8"
   id: run-move-scu
   volumes:
   - name: 'vol1'
@@ -112,7 +127,7 @@
   - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -m SOPInstanceUID=111 --dest STORESCP'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-movescu"
   waitFor:
-  - run-find-scu
+  - run-commitment-scu
   - wait-for-storescp
 
 - name: 'busybox:latest'
@@ -201,7 +216,9 @@ substitutions:
   _CLOSE_ADAPTER_PORT: '3000'
   _STORE_SCP_PORT: '2576'
   _CLOSE_STORE_SCP_PORT: '3001'
+  _COMMITMENT_SCU_PORT: '4000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_4'
   _STORE_SCP_RUN_STEP: 'step_3'
+  _COMMITMENT_SCU_STEP: 'step_10'
