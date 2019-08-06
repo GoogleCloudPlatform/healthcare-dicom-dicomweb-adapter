@@ -14,19 +14,27 @@
   dir: dcm4che
 
 - name: "maven:3.6.0-jdk-8"
-  id: build-store-scu
+  id: build-tools
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
   args:
-  - mvn
-  - install
-  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+  - bash
+  - integration_test/mvn-install-tools.sh
+
+- name: "maven:3.6.0-jdk-8"
+  id: store-scp
+  args:
+  - bash
+  - integration_test/run-store-scp-and-wait.sh
+  - ${_STORE_SCP_RUN_STEP}
+  - ${_STORE_SCP_PORT}
+  - ${_CLOSE_STORE_SCP_PORT}
 
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: 'gradle:5.4.1-jdk8'
-  id: gradle-run-adapter
-  args: [ 'bash', '../integration_test/run_adapter_and_wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}']
+  id: adapter-main
+  args: [ 'bash', '../integration_test/run-adapter-and-wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}', '${_COMMITMENT_SCU_STEP}', '${_COMMITMENT_SCU_PORT}']
   dir: import
   waitFor: ['-']
 
@@ -35,7 +43,7 @@
   id: setup-dataset-and-dicom-store
   args:
   - bash
-  - integration_test/setup_dataset_and_store.sh
+  - integration_test/setup-dataset-and-store.sh
   - ${_PROJECT}
   - ${_LOCATION}
   - ${_DATASET}
@@ -47,12 +55,22 @@
   id: wait-for-adapter
   args:
   - ash
-  - integration_test/wait_for_port.sh
+  - integration_test/wait-for-port.sh
   - ${_ADAPTER_RUN_STEP}
   - ${_ADAPTER_PORT}
   waitFor:
-  - build-store-scu
+  - build-tools
   - setup-dataset-and-dicom-store
+
+- name: 'busybox:latest'
+  id: wait-for-storescp
+  args:
+  - ash
+  - integration_test/wait-for-port.sh
+  - ${_STORE_SCP_RUN_STEP}
+  - ${_STORE_SCP_PORT}
+  waitFor:
+  - build-tools
 
 - name: "maven:3.6.0-jdk-8"
   id: run-store-scu
@@ -68,6 +86,50 @@
   waitFor:
   - wait-for-adapter
 
+- name: "maven:3.6.0-jdk-8"
+  id: run-find-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.findscu.FindSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L IMAGE -X --out-cat --out-file findscu-result.xml --out-dir ../../../integration_test/'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
+  waitFor:
+  - run-store-scu
+
+- name: "maven:3.6.0-jdk-8"
+  id: run-commitment-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr /workspace/integration_test/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
+  waitFor:
+  - run-find-scu
+  timeout: 30s
+
+- name: "maven:3.6.0-jdk-8"
+  id: run-move-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.movescu.MoveSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -m SOPInstanceUID=111 --dest STORESCP'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-movescu"
+  waitFor:
+  - run-commitment-scu
+  - wait-for-storescp
+
 - name: 'busybox:latest'
   id: close-adapter
   args:
@@ -76,10 +138,20 @@
   - ${_ADAPTER_RUN_STEP}
   - ${_CLOSE_ADAPTER_PORT}
   waitFor:
-  - run-store-scu
+  - run-move-scu
+
+- name: 'busybox:latest'
+  id: close-store-scp
+  args:
+  - nc
+  - '-z'
+  - ${_STORE_SCP_RUN_STEP}
+  - ${_CLOSE_STORE_SCP_PORT}
+  waitFor:
+  - run-move-scu
 
 - name: 'google/cloud-sdk:250.0.0'
-  id: curl-dcm
+  id: check-store-curl
   args:
   - bash
   - integration_test/curl-dcm.sh
@@ -89,13 +161,32 @@
   - run-store-scu
 
 - name: 'busybox:latest'
-  id: diff-dcm
+  id: check-store-diff
   args:
   - diff
   - 'integration_test/downloaded.dcm'
   - 'integration_test/example.dcm'
   waitFor:
-  - curl-dcm
+  - check-store-curl
+
+- name: 'busybox:latest'
+  id: check-find-diff
+  args:
+  - diff
+  - 'integration_test/findscu-result1.xml'
+  - 'integration_test/findscu-expected.xml'
+  waitFor:
+  - run-find-scu
+
+# storescp adds 1 extra tag
+- name: 'busybox:latest'
+  id: check-move-diff
+  args:
+  - diff
+  - 'integration_test/storescp-data/111'
+  - 'integration_test/example-moved.dcm'
+  waitFor:
+  - run-move-scu
 
 - name: 'google/cloud-sdk:250.0.0'
   id: delete-dicom-store
@@ -111,7 +202,9 @@
   - "--location=${_LOCATION}"  
   - "--quiet"
   waitFor:
-  - diff-dcm
+  - check-store-curl
+  - run-find-scu
+  - run-move-scu
 
 substitutions:
   _VERSION: v1beta1
@@ -121,6 +214,11 @@ substitutions:
   _STORE_NAME: integration-test-store
   _ADAPTER_PORT: '2575'
   _CLOSE_ADAPTER_PORT: '3000'
+  _STORE_SCP_PORT: '2576'
+  _CLOSE_STORE_SCP_PORT: '3001'
+  _COMMITMENT_SCU_PORT: '4000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
-  _ADAPTER_RUN_STEP: 'step_3'
+  _ADAPTER_RUN_STEP: 'step_4'
+  _STORE_SCP_RUN_STEP: 'step_3'
+  _COMMITMENT_SCU_STEP: 'step_10'

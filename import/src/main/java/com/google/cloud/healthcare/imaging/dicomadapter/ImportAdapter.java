@@ -94,7 +94,7 @@ public class ImportAdapter {
     // Handle C-MOVE
     String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
     CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet, dicomWebClient);
-    AetDictionary aetDict = new AetDictionary(flags.aetDictionaryPath);
+    AetDictionary aetDict = new AetDictionary(flags.aetDictionaryInline, flags.aetDictionaryPath);
     CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cStoreSenderFactory);
     serviceRegistry.addDicomService(cMoveService);
 
