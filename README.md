@@ -243,3 +243,35 @@ TAG=gcr.io/${PROJECT}/dicom-export-adapter
 gradle dockerBuildImage -Pdocker_tag=${TAG}
 docker push ${TAG}
 ```
+
+### Running Docker Images locally
+
+Unlike gce/gke, simple docker run doesn't automatically handle google authentication credentials.
+Solution is to mount local credentials file as a volume:
+
+```shell
+-v /path/to/google_credentials.json:/credentials -e GOOGLE_APPLICATION_CREDENTIALS='/credentials'
+```
+
+Import adapter also needs AET dictionary json to support C-MOVE and Storage Commitment service:
+
+```shell
+-v /path/to/HealthcareProjects/AETs.json:/AETs
+```
+
+Example of full command:
+
+```shell
+docker run \
+-p 2579:2579 \
+-v /path/to/google_credentials.json:/credentials -e GOOGLE_APPLICATION_CREDENTIALS='/credentials' \
+-v /path/to/AETs.json:/AETs \
+${TAG} \
+--aet_dictionary=/AETs \
+--dimse_aet=IMPORTADAPTER \
+--dimse_port=2579 \
+--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/${PROJECT}/locations/${LOCATION}/datasets/${DATASET}/dicomStores/${DICOMSTORE}/dicomWeb \
+--oauth_scopes=https://www.googleapis.com/auth/cloud-platform \
+--monitoring_project_id=${PROJECT} \
+--verbose
+```
