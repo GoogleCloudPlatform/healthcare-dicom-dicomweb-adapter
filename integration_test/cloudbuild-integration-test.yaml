@@ -100,6 +100,8 @@
   waitFor:
   - run-store-scu
 
+# Stgcmtscu  waits for n-event-report after n-action request returns success,
+# if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
 - name: "maven:3.6.0-jdk-8"
   id: run-commitment-scu
   volumes:
@@ -179,6 +181,7 @@
   - run-find-scu
 
 # storescp adds 1 extra tag
+# (0002,0016) [AE] SourceApplicationEntityTitle: IMPORTADAPTER
 - name: 'busybox:latest'
   id: check-move-diff
   args:
