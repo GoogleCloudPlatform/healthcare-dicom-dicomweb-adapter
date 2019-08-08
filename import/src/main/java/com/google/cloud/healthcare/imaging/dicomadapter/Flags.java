@@ -70,7 +70,8 @@ public class Flags {
 
   @Parameter(
       names = {"--aet_dictionary_inline"},
-      description = "Json array containing aet definitions (name/host/port per element)"
+      description = "Json array containing aet definitions (name/host/port per element)."
+          + "Only one of aet_dictionary and aet_dictionary_inline needs to be specified."
   )
   String aetDictionaryInline = "";
 

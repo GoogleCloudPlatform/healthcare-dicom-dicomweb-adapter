@@ -111,7 +111,7 @@
   - mvn
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr /workspace/integration_test/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/example.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
   waitFor:
   - run-find-scu
@@ -191,6 +191,15 @@
   waitFor:
   - run-move-scu
 
+- name: 'busybox:latest'
+  id: check-commitment-result-exists
+  args:
+  - ash
+  - integration_test/dir-not-empty.sh
+  - /workspace/integration_test/commitment_result
+  waitFor:
+  - run-commitment-scu
+
 - name: 'google/cloud-sdk:250.0.0'
   id: delete-dicom-store
   args:
@@ -208,6 +217,7 @@
   - check-store-curl
   - run-find-scu
   - run-move-scu
+  - run-commitment-scu
 
 substitutions:
   _VERSION: v1beta1
