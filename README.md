@@ -13,6 +13,8 @@ The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb re
 WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination
 - Storage commitment service to QIDO-RS
 
+Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
+
 Available AET destinations for the C-MOVE and storage commitment services are configured via an AET dictionary json file, 
 which can be specified either by using the "--aet_dictionary" command line parameter or 
 specifying the "ENV_AETS_JSON" environment variable.
@@ -52,8 +54,6 @@ kubectl create configmap aet-dictionary --from-file=AETs.json
 ```
 
 The AET dictionary JSON can also be specified directly via the "--aet_dictionary_inline" parameter.
-
-Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
