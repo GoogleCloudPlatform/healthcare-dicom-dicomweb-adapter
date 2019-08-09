@@ -41,7 +41,7 @@ public class Flags {
   @Deprecated
   @Parameter(
       names = {"--dicomweb_addr"},
-      description = "Address for DicomWeb service. Deprecated and used only with C-STORE."
+      description = "Address for DicomWeb service. Deprecated and used only with C-STORE. "
           + "If dicomweb_address is also specified, it takes precedence."
   )
   String dicomwebAddr = "";
@@ -50,7 +50,7 @@ public class Flags {
   @Parameter(
       names = {"--dicomweb_stow_path"},
       description =
-          "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag."
+          "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag. "
               + "Deprecated and used only with C-STORE. If dicomweb_address is also specified, it takes precedence."
   )
   String dicomwebStowPath = "";
