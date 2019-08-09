@@ -13,7 +13,7 @@
   - "tags/5.15.1"
   dir: dcm4che
 
-- name: "maven:3.6.0-jdk-8"
+- name: "maven:3.6.1-jdk-8"
   id: build-tools
   volumes:
   - name: 'vol1'
@@ -22,7 +22,7 @@
   - bash
   - integration_test/mvn-install-tools.sh
 
-- name: "maven:3.6.0-jdk-8"
+- name: "maven:3.6.1-jdk-8"
   id: store-scp
   args:
   - bash
@@ -58,6 +58,7 @@
   - integration_test/wait-for-port.sh
   - ${_ADAPTER_RUN_STEP}
   - ${_ADAPTER_PORT}
+  timeout: 5m
   waitFor:
   - build-tools
   - setup-dataset-and-dicom-store
@@ -69,16 +70,18 @@
   - integration_test/wait-for-port.sh
   - ${_STORE_SCP_RUN_STEP}
   - ${_STORE_SCP_PORT}
+  timeout: 5m
   waitFor:
   - build-tools
 
-- name: "maven:3.6.0-jdk-8"
+- name: "maven:3.6.1-jdk-8"
   id: run-store-scu
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
   args:
   - mvn
+  - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
   - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} ../../../integration_test/example.dcm'
@@ -86,13 +89,14 @@
   waitFor:
   - wait-for-adapter
 
-- name: "maven:3.6.0-jdk-8"
+- name: "maven:3.6.1-jdk-8"
   id: run-find-scu
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
   args:
   - mvn
+  - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.findscu.FindSCU'
   - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L IMAGE -X --out-cat --out-file findscu-result.xml --out-dir ../../../integration_test/'
@@ -102,28 +106,30 @@
 
 # Stgcmtscu  waits for n-event-report after n-action request returns success,
 # if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
-- name: "maven:3.6.0-jdk-8"
+- name: "maven:3.6.1-jdk-8"
   id: run-commitment-scu
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
   args:
   - mvn
+  - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr /workspace/integration_test/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/example.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
   waitFor:
   - run-find-scu
   timeout: 30s
 
-- name: "maven:3.6.0-jdk-8"
+- name: "maven:3.6.1-jdk-8"
   id: run-move-scu
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
   args:
   - mvn
+  - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.movescu.MoveSCU'
   - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -m SOPInstanceUID=111 --dest STORESCP'
@@ -191,6 +197,18 @@
   waitFor:
   - run-move-scu
 
+- name: "maven:3.6.1-jdk-8"
+  id: check-commitment-diff
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - bash
+  - /workspace/integration_test/diff-commitment-result.sh
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-dcm2xml"
+  waitFor:
+  - run-commitment-scu
+
 - name: 'google/cloud-sdk:250.0.0'
   id: delete-dicom-store
   args:
@@ -208,6 +226,7 @@
   - check-store-curl
   - run-find-scu
   - run-move-scu
+  - run-commitment-scu
 
 substitutions:
   _VERSION: v1beta1
