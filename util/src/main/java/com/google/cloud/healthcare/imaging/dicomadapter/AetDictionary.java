@@ -32,12 +32,16 @@ public class AetDictionary {
 
   /**
    * Creates AetDictionary based on provided path to json or environment variable
-   * @param jsonPath if absent, will try ENV_AETS_JSON
+   * if both parameters absent, will try ENV_AETS_JSON
+   * @param jsonInline checked 1st
+   * @param jsonPath checked 2nd
    */
-  public AetDictionary(String jsonPath) {
+  public AetDictionary( String jsonInline, String jsonPath) {
     try {
       JSONArray jsonArray;
-      if (jsonPath != null && jsonPath.length() > 0) {
+      if(jsonInline != null && jsonInline.length() > 0) {
+        jsonArray = new JSONArray(jsonInline);
+      } else if (jsonPath != null && jsonPath.length() > 0) {
         jsonArray = new JSONArray(new String(
             Files.readAllBytes(Paths.get(jsonPath)), StandardCharsets.UTF_8));
       } else {
