@@ -13,7 +13,7 @@ The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb re
 WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination
 - Storage commitment service to QIDO-RS
 
-Available AET destinations for C-MOVE and storage commitment service are configured via an AET dictionary json file, 
+Available AET destinations for the C-MOVE and storage commitment services are configured via an AET dictionary json file, 
 which can be specified either by using the "--aet_dictionary" command line parameter or 
 specifying the "ENV_AETS_JSON" environment variable.
 
@@ -51,17 +51,11 @@ And command to create configmap from it:
 kubectl create configmap aet-dictionary --from-file=AETs.json
 ```
 
-AET dictionary json can also passed directly via "--aet_dictionary_inline" parameter.
+The AET dictionary JSON can also be specified directly via the "--aet_dictionary_inline" parameter.
 
 Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
-
-### Import Adapter parameter deprecation notes
-
-'dicomwebAddr' and 'dicomwebStowPath' parameters are considered deprecated, but can still be used with C-STORE service.
-Use 'dicomwebAddress' (that must include full path) instead to also support C-FIND, C-MOVE and storage commitment services.
-If both parameters are used, 'dicomwebAddress' takes precedence for C-STORE service.
 
 ## Export Adapter
 
@@ -146,6 +140,9 @@ spec:
             - "--dimse_port=2575"
             - "--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb"
 ```
+
+The dicomweb_addr and dicomweb_stow_path parameters have been deprecated, please use the dicomweb_address parameter instead as shown above.
+The old address parameters will not work with C-FIND, C-MOVE, and storage commitment.
 
 If needed, to additionally include an Export Adapter, you can add the to the
 containers in `dicom_adapter.yaml`. Modify the flags for your use case.
