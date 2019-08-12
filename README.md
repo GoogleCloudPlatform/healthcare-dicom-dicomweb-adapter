@@ -10,9 +10,12 @@ The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb re
 - C-STORE to STOW-RS
 - C-FIND to QIDO-RS
 - C-MOVE uses QIDO-RS to determine which instances to transfer, then for each instance executes a 
-WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination 
+WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination
+- Storage commitment service to QIDO-RS
 
-Available AET destinations for C-MOVE are configured via an AET dictionary json file, 
+Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
+
+Available AET destinations for the C-MOVE and storage commitment services are configured via an AET dictionary json file, 
 which can be specified either by using the "--aet_dictionary" command line parameter or 
 specifying the "ENV_AETS_JSON" environment variable.
 
@@ -50,7 +53,7 @@ And command to create configmap from it:
 kubectl create configmap aet-dictionary --from-file=AETs.json
 ```
 
-Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
+The AET dictionary JSON can also be specified directly via the "--aet_dictionary_inline" parameter.
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
@@ -135,9 +138,11 @@ spec:
             - "/import/bin/import"
             - "--dimse_aet=IMPORTADAPTER"
             - "--dimse_port=2575"
-            - "--dicomweb_addr=https://healthcare.googleapis.com/v1beta1"
-            - "--dicomweb_stow_path=/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb/studies"
+            - "--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb"
 ```
+
+The dicomweb_addr and dicomweb_stow_path parameters have been deprecated, please use the dicomweb_address parameter instead as shown above.
+The old address parameters will not work with C-FIND, C-MOVE, and storage commitment.
 
 If needed, to additionally include an Export Adapter, you can add the to the
 containers in `dicom_adapter.yaml`. Modify the flags for your use case.
@@ -211,7 +216,7 @@ gradle build
 For example, to additionally execute Import Adapter locally:
 
 ```shell
-gradle run -Dexec.args="--dimse_aet=IMPORTADAPTER --dimse_port=4008 --dicomweb_addr=http://localhost:80 --dicomweb_stow_path=/studies"
+gradle run -Dexec.args="--dimse_aet=IMPORTADAPTER --dimse_port=4008 --dicomweb_address=http://localhost:80"
 ```
 
 ### Building and publishing Docker Images

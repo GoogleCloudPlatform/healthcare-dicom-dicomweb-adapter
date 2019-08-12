@@ -19,46 +19,57 @@ import com.beust.jcommander.Parameters;
 
 @Parameters(separators = "= ")
 public class Flags {
+
   @Parameter(
-    names = {"--dimse_aet"},
-    description = "Title of DIMSE Application Entity."
+      names = {"--dimse_aet"},
+      description = "Title of DIMSE Application Entity."
   )
   String dimseAET = "";
 
   @Parameter(
-    names = {"--dimse_cmove_aet"},
-    description = "(Optional) Separate AET used for C-STORE calls within context of C-MOVE."
+      names = {"--dimse_cmove_aet"},
+      description = "(Optional) Separate AET used for C-STORE calls within context of C-MOVE."
   )
   String dimseCmoveAET = "";
 
   @Parameter(
-    names = {"--dimse_port"},
-    description = "Port the server is listening to for incoming DIMSE requests."
+      names = {"--dimse_port"},
+      description = "Port the server is listening to for incoming DIMSE requests."
   )
   Integer dimsePort = 0;
 
+  @Deprecated
   @Parameter(
-    names = {"--dicomweb_addr"},
-    description = "Address for DicomWeb service."
+      names = {"--dicomweb_addr"},
+      description = "Address for DicomWeb service. Deprecated and used only with C-STORE. "
+          + "If dicomweb_address is also specified, it takes precedence."
   )
   String dicomwebAddr = "";
 
+  @Deprecated
   @Parameter(
-    names = {"--dicomweb_stow_path"},
-    description =
-        "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag."
+      names = {"--dicomweb_stow_path"},
+      description =
+          "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag. "
+              + "Deprecated and used only with C-STORE. If dicomweb_address is also specified, it takes precedence."
   )
   String dicomwebStowPath = "";
 
   @Parameter(
-    names = {"--oauth_scopes"},
-    description = "Comma seperated OAuth scopes used by adapter."
+      names = {"--dicomweb_address"},
+      description = "Address for DicomWeb service. Must be a full path up to /dicomWeb if the Cloud Healthcare API is used."
+  )
+  String dicomwebAddress = "";
+
+  @Parameter(
+      names = {"--oauth_scopes"},
+      description = "Comma seperated OAuth scopes used by adapter."
   )
   String oauthScopes = "";
 
   @Parameter(
-    names = {"--verbose"},
-    description = "Prints out debug messages."
+      names = {"--verbose"},
+      description = "Prints out debug messages."
   )
   boolean verbose = false;
 
@@ -81,5 +92,6 @@ public class Flags {
   )
   String monitoringProjectId = "";
 
-  public Flags() {}
+  public Flags() {
+  }
 }
