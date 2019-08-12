@@ -149,10 +149,6 @@ public class StorageCommitmentService extends AbstractDicomService {
             attrsItem.getString(Tag.ReferencedSOPClassUID));
         queryAttributes
             .setString(Tag.SOPInstanceUID, VR.UI, cmtItem.getInstanceUid());
-        // current (v1beta1) healthcare api wrongly returns
-        // "SOPClassUID is not a supported instance or study or series level attribute"
-        //queryAttributes
-        //    .setString(Tag.SOPClassUID, VR.UI, cmtItem.getClassUid());
         queryAttributes.setString(Tag.QueryRetrieveLevel, VR.CS, "IMAGE");
         try {
           String qidoPath = AttributesUtil.attributesToQidoPath(queryAttributes);
