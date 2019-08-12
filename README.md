@@ -240,3 +240,5 @@ TAG=gcr.io/${PROJECT}/dicom-export-adapter
 gradle dockerBuildImage -Pdocker_tag=${TAG}
 docker push ${TAG}
 ```
+
+Instructions on how to run the Import Adapter Docker image locally are available on the [wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/Running-Docker-image-locally).
