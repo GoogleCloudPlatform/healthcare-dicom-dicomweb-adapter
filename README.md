@@ -241,4 +241,4 @@ gradle dockerBuildImage -Pdocker_tag=${TAG}
 docker push ${TAG}
 ```
 
-Check [wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/Running-Docker-image-locally) for instructions on how to run Import Adapter Docker image locally.
+Instructions on how to run the Import Adapter Docker image locally are available on the [wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/Running-Docker-image-locally).
