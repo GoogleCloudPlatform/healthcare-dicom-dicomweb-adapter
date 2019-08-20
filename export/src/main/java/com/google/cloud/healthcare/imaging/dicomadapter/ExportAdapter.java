@@ -34,6 +34,7 @@ import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4che3.net.Connection;
 
 public class ExportAdapter {
+
   public static HttpRequestFactory createHttpRequestFactory(GoogleCredentials credentials) {
     if (credentials == null) {
       return new NetHttpTransport().createRequestFactory();
@@ -70,7 +71,8 @@ public class ExportAdapter {
     }
 
     // Use either C-STORE or STOW-RS to send DICOM, based on flags.
-    boolean isStowRs = !flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty();
+    boolean isStowRs = !flags.peerDicomwebAddress.isEmpty()
+        || (!flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty());
     boolean isCStore =
         !flags.peerDimseAET.isEmpty() && !flags.peerDimseIP.isEmpty() && flags.peerDimsePort != 0;
     DicomSender dicomSender = null;
@@ -88,13 +90,16 @@ public class ExportAdapter {
       } else {
         requestFactory = createHttpRequestFactory(null);
       }
+      boolean isLegacyAdress = flags.peerDicomwebAddress.isEmpty();
+      String peerDicomwebAddress = isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
+      String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
       DicomWebClient exportDicomWebClient =
-          new DicomWebClient(requestFactory, flags.peerDicomwebAddr);
+          new DicomWebClient(requestFactory, peerDicomwebAddress);
       dicomSender =
-          new StowRsSender(dicomWebClient, exportDicomWebClient, flags.peerDicomwebStowPath);
+          new StowRsSender(dicomWebClient, exportDicomWebClient, peerDicomwebStowpath);
       System.out.printf(
           "Export adapter set-up to export via STOW-RS to address: %s, path: %s\n",
-          flags.peerDicomwebAddr, flags.peerDicomwebStowPath);
+          peerDicomwebAddress, peerDicomwebStowpath);
     } else if (isCStore) {
       // C-Store sender.
       //
