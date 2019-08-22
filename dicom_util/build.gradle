@@ -18,7 +18,7 @@ apply plugin: 'java'
 
 buildDir = '/tmp/gradle_build/dicom_adapter/dicom_util'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.11
 version = '0.0.1'
 
 compileJava {
