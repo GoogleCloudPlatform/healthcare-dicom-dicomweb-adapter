@@ -38,7 +38,7 @@ run {
 buildDir = '/tmp/gradle_build/dicom_adapter/export'
 
 sourceCompatibility = 1.8
-version = '0.0.1'
+version = '0.1'
 
 compileJava {
     // Print out detailed deprecation warnings.
@@ -53,7 +53,7 @@ repositories {
 
 dependencies {
     compile 'com.google.cloud:google-cloud-pubsub:0.32.0-beta'
-    compile 'com.google.guava:guava:23.6-jre'
+    compile 'com.google.guava:guava:26.0-jre'
     compile "com.beust:jcommander:1.72"
     compile 'com.google.auth:google-auth-library-oauth2-http:0.9.0'
     compile "com.google.api-client:google-api-client:1.23.0"
@@ -108,6 +108,13 @@ task copySourceAndLicenseToDockerImage {
   dependsOn tasks.downloadLicenses
   dependsOn tasks.downloadSourceJars
 }
+
+task printVersion {
+    doLast {
+        println project.version
+    }
+}
+
 dockerCopyDistResources.finalizedBy tasks.copySourceAndLicenseToDockerImage
 dockerDistTar {
     instruction {'ADD license /usr/share/oss-license'}
