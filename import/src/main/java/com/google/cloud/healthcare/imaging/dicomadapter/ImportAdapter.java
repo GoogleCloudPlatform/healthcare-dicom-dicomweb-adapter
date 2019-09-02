@@ -82,8 +82,7 @@ public class ImportAdapter {
     }
 
     IDicomWebClient cstoreDicomWebClient =
-        //new DicomWebClient(requestFactory, cstoreDicomwebAddr);
-        new DicomWebClientJetty(credentials, flags.dicomwebAddress);
+        new DicomWebClientJetty(credentials, cstoreDicomwebAddr);
     CStoreService cStoreService =
         new CStoreService(cstoreDicomwebStowPath, cstoreDicomWebClient);
     serviceRegistry.addDicomService(cStoreService);
