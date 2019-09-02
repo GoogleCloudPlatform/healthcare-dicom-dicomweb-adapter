@@ -41,6 +41,11 @@ dependencies {
     compile "org.junit.jupiter:junit-jupiter-engine:5.0.0"
     compile "org.dcm4che:dcm4che-core:3.3.8"
     compile "org.dcm4che:dcm4che-net:3.3.8"
+
+    compile 'com.google.auth:google-auth-library-oauth2-http:0.9.0'
+    compile group: 'org.eclipse.jetty.http2', name: 'http2-client', version: '9.4.20.v20190813'
+    compile group: 'org.eclipse.jetty', name: 'jetty-alpn-java-client', version: '9.4.20.v20190813'
+
     compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.25'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.8.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.8.2'

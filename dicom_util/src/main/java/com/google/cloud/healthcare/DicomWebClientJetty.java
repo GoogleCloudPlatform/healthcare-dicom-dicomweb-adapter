@@ -1,0 +1,218 @@
+package com.google.cloud.healthcare;
+
+import com.github.danieln.multipart.MultipartInput;
+import com.google.api.client.http.HttpRequestFactory;
+import com.google.auth.oauth2.OAuth2Credentials;
+import com.google.common.base.CharMatcher;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import javax.inject.Inject;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.http.HttpStatus;
+import org.eclipse.jetty.http.HttpURI;
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.http.MetaData;
+import org.eclipse.jetty.http.MetaData.Response;
+import org.eclipse.jetty.http2.api.Session;
+import org.eclipse.jetty.http2.api.Stream;
+import org.eclipse.jetty.http2.api.server.ServerSessionListener;
+import org.eclipse.jetty.http2.client.HTTP2Client;
+import org.eclipse.jetty.http2.frames.DataFrame;
+import org.eclipse.jetty.http2.frames.HeadersFrame;
+import org.eclipse.jetty.http2.frames.ResetFrame;
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.FuturePromise;
+import org.eclipse.jetty.util.Promise;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+public class DicomWebClientJetty implements IDicomWebClient {
+
+  private final String serviceUrlPrefix;
+  private final OAuth2Credentials credentials;
+
+  public DicomWebClientJetty(
+      OAuth2Credentials credentials,
+      String serviceUrlPrefix) {
+    this.credentials = credentials;
+    this.serviceUrlPrefix = trim(serviceUrlPrefix);
+  }
+
+  private String trim(String value) {
+    return CharMatcher.is('/').trimFrom(value);
+  }
+
+  @Override
+  public MultipartInput wadoRs(String path) throws DicomWebException {
+    throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
+  }
+  
+  @Override
+  public JSONArray qidoRs(String path) throws DicomWebException {
+    throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
+  }
+
+  @Override
+  public void stowRs(String path, InputStream in) throws DicomWebException {
+    try {
+      HTTP2Client client = new HTTP2Client();
+      SslContextFactory sslContextFactory = new SslContextFactory();
+      client.addBean(sslContextFactory);
+      client.start();
+
+      HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + trim(path));
+
+      FuturePromise<Session> sessionPromise = new FuturePromise<>();
+      client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), 443),
+          new ServerSessionListener.Adapter(), sessionPromise);
+
+      // Obtain the client Session object.
+      Session session = sessionPromise.get(5, TimeUnit.SECONDS);
+
+      // Prepare the HTTP request headers.
+      credentials.getRequestMetadata();
+      HttpFields requestFields = new HttpFields();
+      requestFields.add(HttpHeader.AUTHORIZATION,
+          "Bearer " + credentials.getAccessToken().getTokenValue());
+      requestFields.add(HttpHeader.CONTENT_TYPE,
+          "application/dicom");
+      // Prepare the HTTP request object.
+      MetaData.Request request = new MetaData.Request("POST", uri, HttpVersion.HTTP_2,
+          requestFields);
+      // Create the HTTP/2 HEADERS frame representing the HTTP request.
+      HeadersFrame headersFrame = new HeadersFrame(request, null, false);
+
+      // Prepare the listener to receive the HTTP response frames.
+      final StringBuilder resultBuilder = new StringBuilder();
+      final CompletableFuture<Integer> responseCodeFuture = new CompletableFuture<>();
+      final CompletableFuture<Boolean> doneFuture = new CompletableFuture<>();
+      Stream.Listener responseListener = new Stream.Listener.Adapter() {
+        @Override
+        public void onReset(Stream stream, ResetFrame frame) {
+          doneFuture.complete(false);
+        }
+
+        @Override
+        public void onHeaders(Stream stream, HeadersFrame frame) {
+          if (frame.getMetaData() instanceof Response) {
+            responseCodeFuture.complete(((Response) frame.getMetaData()).getStatus());
+          }
+        }
+
+        @Override
+        public void onData(Stream stream, DataFrame frame, Callback callback) {
+          byte[] bytes = new byte[frame.getData().remaining()];
+          frame.getData().get(bytes);
+          callback.succeeded();
+
+          resultBuilder.append(new String(bytes, StandardCharsets.UTF_8));
+          if (frame.isEndStream()) {
+            doneFuture.complete(true);
+          }
+        }
+      };
+
+      FuturePromise<Stream> streamPromise = new FuturePromise<>();
+      session.newStream(headersFrame, streamPromise, responseListener);
+      Stream stream = streamPromise.get();
+
+      DataStream dataStream = new DataStream(stream, in);
+      try {
+        dataStream.send();
+      } catch (IOException e) {
+        if (!doneFuture.isDone()) {
+          throw e;
+        }
+      }
+
+      doneFuture.get();
+      client.stop();
+
+      if (responseCodeFuture.get() != HttpStatus.OK_200) {
+        JSONObject responseJson = new JSONObject(resultBuilder.toString());
+        throw new DicomWebException("Http_" + responseCodeFuture.get()
+            + ", " + responseJson.getJSONObject("error").getString("status")
+            + ", " + responseJson.getJSONObject("error").getString("message"));
+      }
+    } catch (Exception e) {
+      if (e instanceof DicomWebException) {
+        throw (DicomWebException) e;
+      }
+      throw new DicomWebException(e);
+    }
+  }
+
+  private static class DataStream {
+
+    private final byte[] buffer = new byte[4096];
+    private final InputStream in;
+    private final Stream stream;
+
+    private boolean endStream = false;
+
+    public DataStream(Stream http2stream, InputStream inputStream) {
+      this.stream = http2stream;
+      this.in = inputStream;
+    }
+
+    public boolean hasNext() {
+      return !endStream;
+    }
+
+    public DataFrame nextFrame() throws IOException {
+      int read = in.read(buffer);
+      if (read == -1) {
+        endStream = true;
+        return new DataFrame(stream.getId(),
+            ByteBuffer.wrap(buffer, 0, 0), true);
+      } else {
+        return new DataFrame(stream.getId(),
+            ByteBuffer.wrap(buffer, 0, read), false);
+      }
+    }
+
+    public void send() throws IOException {
+      SendCallback callback = new SendCallback();
+      while (hasNext()) {
+        stream.data(nextFrame(), callback);
+        callback.checkAndReset();
+      }
+    }
+  }
+
+  private static class SendCallback implements Callback {
+
+    private CompletableFuture<Throwable> result = new CompletableFuture<Throwable>();
+
+    @Override
+    public void succeeded() {
+      result.complete(null);
+    }
+
+    @Override
+    public void failed(Throwable x) {
+      result.complete(x);
+    }
+
+    public void checkAndReset() throws IOException {
+      try {
+        Throwable x = result.get();
+        result = new CompletableFuture<>();
+        if (x != null) {
+          throw new IOException(x);
+        }
+      } catch (InterruptedException | ExecutionException e) {
+        throw new IOException(e);
+      }
+    }
+  }
+}
