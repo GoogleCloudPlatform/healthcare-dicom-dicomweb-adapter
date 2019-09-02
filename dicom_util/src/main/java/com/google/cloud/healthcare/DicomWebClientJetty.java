@@ -32,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class DicomWebClientJetty implements IDicomWebClient {
+  private static final int CONNECT_PORT = 443;
 
   private final String serviceUrlPrefix;
   private final OAuth2Credentials credentials;
@@ -64,8 +65,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
       HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + Util.trim(path));
 
       FuturePromise<Session> sessionPromise = new FuturePromise<>();
-      // need to do something about constant port
-      client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), 443),
+      client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), CONNECT_PORT),
           new ServerSessionListener.Adapter(), sessionPromise);
       Session session = sessionPromise.get(5, TimeUnit.SECONDS);
 
@@ -143,8 +143,9 @@ public class DicomWebClientJetty implements IDicomWebClient {
   }
 
   private static class DataStream {
+    private static final int BUFFER_SIZE = 8192;
 
-    private final byte[] buffer = new byte[4096];
+    private final byte[] buffer = new byte[BUFFER_SIZE];
     private final InputStream in;
     private final Stream stream;
 
