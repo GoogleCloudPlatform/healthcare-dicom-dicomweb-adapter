@@ -1,10 +1,7 @@
 package com.google.cloud.healthcare;
 
 import com.github.danieln.multipart.MultipartInput;
-import com.google.api.client.http.HttpRequestFactory;
 import com.google.auth.oauth2.OAuth2Credentials;
-import com.google.common.base.CharMatcher;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -13,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Inject;
+import org.dcm4che3.net.Status;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpStatus;
@@ -30,7 +27,6 @@ import org.eclipse.jetty.http2.frames.HeadersFrame;
 import org.eclipse.jetty.http2.frames.ResetFrame;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.FuturePromise;
-import org.eclipse.jetty.util.Promise;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,18 +40,14 @@ public class DicomWebClientJetty implements IDicomWebClient {
       OAuth2Credentials credentials,
       String serviceUrlPrefix) {
     this.credentials = credentials;
-    this.serviceUrlPrefix = trim(serviceUrlPrefix);
-  }
-
-  private String trim(String value) {
-    return CharMatcher.is('/').trimFrom(value);
+    this.serviceUrlPrefix = Util.trim(serviceUrlPrefix);
   }
 
   @Override
   public MultipartInput wadoRs(String path) throws DicomWebException {
     throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
   }
-  
+
   @Override
   public JSONArray qidoRs(String path) throws DicomWebException {
     throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
@@ -69,26 +61,23 @@ public class DicomWebClientJetty implements IDicomWebClient {
       client.addBean(sslContextFactory);
       client.start();
 
-      HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + trim(path));
+      HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + Util.trim(path));
 
       FuturePromise<Session> sessionPromise = new FuturePromise<>();
+      // need to do something about constant port
       client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), 443),
           new ServerSessionListener.Adapter(), sessionPromise);
-
-      // Obtain the client Session object.
       Session session = sessionPromise.get(5, TimeUnit.SECONDS);
 
-      // Prepare the HTTP request headers.
+      // Prepare the request
       credentials.getRequestMetadata();
       HttpFields requestFields = new HttpFields();
       requestFields.add(HttpHeader.AUTHORIZATION,
           "Bearer " + credentials.getAccessToken().getTokenValue());
       requestFields.add(HttpHeader.CONTENT_TYPE,
           "application/dicom");
-      // Prepare the HTTP request object.
       MetaData.Request request = new MetaData.Request("POST", uri, HttpVersion.HTTP_2,
           requestFields);
-      // Create the HTTP/2 HEADERS frame representing the HTTP request.
       HeadersFrame headersFrame = new HeadersFrame(request, null, false);
 
       // Prepare the listener to receive the HTTP response frames.
@@ -137,11 +126,13 @@ public class DicomWebClientJetty implements IDicomWebClient {
       doneFuture.get();
       client.stop();
 
-      if (responseCodeFuture.get() != HttpStatus.OK_200) {
+      int httpStatus = responseCodeFuture.get();
+      if (httpStatus != HttpStatus.OK_200) {
         JSONObject responseJson = new JSONObject(resultBuilder.toString());
         throw new DicomWebException("Http_" + responseCodeFuture.get()
             + ", " + responseJson.getJSONObject("error").getString("status")
-            + ", " + responseJson.getJSONObject("error").getString("message"));
+            + ", " + responseJson.getJSONObject("error").getString("message"),
+            httpStatus, Status.ProcessingFailure);
       }
     } catch (Exception e) {
       if (e instanceof DicomWebException) {
@@ -164,7 +155,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
       this.in = inputStream;
     }
 
-    public boolean hasNext() {
+    public boolean hasNextFrame() {
       return !endStream;
     }
 
@@ -181,15 +172,15 @@ public class DicomWebClientJetty implements IDicomWebClient {
     }
 
     public void send() throws IOException {
-      SendCallback callback = new SendCallback();
-      while (hasNext()) {
+      CheckerCallback callback = new CheckerCallback();
+      while (hasNextFrame()) {
         stream.data(nextFrame(), callback);
         callback.checkAndReset();
       }
     }
   }
 
-  private static class SendCallback implements Callback {
+  private static class CheckerCallback implements Callback {
 
     private CompletableFuture<Throwable> result = new CompletableFuture<Throwable>();
 

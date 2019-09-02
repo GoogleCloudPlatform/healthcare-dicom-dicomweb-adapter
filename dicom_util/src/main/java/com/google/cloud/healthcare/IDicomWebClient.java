@@ -15,6 +15,7 @@
 package com.google.cloud.healthcare;
 
 import com.github.danieln.multipart.MultipartInput;
+import com.google.api.client.http.HttpStatusCodes;
 import java.io.InputStream;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
@@ -52,6 +53,23 @@ public interface IDicomWebClient {
       this.status = status;
     }
 
+    public DicomWebException(
+        String message,
+        int httpStatus,
+        int defaultDicomStatus) {
+      super(message);
+      this.status = httpStatusToDicomStatus(httpStatus, defaultDicomStatus);
+    }
+
+    public DicomWebException(
+        String message,
+        Throwable cause,
+        int httpStatus,
+        int defaultDicomStatus) {
+      super(message, cause);
+      this.status = httpStatusToDicomStatus(httpStatus, defaultDicomStatus);
+    }
+
     public DicomWebException(String message) {
       super(message);
     }
@@ -69,5 +87,17 @@ public interface IDicomWebClient {
       attrs.setString(Tag.ErrorComment, VR.LO, getMessage());
       return attrs;
     }
+
+    private int httpStatusToDicomStatus(int httpStatus, int defaultStatus) {
+      switch (httpStatus) {
+        case HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE:
+          return Status.OutOfResources;
+        case HttpStatusCodes.STATUS_CODE_UNAUTHORIZED:
+          return Status.NotAuthorized;
+        default:
+          return defaultStatus;
+      }
+    }
+
   }
 }
