@@ -101,12 +101,13 @@ public class DicomWebClientJetty implements IDicomWebClient {
         public void onData(Stream stream, DataFrame frame, Callback callback) {
           byte[] bytes = new byte[frame.getData().remaining()];
           frame.getData().get(bytes);
-          callback.succeeded();
-
           resultBuilder.append(new String(bytes, StandardCharsets.UTF_8));
+
           if (frame.isEndStream()) {
             doneFuture.complete(true);
           }
+
+          callback.succeeded();
         }
       };
 
