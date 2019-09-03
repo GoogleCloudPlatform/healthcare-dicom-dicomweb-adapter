@@ -32,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class DicomWebClientJetty implements IDicomWebClient {
+
   private static final int CONNECT_PORT = 443;
 
   private final String serviceUrlPrefix;
@@ -70,10 +71,12 @@ public class DicomWebClientJetty implements IDicomWebClient {
       Session session = sessionPromise.get(5, TimeUnit.SECONDS);
 
       // Prepare the request
-      credentials.getRequestMetadata();
       HttpFields requestFields = new HttpFields();
-      requestFields.add(HttpHeader.AUTHORIZATION,
-          "Bearer " + credentials.getAccessToken().getTokenValue());
+      if (credentials != null) {
+        credentials.getRequestMetadata();
+        requestFields.add(HttpHeader.AUTHORIZATION,
+            "Bearer " + credentials.getAccessToken().getTokenValue());
+      }
       requestFields.add(HttpHeader.CONTENT_TYPE,
           "application/dicom");
       MetaData.Request request = new MetaData.Request("POST", uri, HttpVersion.HTTP_2,
@@ -144,6 +147,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
   }
 
   private static class DataStream {
+
     private static final int BUFFER_SIZE = 8192;
 
     private final byte[] buffer = new byte[BUFFER_SIZE];

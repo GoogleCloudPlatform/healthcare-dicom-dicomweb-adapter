@@ -21,6 +21,8 @@ import com.google.api.core.ApiService;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.DicomWebClientJetty;
+import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -81,21 +83,13 @@ public class ExportAdapter {
       System.exit(1);
     } else if (isStowRs) {
       // STOW-RS sender.
-      //
-      // DicomWeb client for sink of DICOM.
-      // Use application default credentials for HTTP requests of DICOM sink, if specified by flag.
-      HttpRequestFactory requestFactory = null;
-      if (flags.useGcpApplicationDefaultCredentials) {
-        requestFactory = createHttpRequestFactory(credentials);
-      } else {
-        requestFactory = createHttpRequestFactory(null);
-      }
       boolean isLegacyAdress = flags.peerDicomwebAddress.isEmpty();
       String peerDicomwebAddress =
           isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
       String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
-      DicomWebClient exportDicomWebClient =
-          new DicomWebClient(requestFactory, peerDicomwebAddress);
+      IDicomWebClient exportDicomWebClient =
+          new DicomWebClientJetty(flags.useGcpApplicationDefaultCredentials ? null : credentials,
+              peerDicomwebAddress);
       dicomSender =
           new StowRsSender(dicomWebClient, exportDicomWebClient, peerDicomwebStowpath);
       System.out.printf(
