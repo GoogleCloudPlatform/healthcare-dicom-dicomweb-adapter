@@ -26,7 +26,7 @@ import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.pubsub.v1.SubscriptionName;
+import com.google.pubsub.v1.ProjectSubscriptionName;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
@@ -91,7 +91,8 @@ public class ExportAdapter {
         requestFactory = createHttpRequestFactory(null);
       }
       boolean isLegacyAdress = flags.peerDicomwebAddress.isEmpty();
-      String peerDicomwebAddress = isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
+      String peerDicomwebAddress =
+          isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
       String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
       DicomWebClient exportDicomWebClient =
           new DicomWebClient(requestFactory, peerDicomwebAddress);
@@ -125,8 +126,8 @@ public class ExportAdapter {
 
     Subscriber subscriber = null;
     try {
-      SubscriptionName subscriptionName =
-          SubscriptionName.of(Flags.projectId, Flags.subscriptionId);
+      ProjectSubscriptionName subscriptionName =
+          ProjectSubscriptionName.of(Flags.projectId, Flags.subscriptionId);
       subscriber =
           Subscriber.newBuilder(subscriptionName, new ExportMessageReceiver(dicomSender)).build();
       subscriber.addListener(
