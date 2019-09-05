@@ -1,0 +1,93 @@
+# Copyright 2019 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This sample configuration provides the minimum configuration required by the data protection toolkit scripts.
+# Audit resources will be created locally in the project.
+# This file contains a sample configuration for deploying the DICOM adapters as part of a project deployed with the Data Protection Toolkit. More information is available here: https://github.com/GoogleCloudPlatform/healthcare/tree/master/deploy"
+
+overall:
+  organization_id: '12345678'           # Replace this with your Organization ID, or remove to setup without an organization.
+  billing_account: 000000-000000-000000 # Replace this with your Billing Account.
+  domain: domain.com                    # Replace this with your domain.
+
+projects:
+- project_id: my-project
+  owners_group: my-project-owners@my-domain.com      # Replace this with the owners group for this project.
+  auditors_group: some-auditors-group@my-domain.com  # Replace this with your auditors group.
+  audit_logs:
+    logs_bq_dataset:
+      properties:
+        location: US
+        name: audit_logs
+  resources:
+    gke_clusters:
+    - properties:
+        clusterLocationType: Regional
+        region: us-central1
+        cluster:
+          name: clusterName
+          description: clusterDescription
+          network: "projects/my-project/global/networks/default"
+          subnetwork: "projects/my-project/regions/us-central1/subnetworks/default"
+          nodeConfig:
+            oauthScopes: 
+              - "https://www.googleapis.com/auth/logging.write"
+          initialNodeCount: 1
+          locations:
+            - us-central1-c
+            - us-central1-b            
+    gke_workloads:
+    - cluster_name: "clusterName"
+      properties:
+        apiVersion: "extensions/v1beta1"
+        kind: Deployment
+        metadata:
+          name: dicom-adapter
+          namespace: "default"
+          labels:
+            app: "dicom-adapter"
+        spec:
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app: dicom-adapter
+            spec:
+              containers:
+                - name: dicom-import-adapter
+                  image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.1.1
+                  ports:
+                    - containerPort: 2575
+                      protocol: TCP
+                      name: "port"
+                  command:
+                    - "/import/bin/import"
+                    - "--dimse_aet=IMPORTADAPTER"
+                    - "--dimse_port=2575"
+                    - "--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/my-project/locations/us-central1-c/datasets/dataset/dicomStores/dicomStores/dicomWeb"
+                    - "--aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":host1,\"port\":2576},{\"name\":\"STGCMTSCU\",\"host\":host2,\"port\":4000},]\""
+                    - "--verbose"
+                  env:
+                    - name: ENV_CONTAINER_NAME
+                      valueFrom:
+                        fieldRef:
+                          fieldPath: spec.nodeName
+                    - name: ENV_POD_NAME
+                      valueFrom:
+                        fieldRef:
+                          fieldPath: metadata.name
+                    - name: ENV_POD_NAMESPACE
+                      valueFrom:
+                        fieldRef:
+                          fieldPath: metadata.namespace
