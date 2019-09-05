@@ -39,18 +39,28 @@ public class Flags {
   public static Integer peerDimsePort = 0;
 
   /** Flags for exporting via DicomWeb STOW-RS. */
+  @Deprecated
   @Parameter(
     names = {"--peer_dicomweb_addr"},
-    description = "Address of peer DicomWeb API serving STOW-RS."
+    description = "Address of peer DicomWeb API serving STOW-RS. "
+        + "Deprecated. If peer_dicomweb_address is also specified, it takes precedence."
   )
   public static String peerDicomwebAddr = "";
 
+  @Deprecated
   @Parameter(
     names = {"--peer_dicomweb_stow_path"},
     description =
-        "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --peer_dicomweb_addr flag."
+        "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --peer_dicomweb_addr flag. "
+            + "Deprecated. If peer_dicomweb_address is also specified, it takes precedence."
   )
   public static String peerDicomwebStowPath = "";
+
+  @Parameter(
+      names = {"--peer_dicomweb_address"},
+      description = "Address of peer DicomWeb API serving STOW-RS.  Must be a full path up to /dicomWeb if the Cloud Healthcare API is used."
+  )
+  public static String peerDicomwebAddress = "";
 
   @Parameter(
     names = {"--use_gcp_application_default_credentials"},

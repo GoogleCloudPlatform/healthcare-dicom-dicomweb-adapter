@@ -16,7 +16,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.github.danieln.multipart.MultipartInput;
 import com.github.danieln.multipart.PartInput;
-import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
@@ -24,13 +24,13 @@ import com.google.pubsub.v1.PubsubMessage;
 
 // StowRsSender sends DICOM to peer using DicomWeb STOW-RS protocol.
 public class StowRsSender implements DicomSender {
-  private DicomWebClient sourceDicomWebClient;
-  private DicomWebClient sinkDicomWebClient;
+  private IDicomWebClient sourceDicomWebClient;
+  private IDicomWebClient sinkDicomWebClient;
   private String sinkDicomWebPath;
 
   StowRsSender(
-      DicomWebClient sourceDicomWebClient,
-      DicomWebClient sinkDicomWebClient,
+      IDicomWebClient sourceDicomWebClient,
+      IDicomWebClient sinkDicomWebClient,
       String sinkDicomWebPath) {
     this.sourceDicomWebClient = sourceDicomWebClient;
     this.sinkDicomWebClient = sinkDicomWebClient;

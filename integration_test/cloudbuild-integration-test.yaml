@@ -13,7 +13,7 @@
   - "tags/5.15.1"
   dir: dcm4che
 
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: build-tools
   volumes:
   - name: 'vol1'
@@ -22,7 +22,7 @@
   - bash
   - integration_test/mvn-install-tools.sh
 
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: store-scp
   args:
   - bash
@@ -32,7 +32,7 @@
   - ${_CLOSE_STORE_SCP_PORT}
 
 # run adapter, close when connection established on _CLOSE_ADAPTER_PORT
-- name: 'gradle:5.4.1-jdk8'
+- name: ${_GRADLE_IMAGE}
   id: adapter-main
   args: [ 'bash', '../integration_test/run-adapter-and-wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}', '${_COMMITMENT_SCU_STEP}', '${_COMMITMENT_SCU_PORT}']
   dir: import
@@ -74,7 +74,7 @@
   waitFor:
   - build-tools
 
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: run-store-scu
   volumes:
   - name: 'vol1'
@@ -89,7 +89,7 @@
   waitFor:
   - wait-for-adapter
 
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: run-find-scu
   volumes:
   - name: 'vol1'
@@ -106,7 +106,7 @@
 
 # Stgcmtscu  waits for n-event-report after n-action request returns success,
 # if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: run-commitment-scu
   volumes:
   - name: 'vol1'
@@ -122,7 +122,7 @@
   - run-find-scu
   timeout: 30s
 
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: run-move-scu
   volumes:
   - name: 'vol1'
@@ -197,7 +197,7 @@
   waitFor:
   - run-move-scu
 
-- name: "maven:3.6.1-jdk-8"
+- name: ${_MAVEN_IMAGE}
   id: check-commitment-diff
   volumes:
   - name: 'vol1'
@@ -244,3 +244,5 @@ substitutions:
   _ADAPTER_RUN_STEP: 'step_4'
   _STORE_SCP_RUN_STEP: 'step_3'
   _COMMITMENT_SCU_STEP: 'step_10'
+  _GRADLE_IMAGE: 'gradle:5.6-jdk11'
+  _MAVEN_IMAGE: 'maven:3.6-jdk-11'
