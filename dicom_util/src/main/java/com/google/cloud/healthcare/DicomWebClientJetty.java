@@ -29,6 +29,7 @@ import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.FuturePromise;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class DicomWebClientJetty implements IDicomWebClient {
@@ -79,6 +80,8 @@ public class DicomWebClientJetty implements IDicomWebClient {
       }
       requestFields.add(HttpHeader.CONTENT_TYPE,
           "application/dicom");
+      requestFields.add(HttpHeader.ACCEPT,
+          "application/dicom+json");
       MetaData.Request request = new MetaData.Request("POST", uri, HttpVersion.HTTP_2,
           requestFields);
       HeadersFrame headersFrame = new HeadersFrame(request, null, false);
@@ -132,11 +135,15 @@ public class DicomWebClientJetty implements IDicomWebClient {
 
       int httpStatus = responseCodeFuture.get();
       if (httpStatus != HttpStatus.OK_200) {
-        JSONObject responseJson = new JSONObject(resultBuilder.toString());
-        throw new DicomWebException("Http_" + responseCodeFuture.get()
-            + ", " + responseJson.getJSONObject("error").getString("status")
-            + ", " + responseJson.getJSONObject("error").getString("message"),
-            httpStatus, Status.ProcessingFailure);
+        try {
+          JSONObject responseJson = new JSONObject(resultBuilder.toString());
+          throw new DicomWebException("Http_" + httpStatus
+              + ", " + responseJson.getJSONObject("error").getString("status")
+              + ", " + responseJson.getJSONObject("error").getString("message"),
+              httpStatus, Status.ProcessingFailure);
+        } catch (JSONException e) {
+          throw new DicomWebException("Http_" + httpStatus, httpStatus, Status.ProcessingFailure);
+        }
       }
     } catch (Exception e) {
       if (e instanceof DicomWebException) {
