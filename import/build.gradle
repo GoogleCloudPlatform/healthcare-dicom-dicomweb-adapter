@@ -37,7 +37,7 @@ run {
 
 buildDir = '/tmp/gradle_build/dicom_adapter/import'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.11
 version = '0.1'
 
 compileJava {
@@ -70,7 +70,7 @@ dependencies {
 apply plugin: 'com.bmuschko.docker-java-application'
 docker {
     javaApplication {
-        baseImage = 'java:openjdk-8-jre'
+        baseImage = 'openjdk:11'
         tag = project.findProperty("docker_tag") ?: "import_adapter"
     }
 }

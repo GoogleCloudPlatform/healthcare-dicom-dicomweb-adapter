@@ -24,7 +24,6 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
-import com.google.common.base.CharMatcher;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +50,7 @@ public class DicomWebClient implements IDicomWebClient {
       HttpRequestFactory requestFactory,
       @Annotations.DicomwebAddr String serviceUrlPrefix) {
     this.requestFactory = requestFactory;
-    this.serviceUrlPrefix = trim(serviceUrlPrefix);
+    this.serviceUrlPrefix = StringUtil.trim(serviceUrlPrefix);
   }
 
   /**
@@ -61,14 +60,14 @@ public class DicomWebClient implements IDicomWebClient {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
-              + trim(path)));
+              + StringUtil.trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       return new MultipartInput(httpResponse.getContent(), httpResponse.getContentType());
     } catch (HttpResponseException e) {
-      throw httpToDicomWebException(e,
+      throw new DicomWebException(
           String.format("WadoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          Status.ProcessingFailure);
+          e, e.getStatusCode(), Status.ProcessingFailure);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
@@ -81,7 +80,7 @@ public class DicomWebClient implements IDicomWebClient {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
-              + trim(path)));
+              + StringUtil.trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       // dcm4che server can return 204 responses.
@@ -92,9 +91,9 @@ public class DicomWebClient implements IDicomWebClient {
           CharStreams
               .toString(new InputStreamReader(httpResponse.getContent(), StandardCharsets.UTF_8)));
     } catch (HttpResponseException e) {
-      throw httpToDicomWebException(e,
+      throw new DicomWebException(
           String.format("QidoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          Status.UnableToCalculateNumberOfMatches);
+          e, e.getStatusCode(), Status.UnableToCalculateNumberOfMatches);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
@@ -107,7 +106,7 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
-    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + trim(path));
+    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path));
 
     // DICOM "Type" parameter:
     // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
@@ -121,31 +120,11 @@ public class DicomWebClient implements IDicomWebClient {
       HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
       httpRequest.execute();
     } catch (HttpResponseException e) {
-      throw httpToDicomWebException(e,
+      throw new DicomWebException(
           String.format("StowRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          Status.ProcessingFailure);
+          e, e.getStatusCode(), Status.ProcessingFailure);
     } catch (IOException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
-  }
-
-  private IDicomWebClient.DicomWebException httpToDicomWebException(
-      HttpResponseException httpException,
-      String message,
-      int defaultStatus) {
-    int dicomStatus = defaultStatus;
-    switch (httpException.getStatusCode()) {
-      case HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE:
-        dicomStatus = Status.OutOfResources;
-        break;
-      case HttpStatusCodes.STATUS_CODE_UNAUTHORIZED:
-        dicomStatus = Status.NotAuthorized;
-        break;
-    }
-    return new IDicomWebClient.DicomWebException(message, httpException, dicomStatus);
-  }
-
-  private String trim(String value) {
-    return CharMatcher.is('/').trimFrom(value);
   }
 }

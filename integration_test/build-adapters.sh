@@ -14,9 +14,10 @@ build_adapter () {
 }
 
 apt-get -qq update
+apt-get install google-cloud-sdk -y
 apt-get -qq install -y gradle
 gradle build
-cd ./importa
+cd ./import
 build_adapter import $2
 cd ../export
 build_adapter export $2
