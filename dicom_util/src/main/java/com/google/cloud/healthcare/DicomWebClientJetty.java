@@ -43,7 +43,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
       OAuth2Credentials credentials,
       String serviceUrlPrefix) {
     this.credentials = credentials;
-    this.serviceUrlPrefix = Util.trim(serviceUrlPrefix);
+    this.serviceUrlPrefix = StringUtil.trim(serviceUrlPrefix);
   }
 
   @Override
@@ -64,7 +64,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
       client.addBean(sslContextFactory);
       client.start();
 
-      HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + Util.trim(path));
+      HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + StringUtil.trim(path));
 
       FuturePromise<Session> sessionPromise = new FuturePromise<>();
       client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), CONNECT_PORT),

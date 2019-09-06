@@ -50,7 +50,7 @@ public class DicomWebClient implements IDicomWebClient {
       HttpRequestFactory requestFactory,
       @Annotations.DicomwebAddr String serviceUrlPrefix) {
     this.requestFactory = requestFactory;
-    this.serviceUrlPrefix = Util.trim(serviceUrlPrefix);
+    this.serviceUrlPrefix = StringUtil.trim(serviceUrlPrefix);
   }
 
   /**
@@ -60,7 +60,7 @@ public class DicomWebClient implements IDicomWebClient {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
-              + Util.trim(path)));
+              + StringUtil.trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       return new MultipartInput(httpResponse.getContent(), httpResponse.getContentType());
@@ -80,7 +80,7 @@ public class DicomWebClient implements IDicomWebClient {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
-              + Util.trim(path)));
+              + StringUtil.trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       // dcm4che server can return 204 responses.
@@ -106,7 +106,7 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
-    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + Util.trim(path));
+    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path));
 
     // DICOM "Type" parameter:
     // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
