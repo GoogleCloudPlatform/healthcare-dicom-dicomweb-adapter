@@ -161,6 +161,8 @@ containers in `dicom_adapter.yaml`. Modify the flags for your use case.
             - "--oauth_scopes=https://www.googleapis.com/auth/pubsub"
 ```
 
+The peer_dicomweb_addr and peer_dicomweb_stow_path parameters have been deprecated, please use the peer_dicomweb_address parameter instead.
+
 To deploy the configuration to GKE cluster, execute the following:
 
 ```shell

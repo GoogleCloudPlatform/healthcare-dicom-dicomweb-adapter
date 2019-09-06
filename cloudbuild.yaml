@@ -1,5 +1,5 @@
 steps:
-- name: 'gradle:5.4.1-jdk8'
+- name: 'gradle:5.6-jdk11'
   args:
   - gradle
   - build

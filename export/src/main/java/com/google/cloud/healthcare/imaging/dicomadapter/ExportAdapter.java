@@ -21,12 +21,14 @@ import com.google.api.core.ApiService;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.DicomWebClientJetty;
+import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.pubsub.v1.SubscriptionName;
+import com.google.pubsub.v1.ProjectSubscriptionName;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
@@ -34,6 +36,7 @@ import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4che3.net.Connection;
 
 public class ExportAdapter {
+
   public static HttpRequestFactory createHttpRequestFactory(GoogleCredentials credentials) {
     if (credentials == null) {
       return new NetHttpTransport().createRequestFactory();
@@ -70,7 +73,8 @@ public class ExportAdapter {
     }
 
     // Use either C-STORE or STOW-RS to send DICOM, based on flags.
-    boolean isStowRs = !flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty();
+    boolean isStowRs = !flags.peerDicomwebAddress.isEmpty()
+        || (!flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty());
     boolean isCStore =
         !flags.peerDimseAET.isEmpty() && !flags.peerDimseIP.isEmpty() && flags.peerDimsePort != 0;
     DicomSender dicomSender = null;
@@ -79,22 +83,18 @@ public class ExportAdapter {
       System.exit(1);
     } else if (isStowRs) {
       // STOW-RS sender.
-      //
-      // DicomWeb client for sink of DICOM.
-      // Use application default credentials for HTTP requests of DICOM sink, if specified by flag.
-      HttpRequestFactory requestFactory = null;
-      if (flags.useGcpApplicationDefaultCredentials) {
-        requestFactory = createHttpRequestFactory(credentials);
-      } else {
-        requestFactory = createHttpRequestFactory(null);
-      }
-      DicomWebClient exportDicomWebClient =
-          new DicomWebClient(requestFactory, flags.peerDicomwebAddr);
+      boolean isLegacyAdress = flags.peerDicomwebAddress.isEmpty();
+      String peerDicomwebAddress =
+          isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
+      String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
+      IDicomWebClient exportDicomWebClient =
+          new DicomWebClientJetty(flags.useGcpApplicationDefaultCredentials ? null : credentials,
+              peerDicomwebAddress);
       dicomSender =
-          new StowRsSender(dicomWebClient, exportDicomWebClient, flags.peerDicomwebStowPath);
+          new StowRsSender(dicomWebClient, exportDicomWebClient, peerDicomwebStowpath);
       System.out.printf(
           "Export adapter set-up to export via STOW-RS to address: %s, path: %s\n",
-          flags.peerDicomwebAddr, flags.peerDicomwebStowPath);
+          peerDicomwebAddress, peerDicomwebStowpath);
     } else if (isCStore) {
       // C-Store sender.
       //
@@ -120,8 +120,8 @@ public class ExportAdapter {
 
     Subscriber subscriber = null;
     try {
-      SubscriptionName subscriptionName =
-          SubscriptionName.of(Flags.projectId, Flags.subscriptionId);
+      ProjectSubscriptionName subscriptionName =
+          ProjectSubscriptionName.of(Flags.projectId, Flags.subscriptionId);
       subscriber =
           Subscriber.newBuilder(subscriptionName, new ExportMessageReceiver(dicomSender)).build();
       subscriber.addListener(
