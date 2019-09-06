@@ -239,7 +239,7 @@
   id: publish-image
   args: [ 'bash', 'integration_test/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
   waitFor: ['delete-dicom-store']
-
+timeout: 1800s
 substitutions:
   _VERSION: v1beta1
   _PROJECT: gcp-healthcare-oss-test
