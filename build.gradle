@@ -27,7 +27,11 @@ ext.downloadLicensesText = { buildDir ->
   new File(buildDir.toString() + '/docker/license').mkdirs()
   for (dep in parsedJson.dependencies) {
     def licenseFile = new File(buildDir.toString() + '/docker/license/' + dep.name)
-    licenseFile << new URL(dep.licenses[0].url).text
+    try {
+      licenseFile << new URL(dep.licenses[0].url).text
+    } catch (IOException e) {
+      logger.debug("can't download license file:" + dep.licenses[0].url)
+    }
   }
 }
 

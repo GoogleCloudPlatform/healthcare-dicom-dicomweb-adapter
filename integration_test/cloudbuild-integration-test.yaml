@@ -31,12 +31,19 @@
   - ${_STORE_SCP_PORT}
   - ${_CLOSE_STORE_SCP_PORT}
 
-# run adapter, close when connection established on _CLOSE_ADAPTER_PORT
 - name: ${_GRADLE_IMAGE}
-  id: adapter-main
-  args: [ 'bash', '../integration_test/run-adapter-and-wait.sh', '${_VERSION}', '${_PROJECT}', '${_LOCATION}', '${_DATASET}', '${_STORE_NAME}', '${_ADAPTER_PORT}', '${_CLOSE_ADAPTER_PORT}', '${_STORE_SCP_RUN_STEP}', '${_STORE_SCP_PORT}', '${_COMMITMENT_SCU_STEP}', '${_COMMITMENT_SCU_PORT}']
-  dir: import
+  id: adapter-build
+  args: [ 'bash', './integration_test/build-adapters.sh', '${_IMAGEPROJECT}', '${SHORT_SHA}']
   waitFor: ['-']
+
+# run adapter
+
+- name: 'gcr.io/${_IMAGEPROJECT}/healthcare-api-dicom-dicomweb-adapter-import:${SHORT_SHA}'
+  id: adapter-main
+  entrypoint: 'bash'
+  args: [ '-c',
+          "/import/bin/import --dimse_aet=IMPORTADAPTER --dimse_port=${_ADAPTER_PORT} --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb --aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":${_STORE_SCP_RUN_STEP},\"port\":${_STORE_SCP_PORT}},{\"name\":\"STGCMTSCU\",\"host\":${_COMMITMENT_SCU_STEP},\"port\":${_COMMITMENT_SCU_PORT}},]\" --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+  waitFor: ['adapter-build']
 
 # create dataset if not exists, re-create store (delete if exists, then create)
 - name: 'google/cloud-sdk:250.0.0'
@@ -61,6 +68,7 @@
   timeout: 5m
   waitFor:
   - build-tools
+  - adapter-build
   - setup-dataset-and-dicom-store
 
 - name: 'busybox:latest'
@@ -138,15 +146,14 @@
   - run-commitment-scu
   - wait-for-storescp
 
-- name: 'busybox:latest'
-  id: close-adapter
+- name: 'gcr.io/cloud-builders/docker'
+  id:  close-adapter
+  entrypoint: bash
   args:
-  - nc
-  - '-z'
-  - ${_ADAPTER_RUN_STEP}
-  - ${_CLOSE_ADAPTER_PORT}
-  waitFor:
-  - run-move-scu
+      - './integration_test/stop-image.sh'
+      - '${_IMAGEPROJECT}'
+      - '${SHORT_SHA}'
+  waitFor: ['run-move-scu']
 
 - name: 'busybox:latest'
   id: close-store-scp
@@ -220,7 +227,7 @@
   - ${_STORE_NAME}
   - "--project=${_PROJECT}"
   - "--dataset=${_DATASET}"
-  - "--location=${_LOCATION}"  
+  - "--location=${_LOCATION}"
   - "--quiet"
   waitFor:
   - check-store-curl
@@ -228,21 +235,27 @@
   - run-move-scu
   - run-commitment-scu
 
+- name: 'google/cloud-sdk:250.0.0'
+  id: publish-image
+  args: [ 'bash', 'integration_test/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
+  waitFor: ['delete-dicom-store']
+timeout: 1800s
 substitutions:
   _VERSION: v1beta1
   _PROJECT: gcp-healthcare-oss-test
+  _IMAGEPROJECT: cloud-healthcare-containers
   _LOCATION: us-central1
   _DATASET: healthcare-dicom-dicomweb-adapter-test
   _STORE_NAME: integration-test-store
   _ADAPTER_PORT: '2575'
-  _CLOSE_ADAPTER_PORT: '3000'
   _STORE_SCP_PORT: '2576'
   _CLOSE_STORE_SCP_PORT: '3001'
   _COMMITMENT_SCU_PORT: '4000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
-  _ADAPTER_RUN_STEP: 'step_4'
+  _ADAPTER_RUN_STEP: 'step_5'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_10'
+  _COMMITMENT_SCU_STEP: 'step_11'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
+  _PUBLISH: 'false'
