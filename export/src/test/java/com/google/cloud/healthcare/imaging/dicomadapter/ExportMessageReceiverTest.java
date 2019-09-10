@@ -16,8 +16,10 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.api.client.http.GenericUrl;
 import com.google.api.client.testing.http.HttpTesting;
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.util.FakeWebServer;
 import com.google.cloud.healthcare.util.TestUtils;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
@@ -25,6 +27,8 @@ import com.google.cloud.healthcare.imaging.dicomadapter.util.StubCStoreService;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
+import java.io.IOException;
+import java.io.InputStream;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
@@ -121,7 +125,15 @@ public final class ExportMessageReceiverTest {
     DicomWebClient sourceDicomWebClient =
         new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
     DicomWebClient sinkDicomWebClient =
-        new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
+        new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL) {
+          public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
+            try {
+              requestFactory.buildGetRequest(new GenericUrl("http://nope")).execute();
+            } catch (IOException e){
+              throw new DicomWebException(e);
+            }
+          }
+        };
     DicomSender dicomSender = new StowRsSender(sourceDicomWebClient, sinkDicomWebClient, "studies");
     ExportMessageReceiver receiver = new ExportMessageReceiver(dicomSender);
     receiver.receiveMessage(pubsubMessage, replyConsumer);

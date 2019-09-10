@@ -40,7 +40,7 @@ import org.json.JSONArray;
 public class DicomWebClient implements IDicomWebClient {
 
   // Factory to create HTTP requests with proper credentials.
-  private final HttpRequestFactory requestFactory;
+  protected final HttpRequestFactory requestFactory;
 
   // Service prefix all dicomWeb paths will be appended to.
   private final String serviceUrlPrefix;
