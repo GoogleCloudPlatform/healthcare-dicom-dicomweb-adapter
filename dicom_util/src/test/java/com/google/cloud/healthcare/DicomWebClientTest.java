@@ -97,10 +97,10 @@ public final class DicomWebClientTest {
   }
 
   @Test
-  public void testDicomWebClient_StowError() throws Exception {
+  public void testDicomWebClient_StowUnsupported() throws Exception {
     fakeDicomWebServer.addResponseWithStatusCode(404);
     assertThrows(
-        IDicomWebClient.DicomWebException.class,
+        UnsupportedOperationException.class,
         () -> client.stowRs("stowPath", new ByteArrayInputStream(new byte[0])));
   }
 }
