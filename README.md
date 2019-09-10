@@ -98,8 +98,8 @@ env:
 
 The adapters can be deployed to Google Cloud Platform using [GKE] (https://cloud.google.com/kubernetes-engine/). We have published prebuilt Docker images for the both adapters to [Google Container Registry](https://cloud.google.com/container-registry/).
 
-- Import Adapter: `gcr.io/cloud-healthcare-containers/dicom-import-adapter`
-- Export Adapter: `gcr.io/cloud-healthcare-containers/dicom-export-adapter`
+- Import Adapter: `gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import`
+- Export Adapter: `gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-export`
 
 ### Requirements
 
@@ -129,7 +129,7 @@ spec:
     spec:
       containers:
         - name: dicom-import-adapter
-          image: gcr.io/cloud-healthcare-containers/dicom-import-adapter:latest
+          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.1.1
           ports:
             - containerPort: 2575
               protocol: TCP
@@ -149,7 +149,7 @@ containers in `dicom_adapter.yaml`. Modify the flags for your use case.
 
 ```yaml
         - name: dicom-export-adapter
-          image: gcr.io/cloud-healthcare-containers/dicom-export-adapter:latest
+          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-export:0.1.1
           command:
             - "/export/bin/export"
             - "--peer_dimse_aet=PEERAET"
