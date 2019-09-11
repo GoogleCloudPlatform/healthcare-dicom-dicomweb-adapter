@@ -40,7 +40,7 @@ import org.json.JSONArray;
 public class DicomWebClient implements IDicomWebClient {
 
   // Factory to create HTTP requests with proper credentials.
-  private final HttpRequestFactory requestFactory;
+  protected final HttpRequestFactory requestFactory;
 
   // Service prefix all dicomWeb paths will be appended to.
   private final String serviceUrlPrefix;
@@ -106,25 +106,6 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
-    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path));
-
-    // DICOM "Type" parameter:
-    // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
-    MultipartContent content = new MultipartContent();
-    content.setMediaType(new HttpMediaType("multipart/related; type=\"application/dicom\""));
-    content.setBoundary(UUID.randomUUID().toString());
-    InputStreamContent dicomStream = new InputStreamContent("application/dicom", in);
-    content.addPart(new MultipartContent.Part(dicomStream));
-
-    try {
-      HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
-      httpRequest.execute();
-    } catch (HttpResponseException e) {
-      throw new DicomWebException(
-          String.format("StowRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          e, e.getStatusCode(), Status.ProcessingFailure);
-    } catch (IOException e) {
-      throw new IDicomWebClient.DicomWebException(e);
-    }
+    throw new UnsupportedOperationException("Not Implemented, use DicomWebClientJetty");
   }
 }

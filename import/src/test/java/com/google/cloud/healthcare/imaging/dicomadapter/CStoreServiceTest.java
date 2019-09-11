@@ -14,6 +14,7 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import com.github.danieln.multipart.MultipartInput;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.LowLevelHttpRequest;
@@ -21,7 +22,7 @@ import com.google.api.client.http.LowLevelHttpResponse;
 import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
-import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import com.google.cloud.healthcare.util.TestUtils;
@@ -40,6 +41,7 @@ import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
+import org.json.JSONArray;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,26 +56,6 @@ public final class CStoreServiceTest {
 
   // Client properties.
   ApplicationEntity clientAE;
-
-  // Creates a HTTP request factory that returns given response code.
-  private HttpRequestFactory createHttpRequestFactory(boolean connectError, int responseCode) {
-    return new MockHttpTransport() {
-      @Override
-      public LowLevelHttpRequest buildRequest(String method, String url) {
-        return new MockLowLevelHttpRequest() {
-          @Override
-          public LowLevelHttpResponse execute() throws IOException {
-            if (connectError) {
-              throw new IOException("connect error");
-            }
-            MockLowLevelHttpResponse response = new MockLowLevelHttpResponse();
-            response.setStatusCode(responseCode);
-            return response;
-          }
-        };
-      }
-    }.createRequestFactory();
-  }
 
   private Association associate(
       String serverHostname, int serverPort, String sopClass, String syntax) throws Exception {
@@ -91,9 +73,8 @@ public final class CStoreServiceTest {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
-    HttpRequestFactory httpRequestFactory = createHttpRequestFactory(connectError, responseCode);
-    DicomWebClient dicomWebClient =
-        new DicomWebClient(httpRequestFactory, "https://doesnotexist");
+    IDicomWebClient dicomWebClient =
+        new MockStowClient(connectError, responseCode);
     CStoreService cStoreService =
         new CStoreService("/studies", dicomWebClient);
     serviceRegistry.addDicomService(cStoreService);
@@ -204,6 +185,37 @@ public final class CStoreServiceTest {
     association.waitForSocketClose();
 
     rspAssert.assertResult();
+  }
+
+  private class MockStowClient implements IDicomWebClient {
+
+    private boolean connectError;
+    private int httpResponseCode;
+
+    public MockStowClient(boolean connectError, int httpResponseCode) {
+      this.connectError = connectError;
+      this.httpResponseCode = httpResponseCode;
+    }
+
+    @Override
+    public MultipartInput wadoRs(String path) throws DicomWebException {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public JSONArray qidoRs(String path) throws DicomWebException {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void stowRs(String path, InputStream in) throws DicomWebException {
+      if (connectError) {
+        throw new DicomWebException("connect error");
+      }
+      if (httpResponseCode != HttpStatusCodes.STATUS_CODE_OK) {
+        throw new DicomWebException("mock error", httpResponseCode, Status.ProcessingFailure);
+      }
+    }
   }
 
   // TODO(b/73252285): increase test coverage.

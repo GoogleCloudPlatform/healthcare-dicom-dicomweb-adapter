@@ -16,8 +16,10 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.api.client.http.GenericUrl;
 import com.google.api.client.testing.http.HttpTesting;
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.util.FakeWebServer;
 import com.google.cloud.healthcare.util.TestUtils;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
@@ -25,6 +27,8 @@ import com.google.cloud.healthcare.imaging.dicomadapter.util.StubCStoreService;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
+import java.io.IOException;
+import java.io.InputStream;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
@@ -41,6 +45,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class ExportMessageReceiverTest {
+
   private final String serverAET = "SERVER";
   private final String serverHost = "localhost";
   private final String clientAET = "CLIENT";
@@ -80,6 +85,7 @@ public final class ExportMessageReceiverTest {
   // StubAckReplyConsumer is a test helper used to check whether Pub/Sub message was ACK-ed
   // (representing a successful export).
   private class StubAckReplyConsumer implements AckReplyConsumer {
+
     private boolean isAck = false;
 
     @Override
@@ -88,7 +94,8 @@ public final class ExportMessageReceiverTest {
     }
 
     @Override
-    public void nack() {}
+    public void nack() {
+    }
 
     public boolean isAck() {
       return isAck;
@@ -121,7 +128,18 @@ public final class ExportMessageReceiverTest {
     DicomWebClient sourceDicomWebClient =
         new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
     DicomWebClient sinkDicomWebClient =
-        new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
+        new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL) {
+          // This tests only ExportMessageReceiver and StowRsSender.
+          // Properly mocking HTTP2 for low-level jetty stowrs implementation would be
+          // significantly more difficult (but it's used during integration test)
+          public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
+            try {
+              requestFactory.buildGetRequest(new GenericUrl("http://nope")).execute();
+            } catch (IOException e) {
+              throw new DicomWebException(e);
+            }
+          }
+        };
     DicomSender dicomSender = new StowRsSender(sourceDicomWebClient, sinkDicomWebClient, "studies");
     ExportMessageReceiver receiver = new ExportMessageReceiver(dicomSender);
     receiver.receiveMessage(pubsubMessage, replyConsumer);
@@ -232,7 +250,7 @@ public final class ExportMessageReceiverTest {
 
     // Service that sinks DICOM.
     FakeWebServer fakeSinkDicomWebServer = new FakeWebServer();
-    fakeSourceDicomWebServer.addResponseWithStatusCode(400);
+    fakeSinkDicomWebServer.addResponseWithStatusCode(400);
 
     StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
     ExportMessageReceiver receiver =
