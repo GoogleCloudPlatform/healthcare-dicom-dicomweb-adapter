@@ -45,6 +45,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class ExportMessageReceiverTest {
+
   private final String serverAET = "SERVER";
   private final String serverHost = "localhost";
   private final String clientAET = "CLIENT";
@@ -84,6 +85,7 @@ public final class ExportMessageReceiverTest {
   // StubAckReplyConsumer is a test helper used to check whether Pub/Sub message was ACK-ed
   // (representing a successful export).
   private class StubAckReplyConsumer implements AckReplyConsumer {
+
     private boolean isAck = false;
 
     @Override
@@ -92,7 +94,8 @@ public final class ExportMessageReceiverTest {
     }
 
     @Override
-    public void nack() {}
+    public void nack() {
+    }
 
     public boolean isAck() {
       return isAck;
@@ -126,10 +129,13 @@ public final class ExportMessageReceiverTest {
         new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
     DicomWebClient sinkDicomWebClient =
         new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL) {
+          // This tests only ExportMessageReceiver and StowRsSender.
+          // Properly mocking HTTP2 for low-level jetty stowrs implementation would be
+          // significantly more difficult (but it's used during integration test)
           public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
             try {
               requestFactory.buildGetRequest(new GenericUrl("http://nope")).execute();
-            } catch (IOException e){
+            } catch (IOException e) {
               throw new DicomWebException(e);
             }
           }
@@ -244,7 +250,7 @@ public final class ExportMessageReceiverTest {
 
     // Service that sinks DICOM.
     FakeWebServer fakeSinkDicomWebServer = new FakeWebServer();
-    fakeSourceDicomWebServer.addResponseWithStatusCode(400);
+    fakeSinkDicomWebServer.addResponseWithStatusCode(400);
 
     StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
     ExportMessageReceiver receiver =

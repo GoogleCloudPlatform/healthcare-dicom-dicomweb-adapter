@@ -57,26 +57,6 @@ public final class CStoreServiceTest {
   // Client properties.
   ApplicationEntity clientAE;
 
-  // Creates a HTTP request factory that returns given response code.
-  private HttpRequestFactory createHttpRequestFactory(boolean connectError, int responseCode) {
-    return new MockHttpTransport() {
-      @Override
-      public LowLevelHttpRequest buildRequest(String method, String url) {
-        return new MockLowLevelHttpRequest() {
-          @Override
-          public LowLevelHttpResponse execute() throws IOException {
-            if (connectError) {
-              throw new IOException("connect error");
-            }
-            MockLowLevelHttpResponse response = new MockLowLevelHttpResponse();
-            response.setStatusCode(responseCode);
-            return response;
-          }
-        };
-      }
-    }.createRequestFactory();
-  }
-
   private Association associate(
       String serverHostname, int serverPort, String sopClass, String syntax) throws Exception {
     AAssociateRQ rq = new AAssociateRQ();
