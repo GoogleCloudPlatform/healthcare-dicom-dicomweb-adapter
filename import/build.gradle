@@ -49,6 +49,7 @@ repositories {
     mavenCentral()
     maven { url 'http://www.dcm4che.org/maven2/' }
     maven { url 'https://jitpack.io' }
+    mavenLocal()
 }
 
 dependencies {
@@ -60,6 +61,8 @@ dependencies {
     compile "org.dcm4che:dcm4che-net:3.3.8"
     compile project(":dicom_util")
     compile project(":util")
+
+    compile "redactor:lib:unspecified"
 
     testCompile "com.google.truth:truth:0.39"
     testCompile "junit:junit:4.2"

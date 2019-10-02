@@ -16,11 +16,17 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
+import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -42,10 +48,12 @@ public class CStoreService extends BasicCStoreSCP {
 
   private final String path;
   private final IDicomWebClient dicomWebClient;
+  private final DicomRedactor redactor;
 
-  CStoreService(String path, IDicomWebClient dicomWebClient) {
+  CStoreService(String path, IDicomWebClient dicomWebClient, DicomRedactor redactor) {
     this.path = path;
     this.dicomWebClient = dicomWebClient;
+    this.redactor = redactor;
   }
 
   @Override
@@ -72,7 +80,17 @@ public class CStoreService extends BasicCStoreSCP {
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
-      dicomWebClient.stowRs(path, inBuffer);
+      InputStream resultInputStream = inBuffer;
+      if (redactor != null) {
+        PipedOutputStream pipedOut = new PipedOutputStream();
+        // either need to have enough buffer to fit OR need to be reading from other thread
+        PipedInputStream pipedIn = new PipedInputStream(pipedOut, 1024* 1024 * 100);
+        redactor.redact(inBuffer, pipedOut);
+
+        resultInputStream = pipedIn;
+      }
+
+      dicomWebClient.stowRs(path, resultInputStream);
 
       log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
           association.toString(), sopClassUID, transferSyntax, remoteAeTitle);

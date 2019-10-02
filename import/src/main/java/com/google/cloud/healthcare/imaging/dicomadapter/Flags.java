@@ -92,6 +92,24 @@ public class Flags {
   )
   String monitoringProjectId = "";
 
+  @Parameter(
+      names = {"--tag_edit_remove"},
+      description = "Tags to remove during C-STORE upload, comma separated"
+  )
+  String tagsToRemove = "";
+
+  @Parameter(
+      names = {"--tag_edit_keep"},
+      description = "Tags to keep during C-STORE upload, comma separated"
+  )
+  String tagsToKeep = "";
+
+  @Parameter(
+      names = {"--tag_edit_profile"},
+      description = "Filter tags by predefined profile during C-STORE upload"
+  )
+  String tagsProfile = "";
+
   public Flags() {
   }
 }

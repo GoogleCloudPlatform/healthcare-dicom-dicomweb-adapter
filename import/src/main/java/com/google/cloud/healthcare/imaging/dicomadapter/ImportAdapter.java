@@ -23,12 +23,15 @@ import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.DicomWebClientJetty;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
+import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.List;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
@@ -81,10 +84,24 @@ public class ImportAdapter {
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
 
+    // TODO cover tagsToKeep and tagsProfile
+    DicomRedactor redactor = null;
+    if (!flags.tagsToRemove.isEmpty()) {
+      try {
+        List<String> tagList = Arrays.asList(flags.tagsToRemove.split(","));
+        DicomConfig config = DicomConfig.newBuilder().setRemoveList(
+            DicomConfig.TagFilterList.newBuilder().addAllTags(tagList)).build();
+
+        redactor = new DicomRedactor(config);
+      } catch (Exception e) {
+        log.error("Error initializing DicomRedactor", e);
+      }
+    }
+
     IDicomWebClient cstoreDicomWebClient =
         new DicomWebClientJetty(credentials, cstoreDicomwebAddr);
     CStoreService cStoreService =
-        new CStoreService(cstoreDicomwebStowPath, cstoreDicomWebClient);
+        new CStoreService(cstoreDicomwebStowPath, cstoreDicomWebClient, redactor);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
