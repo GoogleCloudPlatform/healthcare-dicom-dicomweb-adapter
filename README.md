@@ -17,6 +17,7 @@ Table of Contents
       * [Deployment using Data Protection Toolkit](#deployment-using-data-protection-toolkit)
       * [Building from source](#building-from-source)
          * [Building and publishing Docker Images](#building-and-publishing-docker-images)
+      * [Wiki](#wiki)
 
 ## Import Adapter
 
@@ -263,4 +264,6 @@ TAG=gcr.io/${PROJECT}/dicom-export-adapter
 gradle dockerBuildImage -Pdocker_tag=${TAG}
 docker push ${TAG}
 ```
+## Wiki
 
+For addition documentation please check out the [Wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki).
