@@ -203,8 +203,12 @@ The status and IP address of load balancer can be seen by executing:
 ```shell
 kubectl get service dicom-adapter-load-balancer
 ```
+## Local Deployment
 
-### Data Protection Toolkit Deployment 
+Instructions on how to run the Import Adapter Docker image locally are available on the [wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/Running-Docker-image-locally).
+
+## Deployment using Data Protection Toolkit
+
 The adapters can be deployed as a gke_workload using the [data protection toolkit](https://github.com/GoogleCloudPlatform/healthcare/tree/master/deploy). Sample configuration may be found in this [folder.](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/tree/master/samples) 
 
 ## Building from source
@@ -245,6 +249,4 @@ TAG=gcr.io/${PROJECT}/dicom-export-adapter
 gradle dockerBuildImage -Pdocker_tag=${TAG}
 docker push ${TAG}
 ```
-
-Instructions on how to run the Import Adapter Docker image locally are available on the [wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/Running-Docker-image-locally).
 
