@@ -3,6 +3,20 @@
 The DICOM adapter is a set of components that translate between traditional DICOM DIMSE protocols (e.g., C-STORE) and the RESTful DICOMweb protocols (e.g., STOW-RS). There are
 two components, namely import and export adapter.
 
+Table of Contents
+=================
+
+   * [DICOM Adapter](#dicom-adapter)
+      * [Import Adapter](#import-adapter)
+      * [Export Adapter](#export-adapter)
+      * [Stackdriver Monitoring](#stackdriver-monitoring)
+      * [Deployment using Kubernetes](#deployment-using-kubernetes)
+         * [Requirements](#requirements)
+         * [Deploying Docker Images to GKE](#deploying-docker-images-to-gke)
+      * [Local Deployment](#local-deployment)
+      * [Deployment using Data Protection Toolkit](#deployment-using-data-protection-toolkit)
+      * [Building from source](#building-from-source)
+         * [Building and publishing Docker Images](#building-and-publishing-docker-images)
 
 ## Import Adapter
 
