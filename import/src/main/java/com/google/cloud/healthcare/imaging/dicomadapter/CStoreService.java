@@ -20,13 +20,11 @@ import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.concurrent.CompletableFuture;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -72,6 +70,9 @@ public class CStoreService extends BasicCStoreSCP {
       String transferSyntax = presentationContext.getTransferSyntax();
       String remoteAeTitle = association.getCallingAET();
 
+      log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
+          association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
+
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
@@ -80,22 +81,42 @@ public class CStoreService extends BasicCStoreSCP {
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
-      InputStream resultInputStream = inBuffer;
       if (redactor != null) {
         PipedOutputStream pipedOut = new PipedOutputStream();
-        // either need to have enough buffer to fit OR need to be reading from other thread
-        PipedInputStream pipedIn = new PipedInputStream(pipedOut, 1024* 1024 * 100);
-        redactor.redact(inBuffer, pipedOut);
+        PipedInputStream pipedIn = new PipedInputStream(pipedOut, 8192*8);
 
-        resultInputStream = pipedIn;
+        CompletableFuture<Throwable> futureThrowable = new CompletableFuture<>();
+        association.getApplicationEntity().getDevice().execute(() -> {
+          try {
+            dicomWebClient.stowRs(path, pipedIn);
+            futureThrowable.complete(null);
+          } catch (Throwable e) {
+            futureThrowable.complete(e);
+            try {
+              pipedIn.close();
+            } catch (IOException e1) {
+              log.error("Failed to close pipedIn", e);
+            }
+          }
+        });
+
+        try {
+          redactor.redact(inBuffer, pipedOut);
+        } catch (Exception e){
+          // not sure if this isn't race condition
+          if(!futureThrowable.isDone()) {
+            throw e;
+          }
+        }
+
+        if (futureThrowable.get() != null) {
+          throw futureThrowable.get();
+        }
+      } else {
+        dicomWebClient.stowRs(path, inBuffer);
       }
 
-      dicomWebClient.stowRs(path, resultInputStream);
-
-      log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
-          association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
       response.setInt(Tag.Status, VR.US, Status.Success);
-
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
     } catch (DicomWebException e) {
       MonitoringService.addEvent(Event.CSTORE_ERROR);

@@ -28,6 +28,7 @@ import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomC
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
+import com.google.cloud.healthcare.imaging.dicomadapter.redactor.StreamDicomRedactor;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
@@ -92,7 +93,7 @@ public class ImportAdapter {
         DicomConfig config = DicomConfig.newBuilder().setRemoveList(
             DicomConfig.TagFilterList.newBuilder().addAllTags(tagList)).build();
 
-        redactor = new DicomRedactor(config);
+        redactor = new StreamDicomRedactor(config);
       } catch (Exception e) {
         log.error("Error initializing DicomRedactor", e);
       }
