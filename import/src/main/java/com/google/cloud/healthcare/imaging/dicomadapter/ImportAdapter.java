@@ -24,7 +24,9 @@ import com.google.cloud.healthcare.DicomWebClientJetty;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
+import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
+import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -48,6 +50,11 @@ public class ImportAdapter {
     Flags flags = new Flags();
     JCommander jCommander = new JCommander(flags);
     jCommander.parse(args);
+
+    if(flags.help){
+      jCommander.usage();
+      return;
+    }
 
     // Adjust logging.
     if (flags.verbose) {
@@ -85,20 +92,7 @@ public class ImportAdapter {
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
 
-    // TODO cover tagsToKeep and tagsProfile
-    DicomRedactor redactor = null;
-    if (!flags.tagsToRemove.isEmpty()) {
-      try {
-        List<String> tagList = Arrays.asList(flags.tagsToRemove.split(","));
-        DicomConfig config = DicomConfig.newBuilder().setRemoveList(
-            DicomConfig.TagFilterList.newBuilder().addAllTags(tagList)).build();
-
-        redactor = new StreamDicomRedactor(config);
-      } catch (Exception e) {
-        log.error("Error initializing DicomRedactor", e);
-      }
-    }
-
+    DicomRedactor redactor = configureRedactor(flags);
     IDicomWebClient cstoreDicomWebClient =
         new DicomWebClientJetty(credentials, cstoreDicomwebAddr);
     CStoreService cStoreService =
@@ -124,5 +118,37 @@ public class ImportAdapter {
     // Start DICOM server
     Device device = DeviceUtil.createServerDevice(flags.dimseAET, flags.dimsePort, serviceRegistry);
     device.bindConnections();
+  }
+
+  private static DicomRedactor configureRedactor(Flags flags) throws IOException{
+    DicomRedactor redactor = null;
+    int tagEditFlags = (flags.tagsToRemove.isEmpty() ? 0 : 1) +
+        (flags.tagsToKeep.isEmpty() ? 0 : 1) +
+        (flags.tagsProfile.isEmpty() ? 0 : 1);
+    if (tagEditFlags > 1) {
+      throw new IOException("Only one of 'tag_edit' flags may be used");
+    }
+    if (tagEditFlags > 0) {
+      DicomConfigProtos.DicomConfig.Builder configBuilder = DicomConfig.newBuilder();
+      if (!flags.tagsToRemove.isEmpty()) {
+        List<String> removeList = Arrays.asList(flags.tagsToRemove.split(","));
+        configBuilder.setRemoveList(
+            DicomConfig.TagFilterList.newBuilder().addAllTags(removeList));
+      } else if (!flags.tagsToKeep.isEmpty()) {
+        List<String> keepList = Arrays.asList(flags.tagsToKeep.split(","));
+        configBuilder.setKeepList(
+            DicomConfig.TagFilterList.newBuilder().addAllTags(keepList));
+      } else if (!flags.tagsProfile.isEmpty()){
+        configBuilder.setFilterProfile(TagFilterProfile.valueOf(flags.tagsProfile));
+      }
+
+      try {
+        redactor = new StreamDicomRedactor(configBuilder.build());
+      } catch (Exception e) {
+        throw new IOException("Failure creating DICOM redactor", e);
+      }
+    }
+
+    return redactor;
   }
 }

@@ -94,21 +94,29 @@ public class Flags {
 
   @Parameter(
       names = {"--tag_edit_remove"},
-      description = "Tags to remove during C-STORE upload, comma separated"
+      description = "Tags to remove during C-STORE upload, comma separated. Only one of 'tag_edit' group flags may be present"
   )
   String tagsToRemove = "";
 
   @Parameter(
       names = {"--tag_edit_keep"},
-      description = "Tags to keep during C-STORE upload, comma separated"
+      description = "Tags to keep during C-STORE upload, comma separated. Only one of 'tag_edit' group flags may be present"
   )
   String tagsToKeep = "";
 
   @Parameter(
       names = {"--tag_edit_profile"},
-      description = "Filter tags by predefined profile during C-STORE upload"
+      description = "Filter tags by predefined profile during C-STORE upload. Only one of 'tag_edit' group flags may be present. "
+      + "Values: TAG_FILTER_PROFILE_UNSPECIFIED, CHC_BASIC"
   )
   String tagsProfile = "";
+
+  @Parameter(
+      names = { "--help", "-h" },
+      help = true,
+      description = "Display help"
+  )
+  boolean help = false;
 
   public Flags() {
   }

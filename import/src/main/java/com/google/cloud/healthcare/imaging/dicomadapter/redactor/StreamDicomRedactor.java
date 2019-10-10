@@ -17,7 +17,7 @@ import org.dcm4che3.io.DicomOutputStream;
 
 public class StreamDicomRedactor extends DicomRedactor {
 
-  private static final int BATCH_SIZE = 1024;
+  private static final int BATCH_SIZE = 8192;
 
   public StreamDicomRedactor(
       DicomConfig config)

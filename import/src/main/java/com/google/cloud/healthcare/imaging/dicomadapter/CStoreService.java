@@ -83,7 +83,7 @@ public class CStoreService extends BasicCStoreSCP {
 
       if (redactor != null) {
         PipedOutputStream pipedOut = new PipedOutputStream();
-        PipedInputStream pipedIn = new PipedInputStream(pipedOut, 8192*8);
+        PipedInputStream pipedIn = new PipedInputStream(pipedOut);
 
         CompletableFuture<Throwable> futureThrowable = new CompletableFuture<>();
         association.getApplicationEntity().getDevice().execute(() -> {
