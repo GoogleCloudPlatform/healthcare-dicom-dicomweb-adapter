@@ -10,6 +10,7 @@ import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.data.VR;
+import org.dcm4che3.imageio.codec.TransferSyntaxType;
 import org.dcm4che3.io.BulkDataDescriptor;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.io.DicomInputStream.IncludeBulkData;
@@ -28,6 +29,11 @@ public class StreamDicomRedactor extends DicomRedactor {
   public StreamDicomRedactor(
       DicomConfig config, String prefix) throws Exception {
     super(config, prefix);
+  }
+
+  public boolean willRemoveTagValue(int tag) {
+    return (settings.isKeepList && !settings.tagSet.contains(tag))
+        || (!settings.isKeepList && settings.tagSet.contains(tag));
   }
 
   /**
@@ -54,8 +60,12 @@ public class StreamDicomRedactor extends DicomRedactor {
         metadata = dicomInputStream.getFileMetaInformation();
         // Update UID in metadata.
         regenUID(metadata, Tag.MediaStorageSOPInstanceUID);
-        // TODO Overwrite transfer syntax if PixelData has been removed, if possible (rather than by default)
-        metadata.setString(Tag.TransferSyntaxUID, VR.UI, UID.ExplicitVRLittleEndian);
+
+        String ts = metadata.getString(Tag.TransferSyntaxUID);
+        if (willRemoveTagValue(toTagID("PixelData"))
+            && (TransferSyntaxType.forUID(ts) != TransferSyntaxType.NATIVE)) {
+          metadata.setString(Tag.TransferSyntaxUID, VR.UI, UID.ExplicitVRLittleEndian);
+        }
       } catch (Exception e) {
         throw new IOException("Failed to initialize redactor", e);
       }
