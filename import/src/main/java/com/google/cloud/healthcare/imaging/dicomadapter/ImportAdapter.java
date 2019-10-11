@@ -30,7 +30,6 @@ import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomC
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
-import com.google.cloud.healthcare.imaging.dicomadapter.redactor.StreamDicomRedactor;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
@@ -143,7 +142,7 @@ public class ImportAdapter {
       }
 
       try {
-        redactor = new StreamDicomRedactor(configBuilder.build());
+        redactor = new DicomRedactor(configBuilder.build());
       } catch (Exception e) {
         throw new IOException("Failure creating DICOM redactor", e);
       }
