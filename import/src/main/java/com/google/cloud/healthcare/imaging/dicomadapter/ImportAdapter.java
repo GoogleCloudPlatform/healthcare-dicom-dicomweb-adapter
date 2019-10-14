@@ -23,7 +23,8 @@ import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.DicomWebClientJetty;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
-import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
+import com.google.cloud.healthcare.deid.redactor.IDicomRedactor;
+import com.google.cloud.healthcare.deid.redactor.StreamDicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
@@ -91,7 +92,7 @@ public class ImportAdapter {
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
 
-    DicomRedactor redactor = configureRedactor(flags);
+    IDicomRedactor redactor = configureRedactor(flags);
     IDicomWebClient cstoreDicomWebClient =
         new DicomWebClientJetty(credentials, cstoreDicomwebAddr);
     CStoreService cStoreService =
@@ -119,8 +120,8 @@ public class ImportAdapter {
     device.bindConnections();
   }
 
-  private static DicomRedactor configureRedactor(Flags flags) throws IOException{
-    DicomRedactor redactor = null;
+  private static IDicomRedactor configureRedactor(Flags flags) throws IOException{
+    IDicomRedactor redactor = null;
     int tagEditFlags = (flags.tagsToRemove.isEmpty() ? 0 : 1) +
         (flags.tagsToKeep.isEmpty() ? 0 : 1) +
         (flags.tagsProfile.isEmpty() ? 0 : 1);
@@ -142,7 +143,7 @@ public class ImportAdapter {
       }
 
       try {
-        redactor = new DicomRedactor(configBuilder.build());
+        redactor = new StreamDicomRedactor(configBuilder.build());
       } catch (Exception e) {
         throw new IOException("Failure creating DICOM redactor", e);
       }
