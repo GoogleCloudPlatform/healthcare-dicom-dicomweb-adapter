@@ -62,7 +62,7 @@ dependencies {
     compile project(":dicom_util")
     compile project(":util")
 
-    compile "redactor:lib:unspecified"
+    compile "com.google.cloud.healthcare.deid:redactor:0.1.0"
 
     testCompile "com.google.truth:truth:0.39"
     testCompile "junit:junit:4.2"
