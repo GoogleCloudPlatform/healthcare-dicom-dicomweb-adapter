@@ -1,5 +1,35 @@
 steps:
-- name: 'gradle:5.6-jdk11'
+- name: 'gcr.io/cloud-builders/git'
+  id: clone-deid
+  args:
+  - clone
+  - https://github.com/red1408/healthcare-deid.git
+  - healthcare-deid
+
+- name: 'gcr.io/cloud-builders/git'
+  id: checkout-deid-branch
+  args:
+  - checkout
+  - "stream_edit"
+  dir: healthcare-deid
+
+- name: ${_GRADLE_IMAGE}
+  id: deid-redactor-install
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - gradle
+  - install
+  dir: healthcare-deid/offline_tools/redactor
+
+- name: ${_GRADLE_IMAGE}
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
   args:
   - gradle
   - build
+
+substitutions:
+  _GRADLE_IMAGE: 'gradle:5.6-jdk11'

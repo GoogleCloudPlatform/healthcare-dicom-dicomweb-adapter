@@ -31,10 +31,43 @@
   - ${_STORE_SCP_PORT}
   - ${_CLOSE_STORE_SCP_PORT}
 
+- name: 'gcr.io/cloud-builders/git'
+  id: clone-deid
+  args:
+  - clone
+  - https://github.com/red1408/healthcare-deid.git
+  - healthcare-deid
+  waitFor: ['-']
+
+- name: 'gcr.io/cloud-builders/git'
+  id: checkout-deid-branch
+  args:
+  - checkout
+  - "stream_edit"
+  dir: healthcare-deid
+  waitFor:
+  - clone-deid
+
+- name: ${_GRADLE_IMAGE}
+  id: deid-redactor-install
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - gradle
+  - install
+  dir: healthcare-deid/offline_tools/redactor
+  waitFor:
+  - checkout-deid-branch
+
 - name: ${_GRADLE_IMAGE}
   id: adapter-build
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
   args: [ 'bash', './integration_test/build-adapters.sh', '${_IMAGEPROJECT}', '${SHORT_SHA}']
-  waitFor: ['-']
+  waitFor:
+  - deid-redactor-install
 
 # run adapter
 
@@ -253,9 +286,9 @@ substitutions:
   _COMMITMENT_SCU_PORT: '4000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
-  _ADAPTER_RUN_STEP: 'step_5'
+  _ADAPTER_RUN_STEP: 'step_8'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_11'
+  _COMMITMENT_SCU_STEP: 'step_14'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
   _PUBLISH: 'false'
