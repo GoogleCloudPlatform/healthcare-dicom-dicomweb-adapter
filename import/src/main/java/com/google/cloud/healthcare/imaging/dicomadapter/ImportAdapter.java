@@ -126,7 +126,7 @@ public class ImportAdapter {
         (flags.tagsToKeep.isEmpty() ? 0 : 1) +
         (flags.tagsProfile.isEmpty() ? 0 : 1);
     if (tagEditFlags > 1) {
-      throw new IOException("Only one of 'tag_edit' flags may be used");
+      throw new IllegalArgumentException("Only one of 'redact' flags may be present");
     }
     if (tagEditFlags > 0) {
       DicomConfigProtos.DicomConfig.Builder configBuilder = DicomConfig.newBuilder();

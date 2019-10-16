@@ -70,9 +70,6 @@ public class CStoreService extends BasicCStoreSCP {
       String transferSyntax = presentationContext.getTransferSyntax();
       String remoteAeTitle = association.getCallingAET();
 
-      log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
-          association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
-
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
