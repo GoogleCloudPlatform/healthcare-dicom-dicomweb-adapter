@@ -90,6 +90,7 @@ public class CStoreService extends BasicCStoreSCP {
           } catch (Throwable e) {
             futureThrowable.complete(e);
             try {
+              // to fail redact, instead of letting it hang
               pipedIn.close();
             } catch (IOException e1) {
               log.error("Failed to close pipedIn", e);

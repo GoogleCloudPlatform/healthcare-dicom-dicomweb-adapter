@@ -107,7 +107,7 @@ public class Flags {
   @Parameter(
       names = {"--redact_filter_profile"},
       description = "Filter tags by predefined profile during C-STORE upload. Only one of 'redact' flags may be present. "
-      + "Values: TAG_FILTER_PROFILE_UNSPECIFIED, CHC_BASIC"
+      + "Values: CHC_BASIC"
   )
   String tagsProfile = "";
 
