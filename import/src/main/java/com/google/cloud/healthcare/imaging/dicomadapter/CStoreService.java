@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorCompletionService;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -34,6 +36,7 @@ import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCStoreSCP;
 import org.dcm4che3.net.service.DicomServiceException;
+import org.dcm4che3.util.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +71,6 @@ public class CStoreService extends BasicCStoreSCP {
       String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
       String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
       String transferSyntax = presentationContext.getTransferSyntax();
-      String remoteAeTitle = association.getCallingAET();
 
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
@@ -79,37 +81,7 @@ public class CStoreService extends BasicCStoreSCP {
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
       if (redactor != null) {
-        PipedOutputStream pipedOut = new PipedOutputStream();
-        PipedInputStream pipedIn = new PipedInputStream(pipedOut);
-
-        CompletableFuture<Throwable> futureThrowable = new CompletableFuture<>();
-        association.getApplicationEntity().getDevice().execute(() -> {
-          try {
-            dicomWebClient.stowRs(path, pipedIn);
-            futureThrowable.complete(null);
-          } catch (Throwable e) {
-            futureThrowable.complete(e);
-            try {
-              // to fail redact, instead of letting it hang
-              pipedIn.close();
-            } catch (IOException e1) {
-              log.error("Failed to close pipedIn", e);
-            }
-          }
-        });
-
-        try {
-          redactor.redact(inBuffer, pipedOut);
-        } catch (Exception e){
-          // not sure if this isn't race condition
-          if(!futureThrowable.isDone()) {
-            throw e;
-          }
-        }
-
-        if (futureThrowable.get() != null) {
-          throw futureThrowable.get();
-        }
+        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inBuffer);
       } else {
         dicomWebClient.stowRs(path, inBuffer);
       }
@@ -131,6 +103,43 @@ public class CStoreService extends BasicCStoreSCP {
   private void validateParam(String value, String name) throws DicomServiceException {
     if (value == null || value.trim().length() == 0) {
       throw new DicomServiceException(Status.CannotUnderstand, "Mandatory tag empty: " + name);
+    }
+  }
+
+  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream)
+      throws Throwable {
+    ExecutorCompletionService<Void> ecs = new ExecutorCompletionService<>(underlyingExecutor);
+
+    PipedOutputStream pdvPipeOut = new PipedOutputStream();
+    PipedInputStream pdvPipeIn = new PipedInputStream(pdvPipeOut);
+    PipedOutputStream redactedPipeOut = new PipedOutputStream();
+    PipedInputStream redactedPipeIn = new PipedInputStream(redactedPipeOut);
+
+    ecs.submit(() -> {
+      dicomWebClient.stowRs(path, redactedPipeIn);
+      return null;
+    });
+
+    ecs.submit(() -> {
+      redactor.redact(pdvPipeIn, redactedPipeOut);
+      return null;
+    });
+
+    try {
+      // PDVInputStream is thread-locked
+      StreamUtils.copy(inputStream, pdvPipeOut);
+    } catch (IOException e) {
+      // causes or is caused by exception in redactor.redact, no need to throw this up
+      log.trace("Error copying inputStream to pdvPipeOut", e);
+    }
+    pdvPipeOut.close();
+
+    try {
+      for (int i = 0; i < 2; ++i) {
+        ecs.take().get();
+      }
+    } catch (ExecutionException e) {
+      throw e.getCause();
     }
   }
 }
