@@ -116,23 +116,28 @@ public class CStoreService extends BasicCStoreSCP {
     PipedInputStream redactedPipeIn = new PipedInputStream(redactedPipeOut);
 
     ecs.submit(() -> {
-      dicomWebClient.stowRs(path, redactedPipeIn);
+      try (redactedPipeIn) {
+        dicomWebClient.stowRs(path, redactedPipeIn);
+      }
       return null;
     });
 
     ecs.submit(() -> {
-      redactor.redact(pdvPipeIn, redactedPipeOut);
+      try (pdvPipeIn) {
+        try (redactedPipeOut) {
+          redactor.redact(pdvPipeIn, redactedPipeOut);
+        }
+      }
       return null;
     });
 
-    try {
+    try (pdvPipeOut) {
       // PDVInputStream is thread-locked
       StreamUtils.copy(inputStream, pdvPipeOut);
     } catch (IOException e) {
       // causes or is caused by exception in redactor.redact, no need to throw this up
       log.trace("Error copying inputStream to pdvPipeOut", e);
     }
-    pdvPipeOut.close();
 
     try {
       for (int i = 0; i < 2; ++i) {
