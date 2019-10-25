@@ -62,7 +62,7 @@ dependencies {
     compile project(":dicom_util")
     compile project(":util")
 
-    compile "com.google.cloud.healthcare.deid:redactor:0.1.0"
+    compile "com.github.red1408:deid-redactor:233908ca"
 
     testCompile "com.google.truth:truth:0.39"
     testCompile "junit:junit:4.2"
