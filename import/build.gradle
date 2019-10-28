@@ -49,6 +49,9 @@ repositories {
     mavenCentral()
     maven { url 'http://www.dcm4che.org/maven2/' }
     maven { url 'https://jitpack.io' }
+    flatDir {
+        dirs '../libs'
+    }
 }
 
 dependencies {
@@ -61,7 +64,7 @@ dependencies {
     compile project(":dicom_util")
     compile project(":util")
 
-    compile "com.github.red1408:deid-redactor:233908ca"
+    compile name: 'redactor-0.1.0'
 
     testCompile "com.google.truth:truth:0.39"
     testCompile "junit:junit:4.2"
