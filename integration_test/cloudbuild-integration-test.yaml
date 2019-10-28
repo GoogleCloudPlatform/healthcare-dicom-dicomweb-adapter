@@ -20,23 +20,20 @@
     path: '/root/.m2'
   args:
   - bash
-  - integration_test/mvn-install-tools.sh
+  - integration_test/scripts/mvn-install-tools.sh
 
 - name: ${_MAVEN_IMAGE}
   id: store-scp
   args:
   - bash
-  - integration_test/run-store-scp-and-wait.sh
+  - integration_test/scripts/run-store-scp-and-wait.sh
   - ${_STORE_SCP_RUN_STEP}
   - ${_STORE_SCP_PORT}
   - ${_CLOSE_STORE_SCP_PORT}
 
 - name: ${_GRADLE_IMAGE}
   id: adapter-build
-  volumes:
-  - name: 'vol1'
-    path: '/root/.m2'
-  args: [ 'bash', './integration_test/build-adapters.sh', '${_IMAGEPROJECT}', '${SHORT_SHA}']
+  args: [ 'bash', './integration_test/scripts/build-adapters.sh', '${_IMAGEPROJECT}', '${SHORT_SHA}']
   waitFor: ['-']
 
 # run adapter
@@ -45,7 +42,7 @@
   id: adapter-main
   entrypoint: 'bash'
   args: [ '-c',
-          "/import/bin/import --dimse_aet=IMPORTADAPTER --dimse_port=${_ADAPTER_PORT} --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb --aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":${_STORE_SCP_RUN_STEP},\"port\":${_STORE_SCP_PORT}},{\"name\":\"STGCMTSCU\",\"host\":${_COMMITMENT_SCU_STEP},\"port\":${_COMMITMENT_SCU_PORT}},]\" --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+          "/import/bin/import --dimse_aet=IMPORTADAPTER --dimse_port=${_ADAPTER_PORT} --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb --aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":${_STORE_SCP_RUN_STEP},\"port\":${_STORE_SCP_PORT}},{\"name\":\"STGCMTSCU\",\"host\":${_COMMITMENT_SCU_STEP},\"port\":${_COMMITMENT_SCU_PORT}},]\" --redact_remove_list=ContentTime,ContentDate --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
 
 # create dataset if not exists, re-create store (delete if exists, then create)
@@ -53,7 +50,7 @@
   id: setup-dataset-and-dicom-store
   args:
   - bash
-  - integration_test/setup-dataset-and-store.sh
+  - integration_test/scripts/setup-dataset-and-store.sh
   - ${_PROJECT}
   - ${_LOCATION}
   - ${_DATASET}
@@ -65,7 +62,7 @@
   id: wait-for-adapter
   args:
   - ash
-  - integration_test/wait-for-port.sh
+  - integration_test/scripts/wait-for-port.sh
   - ${_ADAPTER_RUN_STEP}
   - ${_ADAPTER_PORT}
   timeout: 5m
@@ -78,7 +75,7 @@
   id: wait-for-storescp
   args:
   - ash
-  - integration_test/wait-for-port.sh
+  - integration_test/scripts/wait-for-port.sh
   - ${_STORE_SCP_RUN_STEP}
   - ${_STORE_SCP_PORT}
   timeout: 5m
@@ -95,7 +92,7 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} ../../../integration_test/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} ../../../integration_test/data/example.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter
@@ -127,7 +124,7 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/data/example-redacted.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
   waitFor:
   - run-find-scu
@@ -143,7 +140,7 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.movescu.MoveSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -m SOPInstanceUID=111 --dest STORESCP'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -m SOPInstanceUID=${_REPLACED_UID} --dest STORESCP'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-movescu"
   waitFor:
   - run-commitment-scu
@@ -153,7 +150,7 @@
   id:  close-adapter
   entrypoint: bash
   args:
-      - './integration_test/stop-image.sh'
+      - './integration_test/scripts/stop-image.sh'
       - '${_IMAGEPROJECT}'
       - '${SHORT_SHA}'
   waitFor: ['run-move-scu']
@@ -172,18 +169,19 @@
   id: check-store-curl
   args:
   - bash
-  - integration_test/curl-dcm.sh
-  - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/111/series/111/instances/111"
+  - integration_test/scripts/curl-dcm.sh
+  - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID}/series/${_REPLACED_UID}/instances/${_REPLACED_UID}"
   - integration_test/downloaded.dcm
   waitFor:
   - run-store-scu
 
+# example-redacted has replaced UIDs and removed ContentTime,ContentDate tags
 - name: 'busybox:latest'
   id: check-store-diff
   args:
   - diff
   - 'integration_test/downloaded.dcm'
-  - 'integration_test/example.dcm'
+  - 'integration_test/data/example-redacted.dcm'
   waitFor:
   - check-store-curl
 
@@ -192,7 +190,7 @@
   args:
   - diff
   - 'integration_test/findscu-result1.xml'
-  - 'integration_test/findscu-expected.xml'
+  - 'integration_test/data/findscu-expected.xml'
   waitFor:
   - run-find-scu
 
@@ -202,8 +200,8 @@
   id: check-move-diff
   args:
   - diff
-  - 'integration_test/storescp-data/111'
-  - 'integration_test/example-moved.dcm'
+  - 'integration_test/storescp-data/${_REPLACED_UID}'
+  - 'integration_test/data/example-redacted-moved.dcm'
   waitFor:
   - run-move-scu
 
@@ -214,7 +212,7 @@
     path: '/root/.m2'
   args:
   - bash
-  - /workspace/integration_test/diff-commitment-result.sh
+  - /workspace/integration_test/scripts/diff-commitment-result.sh
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-dcm2xml"
   waitFor:
   - run-commitment-scu
@@ -240,7 +238,7 @@
 
 - name: 'google/cloud-sdk:250.0.0'
   id: publish-image
-  args: [ 'bash', 'integration_test/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
+  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
   waitFor: ['delete-dicom-store']
 timeout: 1800s
 substitutions:
@@ -259,6 +257,9 @@ substitutions:
   _ADAPTER_RUN_STEP: 'step_5'
   _STORE_SCP_RUN_STEP: 'step_3'
   _COMMITMENT_SCU_STEP: 'step_11'
+# Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
+# This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
+  _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
   _PUBLISH: 'false'
