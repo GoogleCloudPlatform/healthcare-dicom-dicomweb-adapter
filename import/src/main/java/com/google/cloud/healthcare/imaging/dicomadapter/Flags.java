@@ -92,6 +92,32 @@ public class Flags {
   )
   String monitoringProjectId = "";
 
+  @Parameter(
+      names = {"--redact_remove_list"},
+      description = "Tags to remove during C-STORE upload, comma separated. Only one of 'redact' flags may be present"
+  )
+  String tagsToRemove = "";
+
+  @Parameter(
+      names = {"--redact_keep_list"},
+      description = "Tags to keep during C-STORE upload, comma separated. Only one of 'redact' flags may be present"
+  )
+  String tagsToKeep = "";
+
+  @Parameter(
+      names = {"--redact_filter_profile"},
+      description = "Filter tags by predefined profile during C-STORE upload. Only one of 'redact' flags may be present. "
+      + "Values: CHC_BASIC"
+  )
+  String tagsProfile = "";
+
+  @Parameter(
+      names = { "--help", "-h" },
+      help = true,
+      description = "Display help"
+  )
+  boolean help = false;
+
   public Flags() {
   }
 }

@@ -76,7 +76,7 @@ public final class CStoreServiceTest {
     IDicomWebClient dicomWebClient =
         new MockStowClient(connectError, responseCode);
     CStoreService cStoreService =
-        new CStoreService("/studies", dicomWebClient);
+        new CStoreService("/studies", dicomWebClient, null);
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
