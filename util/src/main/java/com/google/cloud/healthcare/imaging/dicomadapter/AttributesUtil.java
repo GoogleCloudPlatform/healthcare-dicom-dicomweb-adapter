@@ -40,6 +40,9 @@ public class AttributesUtil {
   private static final String PN_PHONETIC = "Phonetic";
   private static final String PN_DELIMITER = "=";
 
+  private static final int INSTANCES_LIMIT = 50000;
+  private static final int STUDIES_SERIES_LIMIT = 5000;
+
   public static String getTagValue(JSONObject json, String tag) throws JSONException {
     JSONObject jsonTag = json.getJSONObject(tag);
     JSONArray valueArray = jsonTag.getJSONArray("Value");
@@ -114,13 +117,13 @@ public class AttributesUtil {
     if (nonEmptyKeys.contains(Tag.QueryRetrieveLevel)) {
       switch (attrs.getString(Tag.QueryRetrieveLevel)) {
         case "STUDY":
-          qidoPath.append("studies");
+          qidoPath.append("studies?limit=" + STUDIES_SERIES_LIMIT + "&");
           break;
         case "SERIES":
-          qidoPath.append("series");
+          qidoPath.append("series?limit=" + STUDIES_SERIES_LIMIT + "&");
           break;
         case "IMAGE":
-          qidoPath.append("instances");
+          qidoPath.append("instances?limit=" + INSTANCES_LIMIT + "&");
           break;
         default:
           throw new DicomServiceException(Status.ProcessingFailure,
@@ -129,10 +132,6 @@ public class AttributesUtil {
       nonEmptyKeys.remove(Tag.QueryRetrieveLevel);
     } else {
       throw new DicomServiceException(Status.ProcessingFailure, "No QueryRetrieveLevel specified");
-    }
-
-    if (nonEmptyKeys.size() > 0 || includeFieldSet.size() > 0) {
-      qidoPath.append("?");
     }
 
     if (includeFieldSet.size() > 0) {

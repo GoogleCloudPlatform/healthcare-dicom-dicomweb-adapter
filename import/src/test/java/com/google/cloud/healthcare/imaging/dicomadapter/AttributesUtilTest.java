@@ -54,7 +54,7 @@ public class AttributesUtilTest {
     String result = AttributesUtil.attributesToQidoPath(attrs);
 
     assertThat(result).isEqualTo(
-        "instances?" + TagUtils.toHexString(Tag.SOPInstanceUID) + "=123&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.SOPInstanceUID) + "=123&");
   }
 
   @Test
@@ -66,7 +66,7 @@ public class AttributesUtilTest {
     String result = AttributesUtil.attributesToQidoPath(attrs);
 
     assertThat(result).isEqualTo(
-        "instances?" + TagUtils.toHexString(Tag.PatientName) + "=%25%26%23%5E+&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.PatientName) + "=%25%26%23%5E+&");
   }
 
   @Test
@@ -77,7 +77,7 @@ public class AttributesUtilTest {
     String[] results = AttributesUtil.attributesToQidoPathArray(attrs);
 
     assertThat(results.length).isEqualTo(1);
-    assertThat(results[0]).isEqualTo("instances");
+    assertThat(results[0]).isEqualTo("instances?limit=50000&");
   }
 
   @Test
@@ -90,7 +90,7 @@ public class AttributesUtilTest {
 
     assertThat(results.length).isEqualTo(1);
     assertThat(results[0]).isEqualTo(
-        "instances?" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=MG&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=MG&");
   }
 
   @Test
@@ -103,11 +103,11 @@ public class AttributesUtilTest {
 
     assertThat(results.length).isEqualTo(3);
     assertThat(results[0]).isEqualTo(
-        "instances?" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=MG&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=MG&");
     assertThat(results[1]).isEqualTo(
-        "instances?" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=CS&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=CS&");
     assertThat(results[2]).isEqualTo(
-        "instances?" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=CR&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.ModalitiesInStudy) + "=CR&");
   }
 
   @Test

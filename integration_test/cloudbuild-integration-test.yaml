@@ -98,7 +98,7 @@
   - wait-for-adapter
 
 - name: ${_MAVEN_IMAGE}
-  id: run-find-scu
+  id: run-find-scu-instance
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
@@ -107,15 +107,13 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.findscu.FindSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L IMAGE -X --out-cat --out-file findscu-result.xml --out-dir ../../../integration_test/'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L IMAGE -X --out-cat --out-file findscu-instance-result.xml --out-dir ../../../integration_test/'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
   waitFor:
   - run-store-scu
 
-# Stgcmtscu  waits for n-event-report after n-action request returns success,
-# if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
 - name: ${_MAVEN_IMAGE}
-  id: run-commitment-scu
+  id: run-find-scu-series
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
@@ -123,12 +121,26 @@
   - mvn
   - '-ntp'
   - 'exec:java'
-  - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/data/example-redacted.dcm'
-  dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
+  - '-Dexec.mainClass=org.dcm4che3.tool.findscu.FindSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L SERIES -X --out-cat --out-file findscu-series-result.xml --out-dir ../../../integration_test/'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
   waitFor:
-  - run-find-scu
-  timeout: 30s
+  - run-store-scu
+
+- name: ${_MAVEN_IMAGE}
+  id: run-find-scu-study
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.findscu.FindSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -L STUDY -X --out-cat --out-file findscu-study-result.xml --out-dir ../../../integration_test/'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
+  waitFor:
+  - run-store-scu
 
 - name: ${_MAVEN_IMAGE}
   id: run-move-scu
@@ -143,8 +155,31 @@
   - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -m SOPInstanceUID=${_REPLACED_UID} --dest STORESCP'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-movescu"
   waitFor:
-  - run-commitment-scu
+  - run-store-scu
   - wait-for-storescp
+
+# Stgcmtscu  waits for n-event-report after n-action request returns success,
+# if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
+# Run it after other tools to avoid timeout due to parallel execution.
+- name: ${_MAVEN_IMAGE}
+  id: run-commitment-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/data/example-redacted.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
+  waitFor:
+  - run-store-scu
+  - run-find-scu-instance
+  - run-find-scu-series
+  - run-find-scu-study
+  - run-move-scu
+  timeout: 30s
 
 - name: 'gcr.io/cloud-builders/docker'
   id:  close-adapter
@@ -153,7 +188,13 @@
       - './integration_test/scripts/stop-image.sh'
       - '${_IMAGEPROJECT}'
       - '${SHORT_SHA}'
-  waitFor: ['run-move-scu']
+  waitFor:
+  - run-store-scu
+  - run-find-scu-instance
+  - run-find-scu-series
+  - run-find-scu-study
+  - run-move-scu
+  - run-commitment-scu
 
 - name: 'busybox:latest'
   id: close-store-scp
@@ -186,13 +227,31 @@
   - check-store-curl
 
 - name: 'busybox:latest'
-  id: check-find-diff
+  id: check-find-diff-instance
   args:
   - diff
-  - 'integration_test/findscu-result1.xml'
-  - 'integration_test/data/findscu-expected.xml'
+  - 'integration_test/findscu-instance-result1.xml'
+  - 'integration_test/data/findscu-instance-expected.xml'
   waitFor:
-  - run-find-scu
+  - run-find-scu-instance
+
+- name: 'busybox:latest'
+  id: check-find-diff-series
+  args:
+  - diff
+  - 'integration_test/findscu-series-result1.xml'
+  - 'integration_test/data/findscu-series-expected.xml'
+  waitFor:
+  - run-find-scu-series
+
+- name: 'busybox:latest'
+  id: check-find-diff-study
+  args:
+  - diff
+  - 'integration_test/findscu-study-result1.xml'
+  - 'integration_test/data/findscu-study-expected.xml'
+  waitFor:
+  - run-find-scu-study
 
 # storescp adds 1 extra tag
 # (0002,0016) [AE] SourceApplicationEntityTitle: IMPORTADAPTER
@@ -232,7 +291,9 @@
   - "--quiet"
   waitFor:
   - check-store-curl
-  - run-find-scu
+  - run-find-scu-instance
+  - run-find-scu-series
+  - run-find-scu-study
   - run-move-scu
   - run-commitment-scu
 
@@ -256,7 +317,7 @@ substitutions:
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_11'
+  _COMMITMENT_SCU_STEP: 'step_14'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
