@@ -16,11 +16,17 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
+import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorCompletionService;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -30,6 +36,7 @@ import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCStoreSCP;
 import org.dcm4che3.net.service.DicomServiceException;
+import org.dcm4che3.util.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +49,12 @@ public class CStoreService extends BasicCStoreSCP {
 
   private final String path;
   private final IDicomWebClient dicomWebClient;
+  private final DicomRedactor redactor;
 
-  CStoreService(String path, IDicomWebClient dicomWebClient) {
+  CStoreService(String path, IDicomWebClient dicomWebClient, DicomRedactor redactor) {
     this.path = path;
     this.dicomWebClient = dicomWebClient;
+    this.redactor = redactor;
   }
 
   @Override
@@ -62,7 +71,6 @@ public class CStoreService extends BasicCStoreSCP {
       String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
       String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
       String transferSyntax = presentationContext.getTransferSyntax();
-      String remoteAeTitle = association.getCallingAET();
 
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
@@ -72,12 +80,13 @@ public class CStoreService extends BasicCStoreSCP {
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
-      dicomWebClient.stowRs(path, inBuffer);
+      if (redactor != null) {
+        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inBuffer);
+      } else {
+        dicomWebClient.stowRs(path, inBuffer);
+      }
 
-      log.info("Received C-STORE for association {}, SOP class {}, TS {}, remote AE {}",
-          association.toString(), sopClassUID, transferSyntax, remoteAeTitle);
       response.setInt(Tag.Status, VR.US, Status.Success);
-
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
     } catch (DicomWebException e) {
       MonitoringService.addEvent(Event.CSTORE_ERROR);
@@ -94,6 +103,48 @@ public class CStoreService extends BasicCStoreSCP {
   private void validateParam(String value, String name) throws DicomServiceException {
     if (value == null || value.trim().length() == 0) {
       throw new DicomServiceException(Status.CannotUnderstand, "Mandatory tag empty: " + name);
+    }
+  }
+
+  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream)
+      throws Throwable {
+    ExecutorCompletionService<Void> ecs = new ExecutorCompletionService<>(underlyingExecutor);
+
+    PipedOutputStream pdvPipeOut = new PipedOutputStream();
+    PipedInputStream pdvPipeIn = new PipedInputStream(pdvPipeOut);
+    PipedOutputStream redactedPipeOut = new PipedOutputStream();
+    PipedInputStream redactedPipeIn = new PipedInputStream(redactedPipeOut);
+
+    ecs.submit(() -> {
+      try (redactedPipeIn) {
+        dicomWebClient.stowRs(path, redactedPipeIn);
+      }
+      return null;
+    });
+
+    ecs.submit(() -> {
+      try (pdvPipeIn) {
+        try (redactedPipeOut) {
+          redactor.redact(pdvPipeIn, redactedPipeOut);
+        }
+      }
+      return null;
+    });
+
+    try (pdvPipeOut) {
+      // PDVInputStream is thread-locked
+      StreamUtils.copy(inputStream, pdvPipeOut);
+    } catch (IOException e) {
+      // causes or is caused by exception in redactor.redact, no need to throw this up
+      log.trace("Error copying inputStream to pdvPipeOut", e);
+    }
+
+    try {
+      for (int i = 0; i < 2; ++i) {
+        ecs.take().get();
+      }
+    } catch (ExecutionException e) {
+      throw e.getCause();
     }
   }
 }
