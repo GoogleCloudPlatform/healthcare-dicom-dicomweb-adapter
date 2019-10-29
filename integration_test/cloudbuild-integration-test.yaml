@@ -142,24 +142,6 @@
   waitFor:
   - run-store-scu
 
-# Stgcmtscu  waits for n-event-report after n-action request returns success,
-# if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
-- name: ${_MAVEN_IMAGE}
-  id: run-commitment-scu
-  volumes:
-  - name: 'vol1'
-    path: '/root/.m2'
-  args:
-  - mvn
-  - '-ntp'
-  - 'exec:java'
-  - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/data/example-redacted.dcm'
-  dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
-  waitFor:
-  - run-store-scu
-  timeout: 30s
-
 - name: ${_MAVEN_IMAGE}
   id: run-move-scu
   volumes:
@@ -176,6 +158,29 @@
   - run-store-scu
   - wait-for-storescp
 
+# Stgcmtscu  waits for n-event-report after n-action request returns success,
+# if it doesn't get one within cloud build step timeout of 30 seconds, step fails.
+# Run it after other tools to avoid timeout due to parallel execution.
+- name: ${_MAVEN_IMAGE}
+  id: run-commitment-scu
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} -b STGCMTSCU:${_COMMITMENT_SCU_PORT} --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/data/example-redacted.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
+  waitFor:
+  - run-store-scu
+  - run-find-scu-instance
+  - run-find-scu-series
+  - run-find-scu-study
+  - run-move-scu
+  timeout: 30s
+
 - name: 'gcr.io/cloud-builders/docker'
   id:  close-adapter
   entrypoint: bash
@@ -183,7 +188,13 @@
       - './integration_test/scripts/stop-image.sh'
       - '${_IMAGEPROJECT}'
       - '${SHORT_SHA}'
-  waitFor: ['run-move-scu']
+  waitFor:
+  - run-store-scu
+  - run-find-scu-instance
+  - run-find-scu-series
+  - run-find-scu-study
+  - run-move-scu
+  - run-commitment-scu
 
 - name: 'busybox:latest'
   id: close-store-scp
@@ -306,7 +317,7 @@ substitutions:
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_13'
+  _COMMITMENT_SCU_STEP: 'step_14'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
