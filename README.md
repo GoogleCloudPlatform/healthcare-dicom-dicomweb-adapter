@@ -10,6 +10,7 @@ Table of Contents
       * [Import Adapter](#import-adapter)
       * [Export Adapter](#export-adapter)
       * [Stackdriver Monitoring](#stackdriver-monitoring)
+      * [DICOM Redactor](#dicom-redactor)
       * [Deployment using Kubernetes](#deployment-using-kubernetes)
          * [Requirements](#requirements)
          * [Deploying Docker Images to GKE](#deploying-docker-images-to-gke)
@@ -111,13 +112,13 @@ env:
 
 ## DICOM Redactor
 
-Import adapter can be configured to use the [DICOM Redactor Library](https://github.com/GoogleCloudPlatform/healthcare-deid/tree/master/offline_tools/redactorhttps://github.com/GoogleCloudPlatform/healthcare-deid/tree/master/offline_tools/redactor) to redact sensitive data contained in DICOM tags during a C-STORE upload.
+The Import Adapter can be configured to use the [DICOM Redactor Library](https://github.com/GoogleCloudPlatform/healthcare-deid/tree/master/offline_tools/redactor) to redact sensitive data contained in DICOM tags during a C-STORE upload.
 The user can configure which tags to redact/remove in one of 3 ways:
 - redact_keep_list - a list of DICOM tags to keep untouched. Other tags are removed.
 - redact_remove_list - a list of DICOM tags to remove. Other tags are kept untouched.
 - redact_filter_profile - a predefined profile that will keep and remove particular tags.
 
-If enabled via one of the above options, the redactor also replaces the following UIDs with a random value:
+If enabled via one of the above options, the redactor also always regenerates the following UIDs:
 - StudyInstanceUID
 - SeriesInstanceUID
 - SOPInstanceUID
