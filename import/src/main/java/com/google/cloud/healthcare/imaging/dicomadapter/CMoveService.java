@@ -121,7 +121,7 @@ public class CMoveService extends BasicCMoveSCP {
           }
         } catch (IDicomWebClient.DicomWebException e) {
           MonitoringService.addEvent(Event.CMOVE_QIDORS_ERROR);
-          log.error("CMove qido-rs error", e);
+          log.error("CMove Qido-rs error", e);
           sendErrorResponse(e.getStatus(), e.getMessage());
           return;
         }
@@ -231,20 +231,16 @@ public class CMoveService extends BasicCMoveSCP {
           MonitoringService.addEvent(Event.CMOVE_ERROR);
       }
 
-      if (message == null && (failedInstanceUids == null || failedInstanceUids.size() == 0)) {
-        as.tryWriteDimseRSP(pc, Commands.mkCMoveRSP(cmd, status));
-        return;
-      }
-
-      Attributes attributes = new Attributes();
+      Attributes cmdAttr = Commands.mkCMoveRSP(cmd, status);
+      Attributes dataAttr = new Attributes();
       if (message != null) {
-        attributes.setString(Tag.ErrorComment, VR.LO, message);
+        cmdAttr.setString(Tag.ErrorComment, VR.LO, message);
       }
       if (failedInstanceUids != null && failedInstanceUids.size() > 0) {
-        attributes.setString(Tag.FailedSOPInstanceUIDList, VR.UI,
+        dataAttr.setString(Tag.FailedSOPInstanceUIDList, VR.UI,
             failedInstanceUids.toArray(new String[]{}));
       }
-      as.tryWriteDimseRSP(pc, Commands.mkCMoveRSP(cmd, status), attributes);
+      as.tryWriteDimseRSP(pc, cmdAttr, dataAttr);
     }
   }
 }
