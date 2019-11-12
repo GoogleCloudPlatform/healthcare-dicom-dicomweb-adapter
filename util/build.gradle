@@ -39,7 +39,7 @@ dependencies {
     compile "org.json:json:20180813"
     compile "com.google.cloud:google-cloud-monitoring:1.98.0"
 
-    testCompile "com.google.truth:truth:0.39"
+    testCompile "com.google.truth:truth:1.0"
     testCompile "junit:junit:4.2"
     testCompile project(path: ":dicom_util", configuration: 'testArtifacts')
 }

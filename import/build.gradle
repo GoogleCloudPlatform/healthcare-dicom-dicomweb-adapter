@@ -55,10 +55,10 @@ repositories {
 }
 
 dependencies {
-    compile 'com.google.guava:guava:23.6-jre'
+    compile 'com.google.guava:guava:28.1-jre'
     compile "com.beust:jcommander:1.72"
-    compile 'com.google.auth:google-auth-library-oauth2-http:0.18.0'
-    compile "com.google.api-client:google-api-client:1.23.0"
+    compile 'com.google.auth:google-auth-library-oauth2-http:0.17.2'
+    compile "com.google.api-client:google-api-client:1.30.5"
     compile "org.dcm4che:dcm4che-core:3.3.8"
     compile "org.dcm4che:dcm4che-net:3.3.8"
     compile project(":dicom_util")
@@ -66,7 +66,7 @@ dependencies {
 
     compile name: 'redactor-0.1.0'
 
-    testCompile "com.google.truth:truth:0.39"
+    testCompile "com.google.truth:truth:1.0"
     testCompile "junit:junit:4.2"
     testCompile project(path: ":dicom_util", configuration: 'testArtifacts')
     testCompile project(path: ":util", configuration: 'testArtifacts')
