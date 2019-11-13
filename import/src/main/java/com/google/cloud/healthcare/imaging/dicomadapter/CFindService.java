@@ -135,15 +135,13 @@ public class CFindService extends BasicCFindSCP {
         MonitoringService.addEvent(Event.CFIND_CANCEL);
         as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.Cancel));
       } catch (IDicomWebClient.DicomWebException e) {
-        log.error("CFind qido-rs error", e);
+        log.error("CFind Qido-rs error", e);
         MonitoringService.addEvent(Event.CFIND_QIDORS_ERROR);
-        as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, e.getStatus()), e.getAttributes());
+        sendErrorResponse(e.getStatus(), e.getMessage());
       } catch (Throwable e) {
         log.error("Failure processing CFind", e);
         MonitoringService.addEvent(Event.CFIND_ERROR);
-        Attributes attrs = new Attributes();
-        attrs.setString(Tag.ErrorComment, VR.LO, e.getMessage());
-        as.tryWriteDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.ProcessingFailure), attrs);
+        sendErrorResponse(Status.ProcessingFailure, e.getMessage());
       } finally {
         synchronized (this) {
           runThread = null;
@@ -151,6 +149,12 @@ public class CFindService extends BasicCFindSCP {
         int msgId = cmd.getInt(Tag.MessageID, -1);
         as.removeCancelRQHandler(msgId);
       }
+    }
+
+    private void sendErrorResponse(int status, String message) {
+      Attributes cmdAttr = Commands.mkCFindRSP(cmd, status);
+      cmdAttr.setString(Tag.ErrorComment, VR.LO, message);
+      as.tryWriteDimseRSP(pc, cmdAttr);
     }
   }
 }
