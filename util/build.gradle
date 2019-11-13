@@ -37,9 +37,9 @@ dependencies {
     compile "org.dcm4che:dcm4che-core:3.3.8"
     compile "org.dcm4che:dcm4che-net:3.3.8"
     compile "org.json:json:20180813"
-    compile "com.google.cloud:google-cloud-monitoring:1.59.0"
+    compile "com.google.cloud:google-cloud-monitoring:1.98.0"
 
-    testCompile "com.google.truth:truth:0.39"
+    testCompile "com.google.truth:truth:1.0"
     testCompile "junit:junit:4.2"
     testCompile project(path: ":dicom_util", configuration: 'testArtifacts')
 }
