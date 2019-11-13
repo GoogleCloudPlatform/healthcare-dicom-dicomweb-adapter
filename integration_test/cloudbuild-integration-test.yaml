@@ -42,7 +42,7 @@
   id: adapter-main
   entrypoint: 'bash'
   args: [ '-c',
-          "/import/bin/import --dimse_aet=IMPORTADAPTER --dimse_port=${_ADAPTER_PORT} --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb --aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":${_STORE_SCP_RUN_STEP},\"port\":${_STORE_SCP_PORT}},{\"name\":\"STGCMTSCU\",\"host\":${_COMMITMENT_SCU_STEP},\"port\":${_COMMITMENT_SCU_PORT}},]\" --redact_remove_list=ContentTime,ContentDate --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+          "/import/bin/import --dimse_aet=IMPORTADAPTER --dimse_port=${_ADAPTER_PORT} --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb --monitoring_project_id=${_PROJECT} --aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":${_STORE_SCP_RUN_STEP},\"port\":${_STORE_SCP_PORT}},{\"name\":\"STGCMTSCU\",\"host\":${_COMMITMENT_SCU_STEP},\"port\":${_COMMITMENT_SCU_PORT}},]\" --redact_remove_list=ContentTime,ContentDate --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
 
 # create dataset if not exists, re-create store (delete if exists, then create)
