@@ -232,15 +232,18 @@ public class CMoveService extends BasicCMoveSCP {
       }
 
       Attributes cmdAttr = Commands.mkCMoveRSP(cmd, status);
-      Attributes dataAttr = new Attributes();
       if (message != null) {
         cmdAttr.setString(Tag.ErrorComment, VR.LO, message);
       }
+
       if (failedInstanceUids != null && failedInstanceUids.size() > 0) {
+        Attributes dataAttr = new Attributes();
         dataAttr.setString(Tag.FailedSOPInstanceUIDList, VR.UI,
             failedInstanceUids.toArray(new String[]{}));
+        as.tryWriteDimseRSP(pc, cmdAttr, dataAttr);
+      } else {
+        as.tryWriteDimseRSP(pc, cmdAttr);
       }
-      as.tryWriteDimseRSP(pc, cmdAttr, dataAttr);
     }
   }
 }

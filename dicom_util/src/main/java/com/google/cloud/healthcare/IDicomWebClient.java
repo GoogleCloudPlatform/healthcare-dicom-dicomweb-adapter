@@ -82,12 +82,6 @@ public interface IDicomWebClient {
       return status;
     }
 
-    public Attributes getAttributes() {
-      Attributes attrs = new Attributes();
-      attrs.setString(Tag.ErrorComment, VR.LO, getMessage());
-      return attrs;
-    }
-
     private int httpStatusToDicomStatus(int httpStatus, int defaultStatus) {
       switch (httpStatus) {
         case HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE:
