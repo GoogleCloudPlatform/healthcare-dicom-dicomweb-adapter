@@ -46,7 +46,7 @@
   waitFor: ['adapter-build']
 
 # create dataset if not exists, re-create store (delete if exists, then create)
-- name: 'google/cloud-sdk:250.0.0'
+- name: ${_CLOUD_SDK_IMAGE}
   id: setup-dataset-and-dicom-store
   args:
   - bash
@@ -206,7 +206,7 @@
   waitFor:
   - run-move-scu
 
-- name: 'google/cloud-sdk:250.0.0'
+- name: ${_CLOUD_SDK_IMAGE}
   id: check-store-curl
   args:
   - bash
@@ -276,11 +276,11 @@
   waitFor:
   - run-commitment-scu
 
-- name: 'google/cloud-sdk:250.0.0'
+- name: ${_CLOUD_SDK_IMAGE}
   id: delete-dicom-store
   args:
   - gcloud
-  - alpha
+  - beta
   - healthcare
   - dicom-stores
   - delete
@@ -297,7 +297,7 @@
   - run-move-scu
   - run-commitment-scu
 
-- name: 'google/cloud-sdk:250.0.0'
+- name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
   args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
   waitFor: ['delete-dicom-store']
@@ -323,4 +323,5 @@ substitutions:
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
+  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:272.0.0'
   _PUBLISH: 'false'
