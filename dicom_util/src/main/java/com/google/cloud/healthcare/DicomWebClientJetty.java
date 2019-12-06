@@ -31,8 +31,12 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DicomWebClientJetty implements IDicomWebClient {
+
+  private static Logger log = LoggerFactory.getLogger(DicomWebClientJetty.class);
 
   private static final int CONNECT_PORT = 443;
 
@@ -137,6 +141,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
       if (httpStatus != HttpStatus.OK_200) {
         try {
           JSONObject responseJson = new JSONObject(resultBuilder.toString());
+          log.error("STOW-RS response:\n" + responseJson.toString(2));
           throw new DicomWebException("Http_" + httpStatus
               + ", " + responseJson.getJSONObject("error").getString("status")
               + ", " + responseJson.getJSONObject("error").getString("message"),
