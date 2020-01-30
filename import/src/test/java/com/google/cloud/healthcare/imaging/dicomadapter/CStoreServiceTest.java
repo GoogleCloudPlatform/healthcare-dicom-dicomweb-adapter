@@ -76,7 +76,7 @@ public final class CStoreServiceTest {
     IDicomWebClient dicomWebClient =
         new MockStowClient(connectError, responseCode);
     CStoreService cStoreService =
-        new CStoreService("/studies", dicomWebClient, null);
+        new CStoreService(dicomWebClient, null, null);
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
@@ -208,7 +208,7 @@ public final class CStoreServiceTest {
     }
 
     @Override
-    public void stowRs(String path, InputStream in) throws DicomWebException {
+    public void stowRs(InputStream in) throws DicomWebException {
       if (connectError) {
         throw new DicomWebException("connect error");
       }

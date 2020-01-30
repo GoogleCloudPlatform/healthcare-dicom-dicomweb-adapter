@@ -51,7 +51,7 @@ public class TestUtils {
     }
 
     @Override
-    public void stowRs(String path, InputStream in) throws DicomWebException {
+    public void stowRs(InputStream in) throws DicomWebException {
 
     }
   }

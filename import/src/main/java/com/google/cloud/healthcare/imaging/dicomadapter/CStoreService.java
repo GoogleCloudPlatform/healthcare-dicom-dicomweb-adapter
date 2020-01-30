@@ -24,12 +24,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
+import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.PDVInputStream;
 import org.dcm4che3.net.Status;
@@ -47,13 +49,15 @@ public class CStoreService extends BasicCStoreSCP {
 
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
-  private final String path;
-  private final IDicomWebClient dicomWebClient;
+  private final IDicomWebClient mainDicomWebClient;
+  private final Map<String, IDicomWebClient> destinationMap;
   private final DicomRedactor redactor;
 
-  CStoreService(String path, IDicomWebClient dicomWebClient, DicomRedactor redactor) {
-    this.path = path;
-    this.dicomWebClient = dicomWebClient;
+  CStoreService(IDicomWebClient mainDicomWebClient,
+      Map<String, IDicomWebClient> destinationMap,
+      DicomRedactor redactor) {
+    this.mainDicomWebClient = mainDicomWebClient;
+    this.destinationMap = destinationMap;
     this.redactor = redactor;
   }
 
@@ -62,7 +66,7 @@ public class CStoreService extends BasicCStoreSCP {
       Association association,
       PresentationContext presentationContext,
       Attributes request,
-      PDVInputStream inDicomStream,
+      PDVInputStream inPdvStream,
       Attributes response)
       throws DicomServiceException, IOException {
     try {
@@ -75,15 +79,22 @@ public class CStoreService extends BasicCStoreSCP {
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
+      DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
+      inDicomStream.mark(Integer.MAX_VALUE); // do or die (OOM)
+      Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);
+      IDicomWebClient destinationClient = selectDestination(attrs);
+      inDicomStream.reset();
+
       CountingInputStream countingStream = new CountingInputStream(inDicomStream);
       InputStream inBuffer =
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
       if (redactor != null) {
-        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inBuffer);
+        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(),
+            inBuffer, destinationClient);
       } else {
-        dicomWebClient.stowRs(path, inBuffer);
+        destinationClient.stowRs(inBuffer);
       }
 
       response.setInt(Tag.Status, VR.US, Status.Success);
@@ -106,8 +117,8 @@ public class CStoreService extends BasicCStoreSCP {
     }
   }
 
-  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream)
-      throws Throwable {
+  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream,
+      IDicomWebClient dicomWebClient) throws Throwable {
     ExecutorCompletionService<Void> ecs = new ExecutorCompletionService<>(underlyingExecutor);
 
     PipedOutputStream pdvPipeOut = new PipedOutputStream();
@@ -117,7 +128,7 @@ public class CStoreService extends BasicCStoreSCP {
 
     ecs.submit(() -> {
       try (redactedPipeIn) {
-        dicomWebClient.stowRs(path, redactedPipeIn);
+        dicomWebClient.stowRs(redactedPipeIn);
       }
       return null;
     });
@@ -146,5 +157,10 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (ExecutionException e) {
       throw e.getCause();
     }
+  }
+
+  private IDicomWebClient selectDestination(Attributes attrs){
+    // TODO
+    return mainDicomWebClient;
   }
 }

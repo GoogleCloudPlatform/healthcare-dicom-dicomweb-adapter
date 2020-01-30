@@ -132,7 +132,7 @@ public final class ExportMessageReceiverTest {
           // This tests only ExportMessageReceiver and StowRsSender.
           // Properly mocking HTTP2 for low-level jetty stowrs implementation would be
           // significantly more difficult (but it's used during integration test)
-          public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
+          public void stowRs(InputStream in) throws IDicomWebClient.DicomWebException {
             try {
               requestFactory.buildGetRequest(new GenericUrl("http://nope")).execute();
             } catch (IOException e) {
@@ -140,7 +140,7 @@ public final class ExportMessageReceiverTest {
             }
           }
         };
-    DicomSender dicomSender = new StowRsSender(sourceDicomWebClient, sinkDicomWebClient, "studies");
+    DicomSender dicomSender = new StowRsSender(sourceDicomWebClient, sinkDicomWebClient);
     ExportMessageReceiver receiver = new ExportMessageReceiver(dicomSender);
     receiver.receiveMessage(pubsubMessage, replyConsumer);
     return receiver;

@@ -102,10 +102,9 @@ public class DicomWebClient implements IDicomWebClient {
   /**
    * Makes a STOW-RS call.
    *
-   * @param path The resource path for the STOW-RS request.
    * @param in The DICOM input stream.
    */
-  public void stowRs(String path, InputStream in) throws IDicomWebClient.DicomWebException {
+  public void stowRs(InputStream in) throws IDicomWebClient.DicomWebException {
     throw new UnsupportedOperationException("Not Implemented, use DicomWebClientJetty");
   }
 }

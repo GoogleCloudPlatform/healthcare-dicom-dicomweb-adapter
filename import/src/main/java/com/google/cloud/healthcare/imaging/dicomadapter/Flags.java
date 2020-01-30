@@ -118,6 +118,13 @@ public class Flags {
   )
   boolean help = false;
 
+  @Parameter(
+      names = {"--destination_config_path"},
+      description = "Path to json containing destination definitions (array containing filter/dicomweb_destination per element)"
+  )
+  String destinationConfigPath = "";
+
+
   public Flags() {
   }
 }

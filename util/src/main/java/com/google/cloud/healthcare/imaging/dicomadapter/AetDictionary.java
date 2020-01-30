@@ -36,28 +36,18 @@ public class AetDictionary {
    * @param jsonInline checked 1st
    * @param jsonPath checked 2nd
    */
-  public AetDictionary( String jsonInline, String jsonPath) {
-    try {
-      JSONArray jsonArray;
-      if(jsonInline != null && jsonInline.length() > 0) {
-        jsonArray = new JSONArray(jsonInline);
-      } else if (jsonPath != null && jsonPath.length() > 0) {
-        jsonArray = new JSONArray(new String(
-            Files.readAllBytes(Paths.get(jsonPath)), StandardCharsets.UTF_8));
-      } else {
-        jsonArray = new JSONArray(System.getenv(ENV_AETS_JSON));
-      }
+  public AetDictionary( String jsonInline, String jsonPath) throws IOException {
+    JSONArray jsonArray = JsonUtil.parseConfig(jsonInline, jsonPath, ENV_AETS_JSON);
 
+    if (jsonArray != null) {
       for (Object elem : jsonArray) {
         JSONObject elemJson = (JSONObject) elem;
         String name = elemJson.getString("name");
         aetMap.put(name, new Aet(name, elemJson.getString("host"), elemJson.getInt("port")));
       }
-
-      log.info("aetMap = {}", aetMap);
-    } catch (Throwable e) {
-      log.error("Failed to load aet dictionary", e);
     }
+
+    log.info("aetMap = {}", aetMap);
   }
 
   public AetDictionary(Aet[] aets) {

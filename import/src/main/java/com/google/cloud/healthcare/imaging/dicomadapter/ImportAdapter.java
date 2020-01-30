@@ -23,6 +23,7 @@ import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.DicomWebClientJetty;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.StringUtil;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
@@ -33,7 +34,9 @@ import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringSer
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
@@ -90,12 +93,17 @@ public class ImportAdapter {
       cstoreDicomwebAddr = flags.dicomwebAddr;
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
+    IDicomWebClient cstoreDicomWebClient =
+        new DicomWebClientJetty(
+            credentials,
+            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+
+    Map<String, IDicomWebClient> destinationMap = makeDestinationMap(flags.destinationConfigPath,
+        credentials);
 
     DicomRedactor redactor = configureRedactor(flags);
-    IDicomWebClient cstoreDicomWebClient =
-        new DicomWebClientJetty(credentials, cstoreDicomwebAddr);
     CStoreService cStoreService =
-        new CStoreService(cstoreDicomwebStowPath, cstoreDicomWebClient, redactor);
+        new CStoreService(cstoreDicomWebClient, destinationMap, redactor);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
@@ -149,5 +157,15 @@ public class ImportAdapter {
     }
 
     return redactor;
+  }
+
+  private static Map<String, IDicomWebClient> makeDestinationMap(String destinationsJsonPath,
+      GoogleCredentials credentials) throws IOException {
+    DestinationsConfig conf = new DestinationsConfig(null, destinationsJsonPath);
+    Map<String, IDicomWebClient> result = new HashMap<>();
+    for (String filter : conf.getMap().keySet()) {
+      result.put(filter, new DicomWebClientJetty(credentials, conf.getMap().get(filter)));
+    }
+    return result;
   }
 }
