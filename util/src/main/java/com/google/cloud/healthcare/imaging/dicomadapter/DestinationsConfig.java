@@ -14,23 +14,22 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.google.api.client.http.HttpRequestFactory;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.HashMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class DestinationsConfig {
 
   private static final String ENV_DESTINATION_JSON = "DESTINATION_CONFIG_JSON";
   private static Logger log = LoggerFactory.getLogger(DestinationsConfig.class);
 
-  private HashMap<String, String> map = new HashMap<>();
+  private HashMap<String, String> map = new LinkedHashMap<>();
 
   /**
    * Creates DestinationsConfig based on provided path to json or environment variable
@@ -44,14 +43,19 @@ public class DestinationsConfig {
     if(jsonArray != null) {
       for (Object elem : jsonArray) {
         JSONObject elemJson = (JSONObject) elem;
-        map.put(elemJson.getString("filter"), elemJson.getString("dicomweb_destination"));
+        String filter = elemJson.getString("filter");
+        if(map.containsKey(filter)){
+          throw new IllegalArgumentException("Duplicate filter in Destinations config");
+        }
+
+        map.put(filter, elemJson.getString("dicomweb_destination"));
       }
     }
 
     log.info("DestinationsConfig map = {}", map);
   }
 
-  public HashMap<String, String> getMap() {
+  public Map<String, String> getMap() {
     return map;
   }
 }

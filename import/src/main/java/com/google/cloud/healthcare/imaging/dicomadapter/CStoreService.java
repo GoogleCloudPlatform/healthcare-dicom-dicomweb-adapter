@@ -49,14 +49,14 @@ public class CStoreService extends BasicCStoreSCP {
 
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
-  private final IDicomWebClient mainDicomWebClient;
-  private final Map<String, IDicomWebClient> destinationMap;
+  private final IDicomWebClient defaultDicomWebClient;
+  private final Map<DestinationFilter, IDicomWebClient> destinationMap;
   private final DicomRedactor redactor;
 
-  CStoreService(IDicomWebClient mainDicomWebClient,
-      Map<String, IDicomWebClient> destinationMap,
+  CStoreService(IDicomWebClient defaultDicomWebClient,
+      Map<DestinationFilter, IDicomWebClient> destinationMap,
       DicomRedactor redactor) {
-    this.mainDicomWebClient = mainDicomWebClient;
+    this.defaultDicomWebClient = defaultDicomWebClient;
     this.destinationMap = destinationMap;
     this.redactor = redactor;
   }
@@ -79,22 +79,29 @@ public class CStoreService extends BasicCStoreSCP {
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
-      DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
-      inDicomStream.mark(Integer.MAX_VALUE); // do or die (OOM)
-      Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);
-      IDicomWebClient destinationClient = selectDestination(attrs);
-      inDicomStream.reset();
+      CountingInputStream countingStream;
+      IDicomWebClient destinationClient;
+      if(destinationMap != null){
+        DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
+        inDicomStream.mark(Integer.MAX_VALUE); // do or die (OOM)
+        Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);
+        inDicomStream.reset();
 
-      CountingInputStream countingStream = new CountingInputStream(inDicomStream);
-      InputStream inBuffer =
+        countingStream = new CountingInputStream(inDicomStream);
+        destinationClient = selectDestinationClient(association.getAAssociateAC().getCallingAET(), attrs);
+      } else {
+        countingStream = new CountingInputStream(inPdvStream);
+        destinationClient = defaultDicomWebClient;
+      }
+
+      InputStream inWithHeader =
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
       if (redactor != null) {
-        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(),
-            inBuffer, destinationClient);
+        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inWithHeader, destinationClient);
       } else {
-        destinationClient.stowRs(inBuffer);
+        destinationClient.stowRs(inWithHeader);
       }
 
       response.setInt(Tag.Status, VR.US, Status.Success);
@@ -159,8 +166,12 @@ public class CStoreService extends BasicCStoreSCP {
     }
   }
 
-  private IDicomWebClient selectDestination(Attributes attrs){
-    // TODO
-    return mainDicomWebClient;
+  private IDicomWebClient selectDestinationClient(String callingAet, Attributes attrs){
+    for(DestinationFilter filter: destinationMap.keySet()){
+      if(filter.matches(callingAet, attrs)){
+        return destinationMap.get(filter);
+      }
+    }
+    return defaultDicomWebClient;
   }
 }
