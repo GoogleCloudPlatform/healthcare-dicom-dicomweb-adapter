@@ -81,7 +81,7 @@ public class CStoreService extends BasicCStoreSCP {
 
       CountingInputStream countingStream;
       IDicomWebClient destinationClient;
-      if(destinationMap != null){
+      if(destinationMap != null && destinationMap.size() > 0){
         DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
         inDicomStream.mark(Integer.MAX_VALUE); // do or die (OOM)
         Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);

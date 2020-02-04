@@ -13,18 +13,27 @@ public class DestinationFilter {
     private final Attributes filterAttrs;
 
     public DestinationFilter(String filterString) {
-        String[] params = filterString.split("&");
         String aetTitle = null;
         this.filterAttrs = new Attributes();
-        for(String param: params){
-            String[] keyValue = param.split("=");
-            if(keyValue[0].equals(AET_TITLE)){
-                aetTitle = keyValue[1];
-            } else {
-                int tag = TagUtils.forName(keyValue[0]);
-                this.filterAttrs.setString(tag, VR.LO, keyValue[1]); // VR just needs to be any string type for match()
+
+        if(filterString != null && filterString.length() > 0) {
+            String[] params = filterString.split("&");
+            for (String param : params) {
+                String[] keyValue = param.split("=");
+                if (keyValue[0].equals(AET_TITLE)) {
+                    aetTitle = keyValue[1];
+                } else {
+                    int tag = TagUtils.forName(keyValue[0]);
+                    if (tag == -1) {
+                        throw new IllegalArgumentException(
+                            "Invalid tag in filter string: " + keyValue[0]);
+                    }
+                    this.filterAttrs.setString(tag, VR.LO,
+                        keyValue[1]); // VR just needs to be any string type for match()
+                }
             }
         }
+
         this.aetTitle = aetTitle;
     }
 
@@ -38,7 +47,8 @@ public class DestinationFilter {
 
     public boolean matches(String incomingAet, Attributes incomingAttrs) {
         return (aetTitle == null || aetTitle.equals(incomingAet)) &&
-                incomingAttrs.matches(this.filterAttrs, false, false);
+            (this.filterAttrs.size() == 0
+                || incomingAttrs.matches(this.filterAttrs, false, false));
     }
 
     @Override
