@@ -73,6 +73,53 @@ The AET dictionary JSON can also be specified directly via the "--aet_dictionary
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
+## Routing to multiple DICOM stores
+
+C-STORE supports routing to multiple DICOM stores based on tags in incoming instance and client AET.
+Filter is in the format fo a QidoRS query, with addition of AETTitle virtual tag for matching calling client AET.
+Empty filter will match all instances.
+If no filter matches, instances will be routed to '--dicomweb_address'.
+
+The following configuration needs to be added to the dicom-adapter.yaml file to use C-STORE routing. 
+Please see the [Deployment using Kubernetes](#deployment-using-kubernetes) section for more information.
+```yaml
+env:
+- name: ENV_DESTINATION_CONFIG_JSON
+  valueFrom:
+    configMapKeyRef:
+      name: destination-config
+      key: destinations.json
+```
+
+Here is an example destination JSON file:
+```shell
+[
+	{
+		"filter": "AETTitle=DEVICE_A", 
+		"dicomweb_destination": "https://healthcare.googleapis.com/v1beta1/projects/your-project/locations/your-location/datasets/your-dataset/dicomStores/your-store/dicomWeb", 
+	},
+	{
+		"filter": "AETTitle=DEVICE_A&StudyDate=19700101", 
+    "dicomweb_destination": "https://healthcare.googleapis.com/v1beta1/projects/your-project/locations/your-location/datasets/your-dataset/dicomStores/your-store/dicomWeb", 
+	},
+	{
+    "filter": "00080020=19700101", 
+    "dicomweb_destination": "https://healthcare.googleapis.com/v1beta1/projects/your-project/locations/your-location/datasets/your-dataset/dicomStores/your-store/dicomWeb",
+  },
+  {
+    "filter": "", 
+    "dicomweb_destination": "https://healthcare.googleapis.com/v1beta1/projects/your-project/locations/your-location/datasets/your-dataset/dicomStores/your-store/dicomWeb",
+  },
+	...
+]
+```
+
+And command to create configmap from it:
+
+```shell
+kubectl create configmap destination-config --from-file=destinations.json
+```
+
 ## Export Adapter
 
 The Export Adapter listens to [Google Cloud Pub/Sub](https://cloud.google.com/pubsub/)

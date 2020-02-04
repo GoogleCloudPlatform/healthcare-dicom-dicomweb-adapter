@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class DestinationsConfig {
 
-  private static final String ENV_DESTINATION_JSON = "DESTINATION_CONFIG_JSON";
+  private static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
   private static Logger log = LoggerFactory.getLogger(DestinationsConfig.class);
 
   private HashMap<String, String> map = new LinkedHashMap<>();
@@ -38,7 +38,7 @@ public class DestinationsConfig {
    * @param jsonPath checked 2nd
    */
   public DestinationsConfig(String jsonInline, String jsonPath) throws IOException {
-    JSONArray jsonArray = JsonUtil.parseConfig(jsonInline, jsonPath, ENV_DESTINATION_JSON);
+    JSONArray jsonArray = JsonUtil.parseConfig(jsonInline, jsonPath, ENV_DESTINATION_CONFIG_JSON);
 
     if(jsonArray != null) {
       for (Object elem : jsonArray) {

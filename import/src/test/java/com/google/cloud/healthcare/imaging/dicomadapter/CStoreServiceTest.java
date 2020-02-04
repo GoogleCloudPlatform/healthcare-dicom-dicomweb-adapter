@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
@@ -36,6 +37,7 @@ import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
+import org.dcm4che3.util.TagUtils;
 import org.json.JSONArray;
 import org.junit.Before;
 import org.junit.Test;
@@ -246,6 +248,18 @@ public final class CStoreServiceTest {
         new MockDestinationConfig[] {
             new MockDestinationConfig("NoSuchTag=NoSuchValue",
                 true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_tagByHex() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig(TagUtils.toHexString(Tag.StudyDate) + "=19921012",
+                false, HttpStatusCodes.STATUS_CODE_OK)
         });
   }
 
