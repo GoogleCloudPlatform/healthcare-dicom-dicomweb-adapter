@@ -63,6 +63,8 @@ public class DicomWebClientJetty implements IDicomWebClient {
   @Override
   public void stowRs(InputStream in) throws DicomWebException {
     try {
+      log.debug("STOW-RS to: " + stowPath);
+
       HTTP2Client client = new HTTP2Client();
       SslContextFactory sslContextFactory = new SslContextFactory.Client();
       client.addBean(sslContextFactory);

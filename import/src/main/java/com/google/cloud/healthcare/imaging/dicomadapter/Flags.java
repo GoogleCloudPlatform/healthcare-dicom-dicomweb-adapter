@@ -120,9 +120,16 @@ public class Flags {
 
   @Parameter(
       names = {"--destination_config_path"},
-      description = "Path to json containing destination definitions (array containing filter/dicomweb_destination per element)"
+      description = "Path to json array containing destination definitions (filter/dicomweb_destination per element)"
   )
   String destinationConfigPath = "";
+
+  @Parameter(
+      names = {"--destination_config_inline"},
+      description = "Json array containing destination definitions (filter/dicomweb_destination per element). "
+          + "Only one of destination_config_path and destination_config_inline needs to be specified."
+  )
+  String destinationConfigInline = "";
 
 
   public Flags() {

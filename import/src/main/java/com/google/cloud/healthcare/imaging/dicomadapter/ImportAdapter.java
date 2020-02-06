@@ -96,8 +96,8 @@ public class ImportAdapter {
             credentials,
             StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
 
-    Map<DestinationFilter, IDicomWebClient> destinationMap = makeDestinationMap(flags.destinationConfigPath,
-        credentials);
+    Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
+        flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
     DicomRedactor redactor = configureRedactor(flags);
     CStoreService cStoreService =
@@ -157,9 +157,11 @@ public class ImportAdapter {
     return redactor;
   }
 
-  private static Map<DestinationFilter, IDicomWebClient> makeDestinationMap(String destinationsJsonPath,
-                                                                            GoogleCredentials credentials) throws IOException {
-    DestinationsConfig conf = new DestinationsConfig(null, destinationsJsonPath);
+  private static Map<DestinationFilter, IDicomWebClient> configureDestinationMap(
+      String destinationJsonInline,
+      String destinationsJsonPath,
+      GoogleCredentials credentials) throws IOException {
+    DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
     Map<DestinationFilter, IDicomWebClient> result = new LinkedHashMap<>();
     for (String filterString : conf.getMap().keySet()) {
       result.put(

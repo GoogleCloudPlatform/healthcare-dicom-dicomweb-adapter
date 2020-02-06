@@ -75,7 +75,7 @@ For the list of command line flags, see [here](import/src/main/java/com/google/c
 
 ## Routing to multiple DICOM stores
 
-C-STORE supports routing to multiple DICOM stores based on tags in incoming instance and client AET.
+Import adapter C-STORE service supports routing to multiple DICOM stores based on tags in incoming instance and client AET.
 Filter is in the format fo a QidoRS query, with addition of AETTitle virtual tag for matching calling client AET.
 Empty filter will match all instances.
 If no filter matches, instances will be routed to '--dicomweb_address'.
