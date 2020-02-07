@@ -175,6 +175,18 @@ public final class CStoreServiceTest {
   }
 
   @Test
+  public void testCStoreService_map_byAet() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012&AETitle=CSTORECLIENT",
+                false, HttpStatusCodes.STATUS_CODE_OK)
+        });
+  }
+
+  @Test
   public void testCStoreService_map_connectionError() throws Exception {
     basicCStoreServiceTest(
         false,
