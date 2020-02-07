@@ -76,7 +76,7 @@ For the list of command line flags, see [here](import/src/main/java/com/google/c
 ## Routing to multiple DICOM stores
 
 Import adapter C-STORE service supports routing to multiple DICOM stores based on tags in incoming instance and client AET.
-Filter is in the format fo a QidoRS query, with addition of AETTitle virtual tag for matching calling client AET.
+Filter is in the format fo a QidoRS query, with addition of AETitle virtual tag for matching calling client AET.
 Empty filter will match all instances.
 If no filter matches, instances will be routed to '--dicomweb_address'.
 
@@ -95,11 +95,11 @@ Here is an example destination JSON file:
 ```shell
 [
 	{
-		"filter": "AETTitle=DEVICE_A", 
+		"filter": "AETitle=DEVICE_A", 
 		"dicomweb_destination": "https://healthcare.googleapis.com/v1beta1/projects/your-project/locations/your-location/datasets/your-dataset/dicomStores/your-store/dicomWeb", 
 	},
 	{
-		"filter": "AETTitle=DEVICE_A&StudyDate=19700101", 
+		"filter": "AETitle=DEVICE_A&StudyDate=19700101", 
     "dicomweb_destination": "https://healthcare.googleapis.com/v1beta1/projects/your-project/locations/your-location/datasets/your-dataset/dicomStores/your-store/dicomWeb", 
 	},
 	{
