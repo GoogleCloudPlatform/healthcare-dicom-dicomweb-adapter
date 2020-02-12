@@ -344,6 +344,22 @@
   - run-commitment-scu
 
 - name: ${_CLOUD_SDK_IMAGE}
+  id: delete-dicom-store-destination-2
+  args:
+  - gcloud
+  - beta
+  - healthcare
+  - dicom-stores
+  - delete
+  - "${_STORE_NAME}-destination-2"
+  - "--project=${_PROJECT}"
+  - "--dataset=${_DATASET}"
+  - "--location=${_LOCATION}"
+  - "--quiet"
+  waitFor:
+  - delete-dicom-store
+
+- name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
   args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
   waitFor: ['delete-dicom-store']

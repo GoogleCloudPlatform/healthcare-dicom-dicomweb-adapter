@@ -252,13 +252,25 @@ public final class CStoreServiceTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testCStoreService_map_invalidFilter() throws Exception {
+  public void testCStoreService_map_invalidFilter_noSuchTag() throws Exception {
     basicCStoreServiceTest(
         false,
         HttpStatusCodes.STATUS_CODE_OK,
         Status.Success,
         new MockDestinationConfig[] {
             new MockDestinationConfig("NoSuchTag=NoSuchValue",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+        });
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCStoreService_map_invalidFilter_format() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012=19921012",
                 true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
         });
   }
