@@ -101,6 +101,6 @@ public final class DicomWebClientTest {
     fakeDicomWebServer.addResponseWithStatusCode(404);
     assertThrows(
         UnsupportedOperationException.class,
-        () -> client.stowRs("stowPath", new ByteArrayInputStream(new byte[0])));
+        () -> client.stowRs(new ByteArrayInputStream(new byte[0])));
   }
 }

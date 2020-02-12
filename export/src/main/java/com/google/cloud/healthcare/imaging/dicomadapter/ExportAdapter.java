@@ -24,6 +24,7 @@ import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.DicomWebClientJetty;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.StringUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.cloud.pubsub.v1.Subscriber;
@@ -44,7 +45,7 @@ public class ExportAdapter {
     return new NetHttpTransport().createRequestFactory(new HttpCredentialsAdapter(credentials));
   }
 
-  public static void main(String[] args) throws IOException, GeneralSecurityException {
+  public static void main(String[] args) throws IOException {
     Flags flags = new Flags();
     JCommander jCommander = new JCommander(flags);
     jCommander.parse(args);
@@ -89,9 +90,9 @@ public class ExportAdapter {
       String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
       IDicomWebClient exportDicomWebClient =
           new DicomWebClientJetty(flags.useGcpApplicationDefaultCredentials ? null : credentials,
-              peerDicomwebAddress);
+              StringUtil.joinPath(peerDicomwebAddress, peerDicomwebStowpath));
       dicomSender =
-          new StowRsSender(dicomWebClient, exportDicomWebClient, peerDicomwebStowpath);
+          new StowRsSender(dicomWebClient, exportDicomWebClient);
       System.out.printf(
           "Export adapter set-up to export via STOW-RS to address: %s, path: %s\n",
           peerDicomwebAddress, peerDicomwebStowpath);

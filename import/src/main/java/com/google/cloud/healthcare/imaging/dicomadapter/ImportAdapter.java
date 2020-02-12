@@ -19,10 +19,7 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.healthcare.DicomWebClient;
-import com.google.cloud.healthcare.DicomWebClientJetty;
-import com.google.cloud.healthcare.IDicomWebClient;
-import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.*;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
@@ -30,20 +27,24 @@ import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomC
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.Arrays;
-import java.util.List;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 
 public class ImportAdapter {
 
-  private static Logger log = LoggerFactory.getLogger(ImportAdapter.class);
+  private static final Logger log = LoggerFactory.getLogger(ImportAdapter.class);
+  private static final String STUDIES = "studies";
 
   public static void main(String[] args) throws IOException, GeneralSecurityException {
     Flags flags = new Flags();
@@ -85,17 +86,22 @@ public class ImportAdapter {
 
     // Handle C-STORE
     String cstoreDicomwebAddr = flags.dicomwebAddress;
-    String cstoreDicomwebStowPath = "studies";
+    String cstoreDicomwebStowPath = STUDIES;
     if (cstoreDicomwebAddr.length() == 0) {
       cstoreDicomwebAddr = flags.dicomwebAddr;
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
+    IDicomWebClient defaultCstoreDicomWebClient =
+        new DicomWebClientJetty(
+            credentials,
+            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+
+    Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
+        flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
     DicomRedactor redactor = configureRedactor(flags);
-    IDicomWebClient cstoreDicomWebClient =
-        new DicomWebClientJetty(credentials, cstoreDicomwebAddr);
     CStoreService cStoreService =
-        new CStoreService(cstoreDicomwebStowPath, cstoreDicomWebClient, redactor);
+        new CStoreService(defaultCstoreDicomWebClient, destinationMap, redactor);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
@@ -149,5 +155,21 @@ public class ImportAdapter {
     }
 
     return redactor;
+  }
+
+  private static Map<DestinationFilter, IDicomWebClient> configureDestinationMap(
+      String destinationJsonInline,
+      String destinationsJsonPath,
+      GoogleCredentials credentials) throws IOException {
+    DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
+    Map<DestinationFilter, IDicomWebClient> result = new LinkedHashMap<>();
+    for (String filterString : conf.getMap().keySet()) {
+      result.put(
+              new DestinationFilter(filterString),
+              new DicomWebClientJetty(credentials,
+                      StringUtil.joinPath(conf.getMap().get(filterString), STUDIES))
+      );
+    }
+    return result.size() > 0 ? result : null;
   }
 }

@@ -42,7 +42,15 @@
   id: adapter-main
   entrypoint: 'bash'
   args: [ '-c',
-          "/import/bin/import --dimse_aet=IMPORTADAPTER --dimse_port=${_ADAPTER_PORT} --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb --monitoring_project_id=${_PROJECT} --aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":${_STORE_SCP_RUN_STEP},\"port\":${_STORE_SCP_PORT}},{\"name\":\"STGCMTSCU\",\"host\":${_COMMITMENT_SCU_STEP},\"port\":${_COMMITMENT_SCU_PORT}},]\" --redact_remove_list=ContentTime,ContentDate --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+          "/import/bin/import \
+          --dimse_aet=IMPORTADAPTER \
+          --dimse_port=${_ADAPTER_PORT} \
+          --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
+          --monitoring_project_id=${_PROJECT} \
+          --aet_dictionary_inline=\"[{\\\"name\\\":\\\"STORESCP\\\",\\\"host\\\":${_STORE_SCP_RUN_STEP},\\\"port\\\":${_STORE_SCP_PORT}},{\\\"name\\\":\\\"STGCMTSCU\\\",\\\"host\\\":${_COMMITMENT_SCU_STEP},\\\"port\\\":${_COMMITMENT_SCU_PORT}},]\" \
+          --destination_config_inline=\"[{\\\"filter\\\":\\\"Modality=MG\\\",\\\"dicomweb_destination\\\":\\\"https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}-destination-2/dicomWeb\\\"}]\" \
+          --redact_remove_list=ContentTime,ContentDate \
+          --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
 
 # create dataset if not exists, re-create store (delete if exists, then create)
@@ -93,6 +101,21 @@
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
   - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} ../../../integration_test/data/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+  waitFor:
+  - wait-for-adapter
+
+- name: ${_MAVEN_IMAGE}
+  id: run-store-scu-destination-2
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT} ../../../integration_test/data/example-mg.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter
@@ -175,6 +198,7 @@
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu"
   waitFor:
   - run-store-scu
+  - run-store-scu-destination-2
   - run-find-scu-instance
   - run-find-scu-series
   - run-find-scu-study
@@ -190,6 +214,7 @@
       - '${SHORT_SHA}'
   waitFor:
   - run-store-scu
+  - run-store-scu-destination-2
   - run-find-scu-instance
   - run-find-scu-series
   - run-find-scu-study
@@ -225,6 +250,26 @@
   - 'integration_test/data/example-redacted.dcm'
   waitFor:
   - check-store-curl
+
+- name: ${_CLOUD_SDK_IMAGE}
+  id: check-store-curl-destination-2
+  args:
+  - bash
+  - integration_test/scripts/curl-dcm.sh
+  - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}-destination-2/dicomWeb/studies/${_REPLACED_UID}/series/${_REPLACED_UID}/instances/${_REPLACED_UID}"
+  - integration_test/downloaded-destination-2.dcm
+  waitFor:
+  - run-store-scu-destination-2
+
+# example-redacted has replaced UIDs and removed ContentTime,ContentDate tags
+- name: 'busybox:latest'
+  id: check-store-diff-destination-2
+  args:
+  - diff
+  - 'integration_test/downloaded-destination-2.dcm'
+  - 'integration_test/data/example-redacted-mg.dcm'
+  waitFor:
+  - check-store-curl-destination-2
 
 - name: 'busybox:latest'
   id: check-find-diff-instance
@@ -291,11 +336,28 @@
   - "--quiet"
   waitFor:
   - check-store-curl
+  - check-store-curl-destination-2
   - run-find-scu-instance
   - run-find-scu-series
   - run-find-scu-study
   - run-move-scu
   - run-commitment-scu
+
+- name: ${_CLOUD_SDK_IMAGE}
+  id: delete-dicom-store-destination-2
+  args:
+  - gcloud
+  - beta
+  - healthcare
+  - dicom-stores
+  - delete
+  - "${_STORE_NAME}-destination-2"
+  - "--project=${_PROJECT}"
+  - "--dataset=${_DATASET}"
+  - "--location=${_LOCATION}"
+  - "--quiet"
+  waitFor:
+  - delete-dicom-store
 
 - name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
@@ -317,7 +379,7 @@ substitutions:
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_14'
+  _COMMITMENT_SCU_STEP: 'step_15'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'

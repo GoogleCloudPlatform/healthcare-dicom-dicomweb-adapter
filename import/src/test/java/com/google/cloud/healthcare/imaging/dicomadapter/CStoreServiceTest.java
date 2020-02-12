@@ -15,20 +15,16 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.github.danieln.multipart.MultipartInput;
-import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpStatusCodes;
-import com.google.api.client.http.LowLevelHttpRequest;
-import com.google.api.client.http.LowLevelHttpResponse;
-import com.google.api.client.testing.http.MockHttpTransport;
-import com.google.api.client.testing.http.MockLowLevelHttpRequest;
-import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import com.google.cloud.healthcare.util.TestUtils;
-import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
+import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.ApplicationEntity;
@@ -41,6 +37,7 @@ import org.dcm4che3.net.pdu.AAssociateRQ;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
+import org.dcm4che3.util.TagUtils;
 import org.json.JSONArray;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,14 +66,26 @@ public final class CStoreServiceTest {
   }
 
   // Creates a DICOM service and returns the port it is listening on.
-  private int createDicomServer(boolean connectError, int responseCode) throws Exception {
+  private int createDicomServer(
+      boolean connectError,
+      int responseCode,
+      MockDestinationConfig[] destinationConfigs) throws Exception {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
     IDicomWebClient dicomWebClient =
         new MockStowClient(connectError, responseCode);
+    Map<DestinationFilter, IDicomWebClient> destinationMap = new LinkedHashMap<>();
+    if(destinationConfigs != null) {
+      for (MockDestinationConfig conf : destinationConfigs) {
+        destinationMap.put(
+            new DestinationFilter(conf.filter),
+            new MockStowClient(conf.connectError, conf.httpResponseCode)
+        );
+      }
+    }
     CStoreService cStoreService =
-        new CStoreService("/studies", dicomWebClient, null);
+        new CStoreService(dicomWebClient, destinationMap, null);
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
@@ -135,6 +144,7 @@ public final class CStoreServiceTest {
         true, // no stow-rs request will be made
         HttpStatusCodes.STATUS_CODE_OK,
         Status.CannotUnderstand,
+        null,
         UID.MRImageStorage,
         null);
   }
@@ -147,6 +157,147 @@ public final class CStoreServiceTest {
         connectionError,
         httpStatus,
         expectedDimseStatus,
+        null,
+        UID.MRImageStorage,
+        "1.0.0.0");
+  }
+
+  @Test
+  public void testCStoreService_map_success() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012&SOPInstanceUID=1.0.0.0",
+                false, HttpStatusCodes.STATUS_CODE_OK)
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_byAet() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012&AETitle=CSTORECLIENT",
+                false, HttpStatusCodes.STATUS_CODE_OK)
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_connectionError() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.ProcessingFailure,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012&SOPInstanceUID=1.0.0.0",
+                true, HttpStatusCodes.STATUS_CODE_OK)
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_filterOrder_successFirst() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012&SOPInstanceUID=1.0.0.0",
+                false, HttpStatusCodes.STATUS_CODE_OK),
+            new MockDestinationConfig("StudyDate=19921012",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_filterOrder_failFirst() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.ProcessingFailure,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012&SOPInstanceUID=1.0.0.0",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+            new MockDestinationConfig("StudyDate=19921012",
+                false, HttpStatusCodes.STATUS_CODE_OK),
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_emptyFilterMatches() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("", false, HttpStatusCodes.STATUS_CODE_OK)
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_defaultClientOnNoMatch() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=NoSuchValue",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+            new MockDestinationConfig("SOPInstanceUID=NoSuchValue",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+        });
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCStoreService_map_invalidFilter_noSuchTag() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("NoSuchTag=NoSuchValue",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+        });
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCStoreService_map_invalidFilter_format() throws Exception {
+    basicCStoreServiceTest(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig("StudyDate=19921012=19921012",
+                true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
+        });
+  }
+
+  @Test
+  public void testCStoreService_map_tagByHex() throws Exception {
+    basicCStoreServiceTest(
+        true,
+        HttpStatusCodes.STATUS_CODE_SERVER_ERROR,
+        Status.Success,
+        new MockDestinationConfig[] {
+            new MockDestinationConfig(TagUtils.toHexString(Tag.StudyDate) + "=19921012",
+                false, HttpStatusCodes.STATUS_CODE_OK)
+        });
+  }
+
+
+  private void basicCStoreServiceTest(
+      boolean connectionError,
+      int httpStatus,
+      int expectedDimseStatus,
+      MockDestinationConfig[] destinationConfigs) throws Exception {
+    basicCStoreServiceTest(
+        connectionError,
+        httpStatus,
+        expectedDimseStatus,
+        destinationConfigs,
         UID.MRImageStorage,
         "1.0.0.0");
   }
@@ -155,6 +306,7 @@ public final class CStoreServiceTest {
       boolean connectionError,
       int httpStatus,
       int expectedDimseStatus,
+      MockDestinationConfig[] destinationConfigs,
       String sopClassUID,
       String sopInstanceUID) throws Exception {
     InputStream in =
@@ -163,7 +315,7 @@ public final class CStoreServiceTest {
 
     // Create C-STORE DICOM server.
     int serverPort =
-        createDicomServer(connectionError, httpStatus);
+        createDicomServer(connectionError, httpStatus, destinationConfigs);
 
     // Associate with peer AE.
     Association association =
@@ -208,13 +360,25 @@ public final class CStoreServiceTest {
     }
 
     @Override
-    public void stowRs(String path, InputStream in) throws DicomWebException {
+    public void stowRs(InputStream in) throws DicomWebException {
       if (connectError) {
         throw new DicomWebException("connect error");
       }
       if (httpResponseCode != HttpStatusCodes.STATUS_CODE_OK) {
         throw new DicomWebException("mock error", httpResponseCode, Status.ProcessingFailure);
       }
+    }
+  }
+
+  private class MockDestinationConfig {
+    private final String filter;
+    private final boolean connectError;
+    private final int httpResponseCode;
+
+    public MockDestinationConfig(String filter, boolean connectError, int httpResponseCode) {
+      this.filter = filter;
+      this.connectError = connectError;
+      this.httpResponseCode = httpResponseCode;
     }
   }
 

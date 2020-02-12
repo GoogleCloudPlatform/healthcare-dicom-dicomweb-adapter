@@ -40,14 +40,14 @@ public class DicomWebClientJetty implements IDicomWebClient {
 
   private static final int CONNECT_PORT = 443;
 
-  private final String serviceUrlPrefix;
+  private final String stowPath;
   private final OAuth2Credentials credentials;
 
   public DicomWebClientJetty(
       OAuth2Credentials credentials,
-      String serviceUrlPrefix) {
+      String stowPath) {
     this.credentials = credentials;
-    this.serviceUrlPrefix = StringUtil.trim(serviceUrlPrefix);
+    this.stowPath = stowPath;
   }
 
   @Override
@@ -61,14 +61,16 @@ public class DicomWebClientJetty implements IDicomWebClient {
   }
 
   @Override
-  public void stowRs(String path, InputStream in) throws DicomWebException {
+  public void stowRs(InputStream in) throws DicomWebException {
     try {
+      log.debug("STOW-RS to: " + stowPath);
+
       HTTP2Client client = new HTTP2Client();
       SslContextFactory sslContextFactory = new SslContextFactory.Client();
       client.addBean(sslContextFactory);
       client.start();
 
-      HttpURI uri = new HttpURI(serviceUrlPrefix + "/" + StringUtil.trim(path));
+      HttpURI uri = new HttpURI(stowPath);
 
       FuturePromise<Session> sessionPromise = new FuturePromise<>();
       client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), CONNECT_PORT),

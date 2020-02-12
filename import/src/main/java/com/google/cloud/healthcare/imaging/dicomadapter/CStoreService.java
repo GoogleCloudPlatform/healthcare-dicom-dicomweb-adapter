@@ -24,12 +24,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
+import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.PDVInputStream;
 import org.dcm4che3.net.Status;
@@ -47,13 +49,15 @@ public class CStoreService extends BasicCStoreSCP {
 
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
-  private final String path;
-  private final IDicomWebClient dicomWebClient;
+  private final IDicomWebClient defaultDicomWebClient;
+  private final Map<DestinationFilter, IDicomWebClient> destinationMap;
   private final DicomRedactor redactor;
 
-  CStoreService(String path, IDicomWebClient dicomWebClient, DicomRedactor redactor) {
-    this.path = path;
-    this.dicomWebClient = dicomWebClient;
+  CStoreService(IDicomWebClient defaultDicomWebClient,
+      Map<DestinationFilter, IDicomWebClient> destinationMap,
+      DicomRedactor redactor) {
+    this.defaultDicomWebClient = defaultDicomWebClient;
+    this.destinationMap = destinationMap;
     this.redactor = redactor;
   }
 
@@ -62,7 +66,7 @@ public class CStoreService extends BasicCStoreSCP {
       Association association,
       PresentationContext presentationContext,
       Attributes request,
-      PDVInputStream inDicomStream,
+      PDVInputStream inPdvStream,
       Attributes response)
       throws DicomServiceException, IOException {
     try {
@@ -75,15 +79,29 @@ public class CStoreService extends BasicCStoreSCP {
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
-      CountingInputStream countingStream = new CountingInputStream(inDicomStream);
-      InputStream inBuffer =
+      CountingInputStream countingStream;
+      IDicomWebClient destinationClient;
+      if(destinationMap != null && destinationMap.size() > 0){
+        DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
+        inDicomStream.mark(Integer.MAX_VALUE);
+        Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);
+        inDicomStream.reset();
+
+        countingStream = new CountingInputStream(inDicomStream);
+        destinationClient = selectDestinationClient(association.getAAssociateAC().getCallingAET(), attrs);
+      } else {
+        countingStream = new CountingInputStream(inPdvStream);
+        destinationClient = defaultDicomWebClient;
+      }
+
+      InputStream inWithHeader =
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
       if (redactor != null) {
-        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inBuffer);
+        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inWithHeader, destinationClient);
       } else {
-        dicomWebClient.stowRs(path, inBuffer);
+        destinationClient.stowRs(inWithHeader);
       }
 
       response.setInt(Tag.Status, VR.US, Status.Success);
@@ -106,8 +124,8 @@ public class CStoreService extends BasicCStoreSCP {
     }
   }
 
-  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream)
-      throws Throwable {
+  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream,
+      IDicomWebClient dicomWebClient) throws Throwable {
     ExecutorCompletionService<Void> ecs = new ExecutorCompletionService<>(underlyingExecutor);
 
     PipedOutputStream pdvPipeOut = new PipedOutputStream();
@@ -117,7 +135,7 @@ public class CStoreService extends BasicCStoreSCP {
 
     ecs.submit(() -> {
       try (redactedPipeIn) {
-        dicomWebClient.stowRs(path, redactedPipeIn);
+        dicomWebClient.stowRs(redactedPipeIn);
       }
       return null;
     });
@@ -146,5 +164,14 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (ExecutionException e) {
       throw e.getCause();
     }
+  }
+
+  private IDicomWebClient selectDestinationClient(String callingAet, Attributes attrs){
+    for(DestinationFilter filter: destinationMap.keySet()){
+      if(filter.matches(callingAet, attrs)){
+        return destinationMap.get(filter);
+      }
+    }
+    return defaultDicomWebClient;
   }
 }

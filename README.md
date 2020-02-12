@@ -73,6 +73,10 @@ The AET dictionary JSON can also be specified directly via the "--aet_dictionary
 
 For the list of command line flags, see [here](import/src/main/java/com/google/cloud/healthcare/imaging/dicomadapter/Flags.java)
 
+## Routing to multiple DICOM stores
+
+The Import Adapter supports routing to multiple DICOM stores based on tags in the incoming instance and the client application entity title. Please see [this page](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/Routing-to-multiple-DICOM-stores) for more information.
+
 ## Export Adapter
 
 The Export Adapter listens to [Google Cloud Pub/Sub](https://cloud.google.com/pubsub/)

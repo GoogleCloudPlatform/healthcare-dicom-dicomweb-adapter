@@ -26,15 +26,12 @@ import com.google.pubsub.v1.PubsubMessage;
 public class StowRsSender implements DicomSender {
   private IDicomWebClient sourceDicomWebClient;
   private IDicomWebClient sinkDicomWebClient;
-  private String sinkDicomWebPath;
 
   StowRsSender(
       IDicomWebClient sourceDicomWebClient,
-      IDicomWebClient sinkDicomWebClient,
-      String sinkDicomWebPath) {
+      IDicomWebClient sinkDicomWebClient) {
     this.sourceDicomWebClient = sourceDicomWebClient;
     this.sinkDicomWebClient = sinkDicomWebClient;
-    this.sinkDicomWebPath = sinkDicomWebPath;
   }
 
   @Override
@@ -49,7 +46,7 @@ public class StowRsSender implements DicomSender {
 
     // Send the STOW-RS request to peer DicomWeb service.
     CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
-    sinkDicomWebClient.stowRs(sinkDicomWebPath, countingStream);
+    sinkDicomWebClient.stowRs(countingStream);
     MonitoringService.addEvent(Event.BYTES, countingStream.getCount());
     if (resp.nextPart() != null) {
       System.err.println("WadoRS response had more than one part, ignoring other parts");

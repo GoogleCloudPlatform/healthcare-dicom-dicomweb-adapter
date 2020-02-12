@@ -29,7 +29,7 @@ public interface IDicomWebClient {
 
   JSONArray qidoRs(String path) throws DicomWebException;
 
-  void stowRs(String path, InputStream in) throws DicomWebException;
+  void stowRs(InputStream in) throws DicomWebException;
 
   /**
    * An exception for errors returned by the DicomWeb server.
