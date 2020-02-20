@@ -163,7 +163,7 @@ spec:
     spec:
       containers:
         - name: dicom-import-adapter
-          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.1.1
+          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.1.14
           ports:
             - containerPort: 2575
               protocol: TCP
