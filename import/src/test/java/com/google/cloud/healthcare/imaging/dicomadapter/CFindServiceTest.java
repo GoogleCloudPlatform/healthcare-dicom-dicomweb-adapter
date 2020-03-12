@@ -135,7 +135,6 @@ public final class CFindServiceTest {
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
     association.cfind(
         UID.StudyRootQueryRetrieveInformationModelFIND,
-        UID.StudyRootQueryRetrieveInformationModelFIND,
         1,
         findData, // I mock IDicomWebClient anyway, AttributesUtil will be tested separately
         UID.ExplicitVRLittleEndian,

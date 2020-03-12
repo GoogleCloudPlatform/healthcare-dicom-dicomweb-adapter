@@ -261,7 +261,6 @@ public final class CMoveServiceTest {
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
     association.cmove(
         UID.StudyRootQueryRetrieveInformationModelMOVE,
-        UID.StudyRootQueryRetrieveInformationModelMOVE,
         1,
         moveDataset,
         UID.ExplicitVRLittleEndian,

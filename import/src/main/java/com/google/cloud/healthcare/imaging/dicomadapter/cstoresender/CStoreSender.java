@@ -14,14 +14,13 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter.cstoresender;
 
-import com.github.danieln.multipart.MultipartInput;
-import com.github.danieln.multipart.PartInput;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
 import com.google.cloud.healthcare.imaging.dicomadapter.CMoveService;
 import com.google.cloud.healthcare.imaging.dicomadapter.DicomClient;
 import com.google.common.io.CountingInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import org.dcm4che3.net.ApplicationEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,13 +48,9 @@ public class CStoreSender implements ICStoreSender {
         String.format("studies/%s/series/%s/instances/%s", studyUid, seriesUid, sopInstanceUid);
     log.info("CStore wadoUri : " + wadoUri);
 
-    MultipartInput resp = dicomWebClient.wadoRs(wadoUri);
-    PartInput part = resp.nextPart();
-    if (part == null) {
-      throw new IllegalArgumentException("WadoRS response has no parts");
-    }
+    InputStream responseStream = dicomWebClient.wadoRs(wadoUri);
 
-    CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
+    CountingInputStream countingStream = new CountingInputStream(responseStream);
     DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, countingStream,
         applicationEntity, target.getName(), target.getHost(), target.getPort());
     return countingStream.getCount();

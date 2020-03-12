@@ -15,8 +15,8 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -151,11 +151,7 @@ public class AttributesUtil {
 
       for (String value : values) {
         String encodedValue;
-        try {
-          encodedValue = URLEncoder.encode(value, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-          throw new DicomServiceException(Status.ProcessingFailure, e);
-        }
+        encodedValue = URLEncoder.encode(value, StandardCharsets.UTF_8);
         qidoPath.append(TagUtils.toHexString(keyTag) + "=" + encodedValue + "&");
       }
     }

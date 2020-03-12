@@ -14,18 +14,14 @@
 
 package com.google.cloud.healthcare;
 
-import com.github.danieln.multipart.MultipartInput;
 import com.google.api.client.http.HttpStatusCodes;
 import java.io.InputStream;
-import org.dcm4che3.data.Attributes;
-import org.dcm4che3.data.Tag;
-import org.dcm4che3.data.VR;
 import org.dcm4che3.net.Status;
 import org.json.JSONArray;
 
 public interface IDicomWebClient {
 
-  MultipartInput wadoRs(String path) throws DicomWebException;
+  InputStream wadoRs(String path) throws DicomWebException;
 
   JSONArray qidoRs(String path) throws DicomWebException;
 

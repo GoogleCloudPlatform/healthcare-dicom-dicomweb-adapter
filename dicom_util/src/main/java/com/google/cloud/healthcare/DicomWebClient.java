@@ -14,22 +14,17 @@
 
 package com.google.cloud.healthcare;
 
-import com.github.danieln.multipart.MultipartInput;
 import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
-import com.google.api.client.http.InputStreamContent;
-import com.google.api.client.http.MultipartContent;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import javax.inject.Inject;
 import org.dcm4che3.net.Status;
 import org.json.JSONArray;
@@ -56,14 +51,15 @@ public class DicomWebClient implements IDicomWebClient {
   /**
    * Makes a WADO-RS call and returns the multipart response.
    */
-  public MultipartInput wadoRs(String path) throws IDicomWebClient.DicomWebException {
+  public InputStream wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
           requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
               + StringUtil.trim(path)));
+      httpRequest.getHeaders().put("Accept", "application/dicom; transfer-syntax=*");
       HttpResponse httpResponse = httpRequest.execute();
 
-      return new MultipartInput(httpResponse.getContent(), httpResponse.getContentType());
+      return httpResponse.getContent();
     } catch (HttpResponseException e) {
       throw new DicomWebException(
           String.format("WadoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),

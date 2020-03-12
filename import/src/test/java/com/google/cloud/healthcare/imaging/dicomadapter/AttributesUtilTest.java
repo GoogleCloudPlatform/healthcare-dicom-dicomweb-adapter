@@ -66,7 +66,7 @@ public class AttributesUtilTest {
     String result = AttributesUtil.attributesToQidoPath(attrs);
 
     assertThat(result).isEqualTo(
-        "instances?limit=50000&" + TagUtils.toHexString(Tag.PatientName) + "=%25%26%23%5E+&");
+        "instances?limit=50000&" + TagUtils.toHexString(Tag.PatientName) + "=%25%26%23%5E&");
   }
 
   @Test
