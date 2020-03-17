@@ -55,6 +55,7 @@ compileJava {
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven { url 'http://www.dcm4che.org/maven2/' }
     maven { url 'https://jitpack.io' }
 }
@@ -69,7 +70,7 @@ dependencies {
 
     compile "org.dcm4che:dcm4che-imageio:5.18.1"
     runtime "org.dcm4che:dcm4che-imageio-rle:5.18.1"
-    runtime "com.github.red1408:jai-imageio-jpeg2000:aec3d03d"
+    runtime "com.github.jai-imageio:jai-imageio-jpeg2000:1.3.1-dicomadapter"
 
     compile project(":dicom_util")
     compile project(":util")
