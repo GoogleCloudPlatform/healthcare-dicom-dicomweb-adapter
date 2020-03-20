@@ -330,8 +330,7 @@ public final class CStoreServiceTest {
       String sopInstanceUID,
       String testFile,
       String transcodeToSyntax) throws Exception {
-    InputStream in =
-        new DicomInputStream(TestUtils.streamDICOMStripHeaders(TestUtils.TEST_MR_FILE));
+    DicomInputStream in = (DicomInputStream) TestUtils.streamDICOMStripHeaders(testFile);
     InputStreamDataWriter data = new InputStreamDataWriter(in);
 
     // Create C-STORE DICOM server.
@@ -340,7 +339,7 @@ public final class CStoreServiceTest {
 
     // Associate with peer AE.
     Association association =
-        associate(serverHostname, serverPort, sopClassUID, UID.ExplicitVRLittleEndian);
+        associate(serverHostname, serverPort, sopClassUID, in.getTransferSyntax());
 
     // Send the DICOM file.
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedDimseStatus);
@@ -349,7 +348,7 @@ public final class CStoreServiceTest {
         sopInstanceUID,
         1,
         data,
-        UID.ExplicitVRLittleEndian,
+        in.getTransferSyntax(),
         rspAssert);
     association.waitForOutstandingRSP();
 
