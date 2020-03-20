@@ -5,7 +5,7 @@ steps:
   volumes:
   - name: 'vol1'
     path: '/root/.m2'
-  dir: jai-imageio-jpeg2000
+  dir: third_party/jai-imageio-jpeg2000
   args:
   - mvn
   - install
