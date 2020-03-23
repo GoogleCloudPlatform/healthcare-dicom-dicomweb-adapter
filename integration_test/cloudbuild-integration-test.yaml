@@ -1,14 +1,4 @@
 ﻿steps:
-- name: ${_MAVEN_IMAGE_JAI}
-  id: build-jai
-  volumes:
-  - name: 'vol1'
-    path: '/root/.m2'
-  dir: third_party/jai-imageio-jpeg2000
-  args:
-  - mvn
-  - install
-
 - name: 'gcr.io/cloud-builders/git'
   id: clone-dcm4che
   args:
@@ -43,9 +33,6 @@
 
 - name: ${_GRADLE_IMAGE}
   id: adapter-build
-  volumes:
-  - name: 'vol1'
-    path: '/root/.m2'
   args: [ 'bash', './integration_test/scripts/build-adapters.sh', '${_IMAGEPROJECT}', '${SHORT_SHA}']
   waitFor: ['-']
 
@@ -391,14 +378,13 @@ substitutions:
   _COMMITMENT_SCU_PORT: '4000'
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
-  _ADAPTER_RUN_STEP: 'step_6'
-  _STORE_SCP_RUN_STEP: 'step_4'
-  _COMMITMENT_SCU_STEP: 'step_16'
+  _ADAPTER_RUN_STEP: 'step_5'
+  _STORE_SCP_RUN_STEP: 'step_3'
+  _COMMITMENT_SCU_STEP: 'step_15'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
-  _MAVEN_IMAGE_JAI: 'maven:3.3.9-jdk-8'
   _CLOUD_SDK_IMAGE: 'google/cloud-sdk:272.0.0'
   _PUBLISH: 'false'

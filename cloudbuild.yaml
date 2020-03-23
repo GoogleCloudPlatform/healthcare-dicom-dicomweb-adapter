@@ -1,24 +1,10 @@
 steps:
 
-- name: ${_MAVEN_IMAGE}
-  id: build-jai
-  volumes:
-  - name: 'vol1'
-    path: '/root/.m2'
-  dir: third_party/jai-imageio-jpeg2000
-  args:
-  - mvn
-  - install
-
 - name: ${_GRADLE_IMAGE}
   id: build-adapter
-  volumes:
-  - name: 'vol1'
-    path: '/root/.m2'
   args:
   - gradle
   - build
 
 substitutions:
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
-  _MAVEN_IMAGE: 'maven:3.3.9-jdk-8'
