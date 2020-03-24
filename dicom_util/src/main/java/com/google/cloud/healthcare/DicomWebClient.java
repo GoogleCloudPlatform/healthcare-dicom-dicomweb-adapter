@@ -49,7 +49,7 @@ public class DicomWebClient implements IDicomWebClient {
   }
 
   /**
-   * Makes a WADO-RS call and returns the multipart response.
+   * Makes a WADO-RS call and returns the response InputStream.
    */
   public InputStream wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {

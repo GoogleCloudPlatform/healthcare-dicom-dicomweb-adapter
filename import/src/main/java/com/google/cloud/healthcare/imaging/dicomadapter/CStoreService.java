@@ -197,7 +197,7 @@ public class CStoreService extends BasicCStoreSCP {
         // PDVInputStream is thread-locked
         StreamUtils.copy(inputStream, pdvPipeOut);
       } catch (IOException e) {
-        // causes or is caused by exception in redactor.redact, no need to throw this up
+        // causes or is caused by exception in callables, no need to throw this up
         log.trace("Error copying inputStream to pdvPipeOut", e);
       }
 
