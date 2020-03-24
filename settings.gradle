@@ -18,3 +18,5 @@ include ":export"
 include ":import"
 include ":util"
 include ':dicom_util'
+include ':jai-imageio-jpeg2000'
+project(':jai-imageio-jpeg2000').projectDir = new File('third_party/jai-imageio-jpeg2000')

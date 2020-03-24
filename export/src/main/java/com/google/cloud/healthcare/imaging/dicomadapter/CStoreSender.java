@@ -14,21 +14,18 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.github.danieln.multipart.MultipartInput;
-import com.github.danieln.multipart.PartInput;
 import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
 import com.google.pubsub.v1.PubsubMessage;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.net.ApplicationEntity;
 import org.dcm4che3.util.TagUtils;
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 // CStoreSender sends DICOM to peer using DIMSE C-STORE protocol.
 public class CStoreSender implements DicomSender {
@@ -70,13 +67,9 @@ public class CStoreSender implements DicomSender {
         SOP_INSTANCE_UID_TAG);
 
     // Invoke WADO-RS to get bulk DICOM.
-    MultipartInput resp = dicomWebClient.wadoRs(wadoUri);
-    PartInput part = resp.nextPart();
-    if (part == null) {
-      throw new IllegalArgumentException("WadoRS response has no parts");
-    }
+    InputStream responseStream = dicomWebClient.wadoRs(wadoUri);
 
-    CountingInputStream countingStream = new CountingInputStream(part.getInputStream());
+    CountingInputStream countingStream = new CountingInputStream(responseStream);
     DicomClient.connectAndCstore(sopClassUid, sopInstanceUid, countingStream,
         applicationEntity, dimsePeerAET, dimsePeerIP, dimsePeerPort);
     MonitoringService.addEvent(Event.BYTES, countingStream.getCount());

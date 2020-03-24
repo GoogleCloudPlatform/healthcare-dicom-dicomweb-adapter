@@ -14,7 +14,6 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.github.danieln.multipart.MultipartInput;
 import com.google.cloud.healthcare.IDicomWebClient;
 import java.io.InputStream;
 import org.dcm4che3.data.Tag;
@@ -46,7 +45,7 @@ public class TestUtils {
   public static abstract class DicomWebClientTestBase implements IDicomWebClient {
 
     @Override
-    public MultipartInput wadoRs(String path) throws DicomWebException {
+    public InputStream wadoRs(String path) throws DicomWebException {
       return null;
     }
 

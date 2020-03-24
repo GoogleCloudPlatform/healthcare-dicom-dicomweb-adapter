@@ -1,5 +1,7 @@
 steps:
+
 - name: ${_GRADLE_IMAGE}
+  id: build-adapter
   args:
   - gradle
   - build

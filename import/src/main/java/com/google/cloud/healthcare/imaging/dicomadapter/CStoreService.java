@@ -22,15 +22,20 @@ import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringSer
 import com.google.common.io.CountingInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
+import org.dcm4che3.imageio.codec.Transcoder;
 import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.PDVInputStream;
@@ -52,13 +57,21 @@ public class CStoreService extends BasicCStoreSCP {
   private final IDicomWebClient defaultDicomWebClient;
   private final Map<DestinationFilter, IDicomWebClient> destinationMap;
   private final DicomRedactor redactor;
+  private final String transcodeToSyntax;
 
   CStoreService(IDicomWebClient defaultDicomWebClient,
       Map<DestinationFilter, IDicomWebClient> destinationMap,
-      DicomRedactor redactor) {
+      DicomRedactor redactor, String transcodeToSyntax) {
     this.defaultDicomWebClient = defaultDicomWebClient;
-    this.destinationMap = destinationMap;
+    this.destinationMap =
+        destinationMap != null && destinationMap.size() > 0 ? destinationMap : null;
     this.redactor = redactor;
+    this.transcodeToSyntax =
+        transcodeToSyntax != null && transcodeToSyntax.length() > 0 ? transcodeToSyntax : null;
+
+    if(this.transcodeToSyntax != null) {
+      log.info("Transcoding to: " + transcodeToSyntax);
+    }
   }
 
   @Override
@@ -79,9 +92,9 @@ public class CStoreService extends BasicCStoreSCP {
       validateParam(sopClassUID, "AffectedSOPClassUID");
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
-      CountingInputStream countingStream;
-      IDicomWebClient destinationClient;
-      if(destinationMap != null && destinationMap.size() > 0){
+      final CountingInputStream countingStream;
+      final IDicomWebClient destinationClient;
+      if(destinationMap != null){
         DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
         inDicomStream.mark(Integer.MAX_VALUE);
         Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);
@@ -98,17 +111,35 @@ public class CStoreService extends BasicCStoreSCP {
           DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
+      List<StreamProcessor> processorList = new ArrayList<>();
       if (redactor != null) {
-        redactAndStow(association.getApplicationEntity().getDevice().getExecutor(), inWithHeader, destinationClient);
-      } else {
-        destinationClient.stowRs(inWithHeader);
+        processorList.add(redactor::redact);
       }
+
+      if(transcodeToSyntax != null && !transcodeToSyntax.equals(transferSyntax)) {
+        processorList.add((inputStream, outputStream) -> {
+          try (Transcoder transcoder = new Transcoder(inputStream)) {
+            transcoder.setIncludeFileMetaInformation(true);
+            transcoder.setDestinationTransferSyntax(transcodeToSyntax);
+            transcoder.transcode((transcoder1, dataset) -> outputStream);
+          }
+        });
+      }
+
+      processorList.add((inputStream, outputStream) -> {
+        destinationClient.stowRs(inputStream);
+      });
+
+      processStream(association.getApplicationEntity().getDevice().getExecutor(),
+          inWithHeader, processorList);
 
       response.setInt(Tag.Status, VR.US, Status.Success);
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
     } catch (DicomWebException e) {
       MonitoringService.addEvent(Event.CSTORE_ERROR);
-      throw new DicomServiceException(e.getStatus(), e.getMessage(), e);
+      DicomServiceException serviceException = new DicomServiceException(e.getStatus(), e);
+      serviceException.setErrorComment(e.getMessage());
+      throw serviceException;
     } catch (DicomServiceException e) {
       MonitoringService.addEvent(Event.CSTORE_ERROR);
       throw e;
@@ -124,48 +155,6 @@ public class CStoreService extends BasicCStoreSCP {
     }
   }
 
-  private void redactAndStow(Executor underlyingExecutor, InputStream inputStream,
-      IDicomWebClient dicomWebClient) throws Throwable {
-    ExecutorCompletionService<Void> ecs = new ExecutorCompletionService<>(underlyingExecutor);
-
-    PipedOutputStream pdvPipeOut = new PipedOutputStream();
-    PipedInputStream pdvPipeIn = new PipedInputStream(pdvPipeOut);
-    PipedOutputStream redactedPipeOut = new PipedOutputStream();
-    PipedInputStream redactedPipeIn = new PipedInputStream(redactedPipeOut);
-
-    ecs.submit(() -> {
-      try (redactedPipeIn) {
-        dicomWebClient.stowRs(redactedPipeIn);
-      }
-      return null;
-    });
-
-    ecs.submit(() -> {
-      try (pdvPipeIn) {
-        try (redactedPipeOut) {
-          redactor.redact(pdvPipeIn, redactedPipeOut);
-        }
-      }
-      return null;
-    });
-
-    try (pdvPipeOut) {
-      // PDVInputStream is thread-locked
-      StreamUtils.copy(inputStream, pdvPipeOut);
-    } catch (IOException e) {
-      // causes or is caused by exception in redactor.redact, no need to throw this up
-      log.trace("Error copying inputStream to pdvPipeOut", e);
-    }
-
-    try {
-      for (int i = 0; i < 2; ++i) {
-        ecs.take().get();
-      }
-    } catch (ExecutionException e) {
-      throw e.getCause();
-    }
-  }
-
   private IDicomWebClient selectDestinationClient(String callingAet, Attributes attrs){
     for(DestinationFilter filter: destinationMap.keySet()){
       if(filter.matches(callingAet, attrs)){
@@ -173,5 +162,80 @@ public class CStoreService extends BasicCStoreSCP {
       }
     }
     return defaultDicomWebClient;
+  }
+
+  private void processStream(Executor underlyingExecutor, InputStream inputStream,
+      List<StreamProcessor> processorList) throws Throwable {
+    if (processorList.size() == 1) {
+      StreamProcessor singleProcessor = processorList.get(0);
+      singleProcessor.process(inputStream, null);
+    } else if (processorList.size() > 1) {
+      List<StreamCallable> callableList = new ArrayList<>();
+
+      PipedOutputStream pdvPipeOut = new PipedOutputStream();
+      InputStream nextInputStream = new PipedInputStream(pdvPipeOut);
+      for(int i=0; i < processorList.size(); i++){
+        StreamProcessor processor = processorList.get(i);
+        InputStream processorInput = nextInputStream;
+        OutputStream processorOutput = null;
+
+        if(i < processorList.size() - 1) {
+          PipedOutputStream pipeOut = new PipedOutputStream();
+          processorOutput = pipeOut;
+          nextInputStream = new PipedInputStream(pipeOut);
+        }
+
+        callableList.add(new StreamCallable(processorInput, processorOutput, processor));
+      }
+
+      ExecutorCompletionService<Void> ecs = new ExecutorCompletionService<>(underlyingExecutor);
+      for(StreamCallable callable : callableList){
+        ecs.submit(callable);
+      }
+
+      try (pdvPipeOut) {
+        // PDVInputStream is thread-locked
+        StreamUtils.copy(inputStream, pdvPipeOut);
+      } catch (IOException e) {
+        // causes or is caused by exception in callables, no need to throw this up
+        log.trace("Error copying inputStream to pdvPipeOut", e);
+      }
+
+      try {
+        for (int i = 0; i < callableList.size(); i++) {
+          ecs.take().get();
+        }
+      } catch (ExecutionException e) {
+        throw e.getCause();
+      }
+    }
+  }
+
+  @FunctionalInterface
+  private interface StreamProcessor {
+    void process(InputStream inputStream, OutputStream outputStream) throws Exception;
+  }
+
+  private static class StreamCallable implements Callable<Void> {
+    private final InputStream inputStream;
+    private final OutputStream outputStream;
+    private final StreamProcessor processor;
+
+    public StreamCallable(InputStream inputStream, OutputStream outputStream,
+        StreamProcessor processor) {
+      this.inputStream = inputStream;
+      this.outputStream = outputStream;
+      this.processor = processor;
+    }
+
+    @Override
+    public Void call() throws Exception {
+      try (inputStream) {
+        try (outputStream) {
+          processor.process(inputStream, outputStream);
+        }
+      }
+      return null;
+    }
   }
 }

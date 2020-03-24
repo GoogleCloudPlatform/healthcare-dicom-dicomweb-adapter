@@ -29,10 +29,18 @@ plugins {
     id 'com.github.hierynomus.license' version '0.14.0'
 }
 
+def transcoderJvmArgs = ["-Dorg.dcm4che3.imageio.codec.ImageReaderFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageReaderFactory.properties",
+                         "-Dorg.dcm4che3.imageio.codec.ImageWriterFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageWriterFactory.properties"]
+
 mainClassName = "com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter"
 run {
     // Accept command line arguments via gradle run -Dexec.args="<args>"
     args System.getProperty("exec.args", "").split()
+    jvmArgs(transcoderJvmArgs)
+}
+
+test {
+    jvmArgs(transcoderJvmArgs)
 }
 
 buildDir = '/tmp/gradle_build/dicom_adapter/import'
@@ -56,8 +64,13 @@ dependencies {
     compile "com.beust:jcommander:1.72"
     compile 'com.google.auth:google-auth-library-oauth2-http:0.17.2'
     compile "com.google.api-client:google-api-client:1.30.5"
-    compile "org.dcm4che:dcm4che-core:3.3.8"
-    compile "org.dcm4che:dcm4che-net:3.3.8"
+    compile "org.dcm4che:dcm4che-core:5.18.1"
+    compile "org.dcm4che:dcm4che-net:5.18.1"
+
+    compile "org.dcm4che:dcm4che-imageio:5.18.1"
+    runtime "org.dcm4che:dcm4che-imageio-rle:5.18.1"
+    compile project(":jai-imageio-jpeg2000")
+
     compile project(":dicom_util")
     compile project(":util")
 
@@ -74,6 +87,7 @@ docker {
     javaApplication {
         baseImage = 'openjdk:11'
         tag = project.findProperty("docker_tag") ?: "import_adapter"
+        applicationDefaultJvmArgs = transcoderJvmArgs
     }
 }
 

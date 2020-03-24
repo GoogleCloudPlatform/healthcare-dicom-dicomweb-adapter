@@ -16,17 +16,15 @@ package com.google.cloud.healthcare;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.danieln.multipart.MultipartInput;
-import com.github.danieln.multipart.PartInput;
 import com.google.api.client.testing.http.HttpTesting;
 import com.google.cloud.healthcare.util.FakeWebServer;
 import com.google.cloud.healthcare.util.TestUtils;
 import com.google.common.io.ByteStreams;
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Arrays;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -52,17 +50,14 @@ public final class DicomWebClientTest {
     byte[] dicomInstance = TestUtils.readTestFile(TestUtils.TEST_MR_FILE);
 
     fakeDicomWebServer.addWadoResponse(dicomInstance);
-    MultipartInput resp = client.wadoRs("instanceName");
+    InputStream responseStream = client.wadoRs("instanceName");
 
-    PartInput part = resp.nextPart();
-    assertNotNull(part);
+    assertNotNull(responseStream);
 
-    byte[] actual = ByteStreams.toByteArray(part.getInputStream());
+    byte[] actual = ByteStreams.toByteArray(responseStream);
     if (!Arrays.equals(dicomInstance, actual)) {
       fail("wadoRs returned unexpected DICOM bytes");
     }
-
-    assertNull("WadoRs returned more than one part", resp.nextPart());
   }
 
   @Test

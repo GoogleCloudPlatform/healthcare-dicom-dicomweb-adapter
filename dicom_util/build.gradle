@@ -36,11 +36,10 @@ dependencies {
     compile "org.json:json:20170516"
     compile "com.google.inject:guice:4.1.0"
     compile "com.google.api-client:google-api-client:1.30.5"
-    compile "com.github.DanielN:multipart-handler:1.0-beta1"
     compile "junit:junit:4.12"
     compile "org.junit.jupiter:junit-jupiter-engine:5.0.0"
-    compile "org.dcm4che:dcm4che-core:3.3.8"
-    compile "org.dcm4che:dcm4che-net:3.3.8"
+    compile "org.dcm4che:dcm4che-core:5.18.1"
+    compile "org.dcm4che:dcm4che-net:5.18.1"
 
     compile 'com.google.auth:google-auth-library-oauth2-http:0.17.2'
     compile group: 'org.eclipse.jetty.http2', name: 'http2-client', version: '9.4.20.v20190813'

@@ -131,6 +131,11 @@ public class Flags {
   )
   String destinationConfigInline = "";
 
+  @Parameter(
+      names = {"--store_compress_to_transfer_syntax"},
+      description = "Transfer Syntax to convert instances to during C-STORE upload. See Readme for list of supported syntaxes."
+  )
+  String transcodeToSyntax = "";
 
   public Flags() {
   }

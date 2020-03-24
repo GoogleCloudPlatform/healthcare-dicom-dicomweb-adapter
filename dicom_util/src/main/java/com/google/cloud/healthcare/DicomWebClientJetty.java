@@ -1,6 +1,5 @@
 package com.google.cloud.healthcare;
 
-import com.github.danieln.multipart.MultipartInput;
 import com.google.auth.oauth2.OAuth2Credentials;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +50,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
   }
 
   @Override
-  public MultipartInput wadoRs(String path) throws DicomWebException {
+  public InputStream wadoRs(String path) throws DicomWebException {
     throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
   }
 

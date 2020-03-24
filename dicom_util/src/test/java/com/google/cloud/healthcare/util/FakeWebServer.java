@@ -14,15 +14,12 @@
 
 package com.google.cloud.healthcare.util;
 
-import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.LowLevelHttpRequest;
 import com.google.api.client.http.LowLevelHttpResponse;
-import com.google.api.client.http.MultipartContent;
 import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -63,17 +60,10 @@ public class FakeWebServer extends MockHttpTransport {
   }
 
   public void addWadoResponse(byte[] dicomInstance) throws IOException {
-    MultipartContent mpc = new MultipartContent();
-    mpc.addPart(
-        new MultipartContent.Part(new ByteArrayContent("application/dicom", dicomInstance)));
-
-    ByteArrayOutputStream contentOutputStream = new ByteArrayOutputStream();
-    mpc.writeTo(contentOutputStream);
-
     MockLowLevelHttpResponse response = new MockLowLevelHttpResponse();
     response.setStatusCode(200);
-    response.setContentType(String.format("multipart/related; boundary=\"%s\"", mpc.getBoundary()));
-    response.setContent(contentOutputStream.toByteArray());
+    response.setContentType("application/dicom; transfer-syntax=*");
+    response.setContent(dicomInstance);
     responses.add(response);
   }
 
