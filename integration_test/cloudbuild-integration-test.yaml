@@ -362,8 +362,10 @@
 
 - name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
-  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}"]
+  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "$REPO_NAME"]
   waitFor: ['delete-dicom-store']
+  secretEnv: ['ACCESS_TOKEN']
+
 timeout: 1800s
 substitutions:
   _VERSION: v1beta1
@@ -388,3 +390,9 @@ substitutions:
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
   _CLOUD_SDK_IMAGE: 'google/cloud-sdk:272.0.0'
   _PUBLISH: 'false'
+secrets:
+- kmsKeyName: projects/gcp-healthcare-oss-test/locations/global/keyRings/default/cryptoKeys/github-robot-access-token
+  secretEnv:
+    ACCESS_TOKEN: CiQAM/SK3FUc1t+CnHDdgRzbc556FIyHddxRpsnolmSKfpiZ66sSUQDrEGO9gz15JIulryNagWzUOGbBEAaC04y85J8fNRjJZ8T8ntzh6Kt0Sa+GCG+3n5xSQdDJdj6xOG0LfVzvU+/K3mZ1KJlIcd0jiCeBrjYLlw==
+
+
