@@ -362,9 +362,22 @@
 
 - name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
-  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "$REPO_NAME"]
-  waitFor: ['delete-dicom-store']
-  secretEnv: ['ACCESS_TOKEN']
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      export ACCESS_TOKEN=$(echo -n $_ACCESS_TOKEN_BASE64 | \
+        base64 -d - | \
+        gcloud kms decrypt \
+          --ciphertext-file - \
+          --plaintext-file - \
+          --project $PROJECT_ID \
+          --location $_KMS_LOCATION \
+          --keyring $_KMS_KEYRING \
+          --key $_KMS_KEY \
+      )
+    - integration_test/scripts/publish-images.sh ${_IMAGEPROJECT} ${_PUBLISH} ${REPO_NAME}
+  waitFor: ['delete-dicom-store-destination-2']
 
 timeout: 1800s
 substitutions:
@@ -378,6 +391,10 @@ substitutions:
   _STORE_SCP_PORT: '2576'
   _CLOSE_STORE_SCP_PORT: '3001'
   _COMMITMENT_SCU_PORT: '4000'
+  _KMS_LOCATION: global
+  _KMS_KEYRING: default
+  _KMS_KEY: github-robot-access-token
+  _ACCESS_TOKEN_BASE64: CiQAM/SK3FUc1t+CnHDdgRzbc556FIyHddxRpsnolmSKfpiZ66sSUQDrEGO9gz15JIulryNagWzUOGbBEAaC04y85J8fNRjJZ8T8ntzh6Kt0Sa+GCG+3n5xSQdDJdj6xOG0LfVzvU+/K3mZ1KJlIcd0jiCeBrjYLlw==
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
@@ -390,9 +407,4 @@ substitutions:
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
   _CLOUD_SDK_IMAGE: 'google/cloud-sdk:272.0.0'
   _PUBLISH: 'false'
-secrets:
-- kmsKeyName: projects/gcp-healthcare-oss-test/locations/global/keyRings/default/cryptoKeys/github-robot-access-token
-  secretEnv:
-    ACCESS_TOKEN: CiQAM/SK3FUc1t+CnHDdgRzbc556FIyHddxRpsnolmSKfpiZ66sSUQDrEGO9gz15JIulryNagWzUOGbBEAaC04y85J8fNRjJZ8T8ntzh6Kt0Sa+GCG+3n5xSQdDJdj6xOG0LfVzvU+/K3mZ1KJlIcd0jiCeBrjYLlw==
-
 
