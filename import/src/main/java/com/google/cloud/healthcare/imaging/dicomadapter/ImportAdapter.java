@@ -164,10 +164,11 @@ public class ImportAdapter {
     DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
     Map<DestinationFilter, IDicomWebClient> result = new LinkedHashMap<>();
     for (String filterString : conf.getMap().keySet()) {
+      String filterPath = StringUtil.trim(conf.getMap().get(filterString));
       result.put(
               new DestinationFilter(filterString),
               new DicomWebClientJetty(credentials,
-                      StringUtil.joinPath(conf.getMap().get(filterString), STUDIES))
+                      filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
       );
     }
     return result.size() > 0 ? result : null;

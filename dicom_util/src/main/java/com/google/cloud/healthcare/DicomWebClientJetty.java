@@ -46,7 +46,9 @@ public class DicomWebClientJetty implements IDicomWebClient {
       OAuth2Credentials credentials,
       String stowPath) {
     this.credentials = credentials;
-    this.stowPath = stowPath;
+    this.stowPath = StringUtil.trim(stowPath);
+
+    DicomWebValidation.validatePath(this.stowPath, DicomWebValidation.DICOMWEB_STUDIES_VALIDATION);
   }
 
   @Override
