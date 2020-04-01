@@ -1,8 +1,15 @@
 #!/bin/bash
-# imageProject publishFlag repositoryString
+# imageProject publishFlag repositoryString ACCESS_TOKEN_BASE64 PROJECT_ID KMS_LOCATION KMS_KEYRING KMS_KEY
 
-accessToken=$ACCESS_TOKEN
 repositoryString=$3
+ACCESS_TOKEN_BASE64=$4
+PROJECT_ID=$5
+KMS_LOCATION=$6
+KMS_KEYRING=$7
+KMS_KEY=$8
+
+# decryption of github access token
+accessToken=$(echo -n $ACCESS_TOKEN_BASE64 | base64 -d - | gcloud kms decrypt --ciphertext-file - --plaintext-file - --project $PROJECT_ID --location $KMS_LOCATION --keyring $KMS_KEYRING --key $KMS_KEY)
 
 # repositoryString contains "githubUser_githubRepo" if repository is stored by user 
 # and just "githubRepo" if stored by organization https://cloud.google.com/cloud-build/docs/configuring-builds/substitute-variable-values
