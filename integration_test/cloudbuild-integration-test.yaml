@@ -362,21 +362,7 @@
 
 - name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
-  entrypoint: 'bash'
-  args:
-    - -c
-    - |
-      export ACCESS_TOKEN=$(echo -n $_ACCESS_TOKEN_BASE64 | \
-        base64 -d - | \
-        gcloud kms decrypt \
-          --ciphertext-file - \
-          --plaintext-file - \
-          --project $PROJECT_ID \
-          --location $_KMS_LOCATION \
-          --keyring $_KMS_KEYRING \
-          --key $_KMS_KEY \
-      )
-    - integration_test/scripts/publish-images.sh ${_IMAGEPROJECT} ${_PUBLISH} ${REPO_NAME}
+  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "${REPO_NAME}" , "${_ACCESS_TOKEN_BASE64}", "${PROJECT_ID}", "${_KMS_LOCATION}", "${_KMS_KEYRING}", "${_KMS_KEY}" ]
   waitFor: ['delete-dicom-store-destination-2']
 
 timeout: 1800s
