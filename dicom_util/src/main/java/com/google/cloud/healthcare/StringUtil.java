@@ -9,6 +9,6 @@ public class StringUtil {
   }
 
   public static String joinPath(String serviceUrlPrefix, String path){
-    return serviceUrlPrefix + "/" + StringUtil.trim(path);
+    return StringUtil.trim(serviceUrlPrefix) + "/" + StringUtil.trim(path);
   }
 }
