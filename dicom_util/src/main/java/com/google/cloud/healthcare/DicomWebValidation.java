@@ -27,6 +27,9 @@ public class DicomWebValidation {
             if(validation == DICOMWEB_ROOT_VALIDATION && path.endsWith(STUDIES)){
                 throw new IllegalArgumentException("Path: " + path + " is not dicomWeb root (ends with 'studies')");
             }
+            if(validation == DICOMWEB_STUDIES_VALIDATION && !path.endsWith(STUDIES)){
+                throw new IllegalArgumentException("Path: " + path + " is not dicomWeb studies path");
+            }
         }
     }
 
