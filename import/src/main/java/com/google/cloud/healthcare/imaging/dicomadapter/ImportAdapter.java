@@ -57,9 +57,7 @@ public class ImportAdapter {
     }
 
     // Adjust logging.
-    if (flags.verbose) {
-      LogUtil.Log4jToStdout();
-    }
+    LogUtil.Log4jToStdout(flags.verbose ? "DEBUG" : "ERROR");
 
     // Credentials, use the default service credentials.
     GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
