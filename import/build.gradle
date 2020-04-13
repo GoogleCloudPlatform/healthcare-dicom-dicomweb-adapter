@@ -87,7 +87,7 @@ docker {
     javaApplication {
         baseImage = 'openjdk:11'
         images = [project.findProperty("docker_tag") ?: "import_adapter"]
-        applicationDefaultJvmArgs = transcoderJvmArgs
+        jvmArgs = transcoderJvmArgs
     }
 }
 
