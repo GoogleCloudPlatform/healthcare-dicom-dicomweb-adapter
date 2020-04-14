@@ -58,7 +58,7 @@ public final class CMoveServiceTest {
 
   @Before
   public void setUp() throws Exception {
-    LogUtil.Log4jToStdout();
+    LogUtil.Log4jToStdout("DEBUG");
 
     // Create the C-STORE client.
     Device device = new Device(clientAET);
