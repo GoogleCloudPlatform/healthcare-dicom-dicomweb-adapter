@@ -38,7 +38,7 @@ run {
 buildDir = '/tmp/gradle_build/dicom_adapter/export'
 
 sourceCompatibility = 1.11
-version = '0.1'
+version = '0.2'
 
 compileJava {
     // Print out detailed deprecation warnings.
