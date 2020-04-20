@@ -51,9 +51,7 @@ public class ExportAdapter {
     jCommander.parse(args);
 
     // Adjust logging.
-    if (flags.verbose) {
-      LogUtil.Log4jToStdout();
-    }
+    LogUtil.Log4jToStdout(flags.verbose ? "DEBUG" : "ERROR");
 
     // DicomWeb client for source of DICOM.
     GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();

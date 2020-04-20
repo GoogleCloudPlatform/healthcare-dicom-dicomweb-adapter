@@ -19,7 +19,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.bmuschko:gradle-docker-plugin:3.2.2'
+        classpath 'com.bmuschko:gradle-docker-plugin:6.2.0'
     }
 }
 
@@ -46,7 +46,7 @@ test {
 buildDir = '/tmp/gradle_build/dicom_adapter/import'
 
 sourceCompatibility = 1.11
-version = '0.1'
+version = '0.2'
 
 compileJava {
     // Print out detailed deprecation warnings.
@@ -86,8 +86,8 @@ apply plugin: 'com.bmuschko.docker-java-application'
 docker {
     javaApplication {
         baseImage = 'openjdk:11'
-        tag = project.findProperty("docker_tag") ?: "import_adapter"
-        applicationDefaultJvmArgs = transcoderJvmArgs
+        images = [project.findProperty("docker_tag") ?: "import_adapter"]
+        jvmArgs = transcoderJvmArgs
     }
 }
 
@@ -130,9 +130,9 @@ task printVersion {
     }
 }
 
-dockerCopyDistResources.finalizedBy tasks.copySourceAndLicenseToDockerImage
-dockerDistTar {
-    instruction {'ADD license /usr/share/oss-license'}
-    instruction {'ADD source /usr/share/oss-source'}
+dockerSyncBuildContext.finalizedBy tasks.copySourceAndLicenseToDockerImage
+dockerCreateDockerfile {
+    instruction 'ADD license /usr/share/oss-license'
+    instruction 'ADD source /usr/share/oss-source'
 }
 

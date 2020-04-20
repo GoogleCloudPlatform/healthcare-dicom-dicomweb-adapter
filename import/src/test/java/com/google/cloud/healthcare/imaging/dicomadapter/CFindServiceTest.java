@@ -53,7 +53,7 @@ public final class CFindServiceTest {
 
   @Before
   public void setUp() throws Exception {
-    LogUtil.Log4jToStdout();
+    LogUtil.Log4jToStdout("DEBUG");
 
     Device device = new Device(clientAET);
     Connection conn = new Connection();

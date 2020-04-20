@@ -26,9 +26,9 @@ public class LogUtil {
 
   // Print all logs emitted by log4j (as low as DEBUG level) to stdout. This
   // is useful for seeing dcm4che errors in verbose mode.
-  public static void Log4jToStdout() {
+  public static void Log4jToStdout(String level) {
     Properties log4jProperties = new Properties();
-    log4jProperties.setProperty("log4j.rootLogger", "DEBUG, console");
+    log4jProperties.setProperty("log4j.rootLogger", level + ", console");
     log4jProperties.setProperty("log4j.appender.console", "org.apache.log4j.ConsoleAppender");
     log4jProperties.setProperty("log4j.appender.console.layout", "org.apache.log4j.PatternLayout");
     log4jProperties.setProperty(
