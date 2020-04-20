@@ -174,6 +174,8 @@ spec:
             - "--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb"
 ```
 
+**The yaml configuration has changed slightly from version 0.1 to 0.2. Please see the [upgrade guide](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/DICOM-Adapter-Upgrade-Guide#to-version-020) for instructions on how to upgrade your configuration.**
+
 The dicomweb_addr and dicomweb_stow_path parameters have been deprecated, please use the dicomweb_address parameter instead as shown above.
 The old address parameters will not work with C-FIND, C-MOVE, and storage commitment.
 
