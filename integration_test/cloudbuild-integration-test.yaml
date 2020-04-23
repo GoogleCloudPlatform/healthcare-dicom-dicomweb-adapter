@@ -369,7 +369,7 @@
 
 timeout: 1800s
 substitutions:
-  _VERSION: v1beta1
+  _VERSION: v1
   _PROJECT: gcp-healthcare-oss-test
   _IMAGEPROJECT: cloud-healthcare-containers
   _LOCATION: us-central1
@@ -393,6 +393,6 @@ substitutions:
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
-  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:272.0.0'
+  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:290.0.0'
   _PUBLISH: 'false'
 

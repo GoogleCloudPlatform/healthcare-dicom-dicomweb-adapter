@@ -71,11 +71,10 @@ projects:
                     - containerPort: 2575
                       protocol: TCP
                       name: "port"
-                  command:
-                    - "/import/bin/import"
+                  args:
                     - "--dimse_aet=IMPORTADAPTER"
                     - "--dimse_port=2575"
-                    - "--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/my-project/locations/us-central1-c/datasets/dataset/dicomStores/dicomStores/dicomWeb"
+                    - "--dicomweb_address=https://healthcare.googleapis.com/v1/projects/my-project/locations/us-central1-c/datasets/dataset/dicomStores/dicomStores/dicomWeb"
                     - "--aet_dictionary_inline=\"[{\"name\":\"STORESCP\",\"host\":host1,\"port\":2576},{\"name\":\"STGCMTSCU\",\"host\":host2,\"port\":4000},]\""
                     - "--verbose"
                   env:
