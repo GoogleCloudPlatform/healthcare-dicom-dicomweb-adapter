@@ -171,7 +171,7 @@ spec:
           args:
             - "--dimse_aet=IMPORTADAPTER"
             - "--dimse_port=2575"
-            - "--dicomweb_address=https://healthcare.googleapis.com/v1beta1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb"
+            - "--dicomweb_address=https://healthcare.googleapis.com/v1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb"
 ```
 
 **The yaml configuration has changed slightly from version 0.1 to 0.2. Please see the [upgrade guide](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/DICOM-Adapter-Upgrade-Guide#to-version-020) for instructions on how to upgrade your configuration.**
@@ -191,7 +191,7 @@ containers in `dicom_adapter.yaml`. Modify the flags for your use case.
             - "--peer_dimse_port=104"
             - "--project_id=myproject"
             - "--subscription_id=mysub"
-            - "--dicomweb_addr=https://healthcare.googleapis.com/v1beta1"
+            - "--dicomweb_addr=https://healthcare.googleapis.com/v1"
             - "--oauth_scopes=https://www.googleapis.com/auth/pubsub"
 ```
 
