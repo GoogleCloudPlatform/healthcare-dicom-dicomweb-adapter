@@ -62,6 +62,12 @@ public class Flags {
   String dicomwebAddress = "";
 
   @Parameter(
+      names = {"--stow_http2"},
+      description = "Whether to use HTTP 2.0 for StowRS (i.e. StoreInstances) requests. False by default."
+  )
+  Boolean useHttp2ForStow = false;
+
+  @Parameter(
       names = {"--oauth_scopes"},
       description = "Comma seperated OAuth scopes used by adapter."
   )

@@ -89,10 +89,16 @@ public class ImportAdapter {
       cstoreDicomwebAddr = flags.dicomwebAddr;
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
-    IDicomWebClient defaultCstoreDicomWebClient =
+    IDicomWebClient defaultCstoreDicomWebClient = null;
+    if (flags.useHttp2ForStow) {
+      defaultCstoreDicomWebClient =
         new DicomWebClientJetty(
             credentials,
             StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+    } else {
+      defaultCstoreDicomWebClient =
+        new DicomWebClient(requestFactory, flags.dicomwebAddress);
+    }
 
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
