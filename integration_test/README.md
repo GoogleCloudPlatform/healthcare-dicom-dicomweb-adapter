@@ -7,15 +7,16 @@ Creates a dicom store, builds & runs adapter, builds & runs store-scu against it
 Local run:
 
 ```shell
-cloud-build-local --config=integration_test/cloudbuild-integration-test.yaml --dryrun=false .
+cloud-build-local --config=integration_test/cloudbuild-integration-test.yaml --dryrun=false --substitutions=SHORT_SHA=local_run .
 ```
 
 Cloud run:
 
 ```shell
-gcloud builds submit --config=integration_test/cloudbuild-integration-test.yaml .
+gcloud builds submit --config=integration_test/cloudbuild-integration-test.yaml --substitutions=SHORT_SHA=local_run .
 ```
 
 Can add --substitutions=_STORE_NAME=your_custom_name parameter to use different name for test storage.
-Without this, concurrent integration tests will fail.
+Without this, concurrent integration tests will fail. 
 
+The default settings require access to the gcp-healthcare-oss-test project, so you should use a seperate project (via `--substitutions=_PROJECT=<your-project-id>`) to run locally.

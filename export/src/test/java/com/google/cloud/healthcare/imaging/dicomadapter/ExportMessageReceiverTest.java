@@ -109,7 +109,7 @@ public final class ExportMessageReceiverTest {
     ByteString pubsubMessageBytes = ByteString.copyFromUtf8(testPubsubPath);
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(pubsubMessageBytes).build();
     DicomWebClient dicomWebClient =
-        new DicomWebClient(fakeWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
+        new DicomWebClient(fakeWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
     DicomSender dicomSender =
         new CStoreSender(clientAE, serverAET, serverHost, serverPort, dicomWebClient);
     ExportMessageReceiver receiver = new ExportMessageReceiver(dicomSender);
@@ -126,9 +126,9 @@ public final class ExportMessageReceiverTest {
     ByteString pubsubMessageBytes = ByteString.copyFromUtf8(testPubsubPath);
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(pubsubMessageBytes).build();
     DicomWebClient sourceDicomWebClient =
-        new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
+        new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
     DicomWebClient sinkDicomWebClient =
-        new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL) {
+        new DicomWebClient(fakeSinkDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies") {
           // This tests only ExportMessageReceiver and StowRsSender.
           // Properly mocking HTTP2 for low-level jetty stowrs implementation would be
           // significantly more difficult (but it's used during integration test)

@@ -97,7 +97,7 @@ public class ImportAdapter {
             StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
     } else {
       defaultCstoreDicomWebClient =
-        new DicomWebClient(requestFactory, flags.dicomwebAddress);
+        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
     }
 
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
@@ -110,7 +110,7 @@ public class ImportAdapter {
 
     // Handle C-FIND
     IDicomWebClient dicomWebClient =
-        new DicomWebClient(requestFactory, flags.dicomwebAddress);
+        new DicomWebClient(requestFactory, flags.dicomwebAddress, cstoreDicomwebStowPath);
     CFindService cFindService = new CFindService(dicomWebClient);
     serviceRegistry.addDicomService(cFindService);
 

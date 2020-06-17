@@ -49,7 +49,7 @@ public final class DicomWebClientTest {
   @Before
   public void setUp() {
     fakeDicomWebServer = new FakeWebServer();
-    client = new DicomWebClient(fakeDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL);
+    client = new DicomWebClient(fakeDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
   }
 
   @Test

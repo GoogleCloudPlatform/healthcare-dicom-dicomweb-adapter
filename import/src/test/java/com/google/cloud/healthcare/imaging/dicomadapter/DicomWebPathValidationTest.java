@@ -12,37 +12,37 @@ public final class DicomWebPathValidationTest {
     @Test
     public void testGooglePath_rootValid() {
         new DicomWebClient(null,
-                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb");
+                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb", "/studies");
     }
 
     @Test
     public void testGooglePath_rootValidExtraSlash() {
         new DicomWebClient(null,
-                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb/");
+                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb/", "/studies");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testGooglePath_rootInvalid() {
         new DicomWebClient(null,
-                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStoresNOPE/_store/dicomWeb");
+                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStoresNOPE/_store/dicomWeb", "/studies");
     }
 
     @Test
     public void testGenericPath_validTypoInBeginning() {
         new DicomWebClient(null,
-                "https://healthcare.zoogleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb");
+                "https://healthcare.zoogleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb", "/studies");
     }
 
     @Test
     public void testGenericPath_validThisIsAlsoTypo() {
         new DicomWebClient(null,
-                "http://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb");
+                "http://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb", "/studies");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testGooglePath_rootStudiesInvalid() {
         new DicomWebClient(null,
-                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb/studies");
+                "https://healthcare.googleapis.com/_version/projects/_project/locations/_location/datasets/_dataset/dicomStores/_store/dicomWeb/studies", "/studies");
     }
 
     @Test
@@ -60,13 +60,13 @@ public final class DicomWebPathValidationTest {
     @Test
     public void testGenericPath_rootValid() {
         new DicomWebClient(null,
-                "almost/anything/is/valid/");
+                "almost/anything/is/valid/", "/studies");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testGenericPath_rootInvalid() {
         new DicomWebClient(null,
-                "almost/anything/is/valid/except/ending/with/studies");
+                "almost/anything/is/valid/except/ending/with/studies", "/studies");
     }
 
     @Test

@@ -44,12 +44,17 @@ public class DicomWebClient implements IDicomWebClient {
   // Service prefix all dicomWeb paths will be appended to.
   private final String serviceUrlPrefix;
 
+  // The path for a StowRS request to be appened to serviceUrlPrefix.
+  private final String stowPath;
+
   @Inject
   public DicomWebClient(
       HttpRequestFactory requestFactory,
-      @Annotations.DicomwebAddr String serviceUrlPrefix) {
+      @Annotations.DicomwebAddr String serviceUrlPrefix,
+      String stowPath) {
     this.requestFactory = requestFactory;
     this.serviceUrlPrefix = StringUtil.trim(serviceUrlPrefix);
+    this.stowPath = stowPath;
 
     DicomWebValidation.validatePath(this.serviceUrlPrefix, DicomWebValidation.DICOMWEB_ROOT_VALIDATION);
   }
@@ -107,7 +112,7 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(InputStream in) throws IDicomWebClient.DicomWebException {
-    GenericUrl url = new GenericUrl(serviceUrlPrefix + "/studies");
+    GenericUrl url = new GenericUrl(StringUtil.joinPath(serviceUrlPrefix, this.stowPath));
 
     // DICOM "Type" parameter:
     // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
