@@ -1,0 +1,30 @@
+import:
+  image:
+    repo: null
+    tag: null
+  dimse_aet: null
+  monitoring_project_id: null
+  dicomweb_address: null
+  redact_remove_list: null
+  redact_keep_list: null
+  dimse_cmove_aet: null
+  aet_dictionary_inline: null
+  destination_config_inline: null
+  store_compress_to_transfer_syntax: null
+export:
+  monitoring_project_id: null
+  hasexporter: null
+  peer_dimse_aet: null
+  peer_dimse_ip: null
+  peer_dimse_port: null
+  peer_dicomweb_address: null
+  project_id: null
+  subscription_id: null
+  dicomweb_addr: null
+  oauth_scopes: null
+  use_gcp_application_default_credentials: null
+  image:
+    repo: null
+    tag: null
+lb:
+  internal: null

@@ -1,0 +1,41 @@
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: "{{ .Release.Name }}"
+  annotations:
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "fill in partner_id", "product_id": "fill in product_id", "partner_name": "fill in partner_name"}'
+spec:
+  selector:
+    matchLabels:
+     app.kubernetes.io/name: "{{ .Release.Name }}"
+  componentKinds:
+    - group: v1
+      kind: Service
+    - group: apps/v1
+      kind: StatefulSet
+  addOwnerRef: true
+  descriptor:
+    type: "dicom adapter"
+    version: "0.2"
+    keywords:
+      - "dicom"
+      - "adapter"
+    links:
+      - description: Github page
+        url: "https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter"
+      - description: Google health API dicom docs
+        url: "https://cloud.google.com/healthcare/docs/how-tos/dicom"
+    description: |-
+      The DICOM adapter is a set of components that translate between traditional DICOM 
+      DIMSE protocols (e.g., C-STORE) and the RESTful DICOMweb protocols (e.g., STOW-RS).
+    # need confirmation
+    maintainers:
+      - name: Google HCLS Dicom team
+        email: hcls-dicom-api-team@google.com
+    # need confirmation
+    owners:
+      - name: Google HCLS Dicom team
+        email: hcls-dicom-api-team@google.com
