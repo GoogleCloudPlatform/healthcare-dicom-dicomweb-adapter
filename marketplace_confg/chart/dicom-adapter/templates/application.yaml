@@ -33,7 +33,7 @@ spec:
       DIMSE protocols (e.g., C-STORE) and the RESTful DICOMweb protocols (e.g., STOW-RS).
     maintainers:
       - name: Google HCLS Dicom team
-        email: hcls-dicom-api-team@google.com
+        email: cloud-healthcare-help@google.com
     owners:
       - name: Google HCLS Dicom team
         email: hcls-dicom-api-team@google.com
