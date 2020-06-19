@@ -56,6 +56,22 @@
           --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
 
+# run adapter with http2
+
+- name: 'gcr.io/${_IMAGEPROJECT}/healthcare-api-dicom-dicomweb-adapter-import:${SHORT_SHA}'
+  id: adapter-http2
+  entrypoint: 'bash'
+  args: [ '-c',
+          "java -Dorg.dcm4che3.imageio.codec.ImageReaderFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageReaderFactory.properties \
+                -Dorg.dcm4che3.imageio.codec.ImageWriterFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageWriterFactory.properties \
+                -cp /app/resources:/app/classes:/app/libs/* com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter \
+          --dimse_aet=IMPORTADAPTER \
+          --dimse_port=${_ADAPTER_PORT_HTTP2} \
+          --stow_http2 \
+          --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
+          --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+  waitFor: ['adapter-build']
+
 # create dataset if not exists, re-create store (delete if exists, then create)
 - name: ${_CLOUD_SDK_IMAGE}
   id: setup-dataset-and-dicom-store
@@ -76,7 +92,21 @@
   - integration_test/scripts/wait-for-port.sh
   - ${_ADAPTER_RUN_STEP}
   - ${_ADAPTER_PORT}
-  timeout: 5m
+  timeout: 300s
+  waitFor:
+  - build-tools
+  - adapter-build
+  - setup-dataset-and-dicom-store
+
+# busybox is a compact utility image
+- name: 'busybox:latest'
+  id: wait-for-adapter-http2
+  args:
+  - ash
+  - integration_test/scripts/wait-for-port.sh
+  - ${_ADAPTER_RUN_STEP_HTTP2}
+  - ${_ADAPTER_PORT_HTTP2}
+  timeout: 300s
   waitFor:
   - build-tools
   - adapter-build
@@ -89,7 +119,7 @@
   - integration_test/scripts/wait-for-port.sh
   - ${_STORE_SCP_RUN_STEP}
   - ${_STORE_SCP_PORT}
-  timeout: 5m
+  timeout: 300s
   waitFor:
   - build-tools
 
@@ -107,6 +137,21 @@
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter
+
+- name: ${_MAVEN_IMAGE}
+  id: run-store-scu-http2
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_HTTP2}:${_ADAPTER_PORT_HTTP2} ../../../integration_test/data/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+  waitFor:
+  - wait-for-adapter-http2
 
 - name: ${_MAVEN_IMAGE}
   id: run-store-scu-destination-2
@@ -377,6 +422,7 @@ substitutions:
   _STORE_NAME: integration-test-store
   _ADAPTER_PORT: '2575'
   _STORE_SCP_PORT: '2576'
+  _ADAPTER_PORT_HTTP2: '2577'
   _CLOSE_STORE_SCP_PORT: '3001'
   _COMMITMENT_SCU_PORT: '4000'
   _KMS_LOCATION: global
@@ -386,8 +432,9 @@ substitutions:
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
+  _ADAPTER_RUN_STEP_HTTP2: 'step_6'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_15'
+  _COMMITMENT_SCU_STEP: 'step_18'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'

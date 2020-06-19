@@ -89,10 +89,16 @@ public class ImportAdapter {
       cstoreDicomwebAddr = flags.dicomwebAddr;
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
-    IDicomWebClient defaultCstoreDicomWebClient =
+    IDicomWebClient defaultCstoreDicomWebClient = null;
+    if (flags.useHttp2ForStow) {
+      defaultCstoreDicomWebClient =
         new DicomWebClientJetty(
             credentials,
             StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+    } else {
+      defaultCstoreDicomWebClient =
+        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
+    }
 
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
@@ -104,7 +110,7 @@ public class ImportAdapter {
 
     // Handle C-FIND
     IDicomWebClient dicomWebClient =
-        new DicomWebClient(requestFactory, flags.dicomwebAddress);
+        new DicomWebClient(requestFactory, flags.dicomwebAddress, STUDIES);
     CFindService cFindService = new CFindService(dicomWebClient);
     serviceRegistry.addDicomService(cFindService);
 

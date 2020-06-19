@@ -17,9 +17,13 @@ package com.google.cloud.healthcare;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
+import com.google.api.client.http.InputStreamContent;
+import com.google.api.client.http.MultipartContent;
+import java.util.UUID;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,12 +44,17 @@ public class DicomWebClient implements IDicomWebClient {
   // Service prefix all dicomWeb paths will be appended to.
   private final String serviceUrlPrefix;
 
+  // The path for a StowRS request to be appened to serviceUrlPrefix.
+  private final String stowPath;
+
   @Inject
   public DicomWebClient(
       HttpRequestFactory requestFactory,
-      @Annotations.DicomwebAddr String serviceUrlPrefix) {
+      @Annotations.DicomwebAddr String serviceUrlPrefix,
+      String stowPath) {
     this.requestFactory = requestFactory;
     this.serviceUrlPrefix = StringUtil.trim(serviceUrlPrefix);
+    this.stowPath = stowPath;
 
     DicomWebValidation.validatePath(this.serviceUrlPrefix, DicomWebValidation.DICOMWEB_ROOT_VALIDATION);
   }
@@ -103,6 +112,25 @@ public class DicomWebClient implements IDicomWebClient {
    * @param in The DICOM input stream.
    */
   public void stowRs(InputStream in) throws IDicomWebClient.DicomWebException {
-    throw new UnsupportedOperationException("Not Implemented, use DicomWebClientJetty");
+    GenericUrl url = new GenericUrl(StringUtil.joinPath(serviceUrlPrefix, this.stowPath));
+
+    // DICOM "Type" parameter:
+    // http://dicom.nema.org/medical/dicom/current/output/html/part18.html#sect_6.6.1.1.1
+    MultipartContent content = new MultipartContent();
+    content.setMediaType(new HttpMediaType("multipart/related; type=\"application/dicom\""));
+    content.setBoundary(UUID.randomUUID().toString());
+    InputStreamContent dicomStream = new InputStreamContent("application/dicom", in);
+    content.addPart(new MultipartContent.Part(dicomStream));
+
+    try {
+      HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
+      httpRequest.execute();
+    } catch (HttpResponseException e) {
+      throw new DicomWebException(
+          String.format("StowRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
+          e, e.getStatusCode(), Status.ProcessingFailure);
+    } catch (IOException e) {
+      throw new IDicomWebClient.DicomWebException(e);
+    }
   }
 }

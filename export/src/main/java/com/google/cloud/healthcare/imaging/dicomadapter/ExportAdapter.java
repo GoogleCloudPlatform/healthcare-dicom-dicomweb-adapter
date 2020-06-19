@@ -58,8 +58,9 @@ public class ExportAdapter {
     if (!flags.oauthScopes.isEmpty()) {
       credentials = credentials.createScoped(Arrays.asList(flags.oauthScopes.split(",")));
     }
+
     DicomWebClient dicomWebClient =
-        new DicomWebClient(createHttpRequestFactory(credentials), flags.dicomwebAddr);
+        new DicomWebClient(createHttpRequestFactory(credentials), flags.dicomwebAddr, "studies");
 
     // Initialize Monitoring
     if (!flags.monitoringProjectId.isEmpty()) {
@@ -84,7 +85,7 @@ public class ExportAdapter {
       // STOW-RS sender.
       boolean isLegacyAdress = flags.peerDicomwebAddress.isEmpty();
       String peerDicomwebAddress =
-          isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
+        isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
       String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
       IDicomWebClient exportDicomWebClient =
           new DicomWebClientJetty(flags.useGcpApplicationDefaultCredentials ? null : credentials,
