@@ -110,7 +110,7 @@ public class ImportAdapter {
 
     // Handle C-FIND
     IDicomWebClient dicomWebClient =
-        new DicomWebClient(requestFactory, flags.dicomwebAddress, cstoreDicomwebStowPath);
+        new DicomWebClient(requestFactory, flags.dicomwebAddress, STUDIES);
     CFindService cFindService = new CFindService(dicomWebClient);
     serviceRegistry.addDicomService(cFindService);
 
