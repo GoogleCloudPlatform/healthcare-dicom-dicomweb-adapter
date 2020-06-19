@@ -18,5 +18,3 @@ gcloud builds submit --config=integration_test/cloudbuild-integration-test.yaml 
 
 Can add --substitutions=_STORE_NAME=your_custom_name parameter to use different name for test storage.
 Without this, concurrent integration tests will fail. 
-
-The default settings require access to the gcp-healthcare-oss-test project, so you should use a seperate project (via `--substitutions=_PROJECT=<your-project-id>`) to run locally.
