@@ -104,7 +104,7 @@
   args:
   - ash
   - integration_test/scripts/wait-for-port.sh
-  - ${_ADAPTER_RUN_STEP}
+  - ${_ADAPTER_RUN_STEP_HTTP2}
   - ${_ADAPTER_PORT_HTTP2}
   timeout: 300s
   waitFor:
@@ -148,7 +148,7 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP}:${_ADAPTER_PORT_HTTP2} ../../../integration_test/data/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_HTTP2}:${_ADAPTER_PORT_HTTP2} ../../../integration_test/data/example.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter-http2
@@ -432,8 +432,9 @@ substitutions:
 # Cloud build names containers that run steps: step_0, step_1 etc. These are also their dns names on docker network.
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
+  _ADAPTER_RUN_STEP_HTTP2: 'step_6'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_15'
+  _COMMITMENT_SCU_STEP: 'step_18'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
