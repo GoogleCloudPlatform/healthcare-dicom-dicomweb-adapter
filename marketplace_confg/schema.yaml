@@ -32,7 +32,7 @@ properties:
     type: boolean
     title: "disable external access"
     description: Set to true for internal access only.
-    default: false
+    default: true
     enum:
     - true
     - false
