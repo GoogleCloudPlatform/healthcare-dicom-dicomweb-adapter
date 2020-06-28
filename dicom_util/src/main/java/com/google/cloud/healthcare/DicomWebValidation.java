@@ -9,28 +9,19 @@ public class DicomWebValidation {
     private static Logger log = LoggerFactory.getLogger(DicomWebValidation.class);
 
     private static String DICOMWEB_PATH = "https:\\/\\/healthcare.googleapis.com\\/.*?\\/projects\\/.*?\\/locations\\/.*?\\/datasets\\/.*?\\/dicomStores\\/.*?\\/dicomWeb";
-    private static String STUDIES = "studies";
-    private static String STUDIES_PATH = DICOMWEB_PATH + "\\/" + STUDIES;
     private static String HEALTHCARE_API_ROOT = "https://healthcare.googleapis.com";
 
     public static ValidationPattern DICOMWEB_ROOT_VALIDATION =
             new ValidationPattern(Pattern.compile(DICOMWEB_PATH), "Google Healthcare Api dicomWeb root path");
-    public static ValidationPattern DICOMWEB_STUDIES_VALIDATION =
-            new ValidationPattern(Pattern.compile(STUDIES_PATH), "Google Healthcare Api dicomWeb studies path");
 
-    public static void validatePath(String path, ValidationPattern validation){
+    public static String validatePath(String path, ValidationPattern validation){
+        path = StringUtil.trim(path);
         if(path.startsWith(HEALTHCARE_API_ROOT)) {
             if (!validation.pattern.matcher(path).matches()) {
                 throw new IllegalArgumentException("Path: " + path + " is not a valid " + validation.name);
             }
-        } else {
-            if(validation == DICOMWEB_ROOT_VALIDATION && path.endsWith(STUDIES)){
-                throw new IllegalArgumentException("Path: " + path + " is not dicomWeb root (ends with 'studies')");
-            }
-            if(validation == DICOMWEB_STUDIES_VALIDATION && !path.endsWith(STUDIES)){
-                throw new IllegalArgumentException("Path: " + path + " is not dicomWeb studies path");
-            }
         }
+        return path;
     }
 
     private static class ValidationPattern{

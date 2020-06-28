@@ -51,6 +51,8 @@ public class ImportAdapter {
     JCommander jCommander = new JCommander(flags);
     jCommander.parse(args);
 
+    String dicomwebAddress = DicomWebValidation.validatePath(flags.dicomwebAddress, DicomWebValidation.DICOMWEB_ROOT_VALIDATION);
+
     if(flags.help){
       jCommander.usage();
       return;
@@ -83,7 +85,7 @@ public class ImportAdapter {
     serviceRegistry.addDicomService(new BasicCEchoSCP());
 
     // Handle C-STORE
-    String cstoreDicomwebAddr = flags.dicomwebAddress;
+    String cstoreDicomwebAddr = dicomwebAddress;
     String cstoreDicomwebStowPath = STUDIES;
     if (cstoreDicomwebAddr.length() == 0) {
       cstoreDicomwebAddr = flags.dicomwebAddr;
@@ -110,7 +112,7 @@ public class ImportAdapter {
 
     // Handle C-FIND
     IDicomWebClient dicomWebClient =
-        new DicomWebClient(requestFactory, flags.dicomwebAddress, STUDIES);
+        new DicomWebClient(requestFactory, dicomwebAddress, STUDIES);
     CFindService cFindService = new CFindService(dicomWebClient);
     serviceRegistry.addDicomService(cFindService);
 
