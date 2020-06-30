@@ -93,7 +93,7 @@ docker {
 
 // TODO(b/77952311): Factor common gradle tasks between import/export adapters.
 // Download open source license texts.
-task downloadLicenses(type: nl.javadude.gradle.plugins.license.DownloadLicenses, overwrite: true) {
+task downloadOpensSourceLicenses(type: nl.javadude.gradle.plugins.license.DownloadLicenses) {
   // These libraries have their license in a non-standard location.
   licenses = specialCaseLicenses
   dependencyConfiguration = 'compile'
@@ -120,7 +120,7 @@ task downloadSourceJars( type: Copy ) {
 
 // OSS release requires license and source code to be included in Docker image.
 task copySourceAndLicenseToDockerImage {
-  dependsOn tasks.downloadLicenses
+  dependsOn tasks.downloadOpensSourceLicenses
   dependsOn tasks.downloadSourceJars
 }
 
