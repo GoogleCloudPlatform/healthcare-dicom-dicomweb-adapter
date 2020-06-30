@@ -6,7 +6,9 @@ metadata:
   labels:
     app.kubernetes.io/name: "{{ .Release.Name }}"
   annotations:
-    marketplace.cloud.google.com/deploy-info: '{"partner_id": "", "product_id": "", "partner_name": ""}'
+    kubernetes-engine.cloud.google.com/icon: >-
+      data:image/png;base64,{{ .Files.Get "logo.png" | b64enc }}
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "hcls-dicom-adapter-ctd-public", "product_id": "dicom-adapter", "partner_name": "hcls-dicom-adapter-ctd-public"}'
 spec:
   selector:
     matchLabels:
@@ -18,8 +20,8 @@ spec:
       kind: StatefulSet
   addOwnerRef: true
   descriptor:
-    type: "dicom adapter"
-    version: "0.2.1"
+    type: dicom adapter
+    version: "0.2.7"
     keywords:
       - "dicom"
       - "adapter"
