@@ -120,9 +120,19 @@ public class AttributesUtil {
       switch (attrs.getString(Tag.QueryRetrieveLevel)) {
         case "STUDY":
           qidoPath.append("studies?limit=" + STUDIES_SERIES_LIMIT + "&");
+          
+          if (FUZZY_MATCHING == "true") {
+            qidoPath.append("fuzzymatching=true" + "&");
+          }
+          
           break;
         case "SERIES":
           qidoPath.append("series?limit=" + STUDIES_SERIES_LIMIT + "&");
+          
+          if (FUZZY_MATCHING == "true") {
+            qidoPath.append("fuzzymatching=true" + "&");
+          }
+          
           break;
         case "IMAGE":
           qidoPath.append("instances?limit=" + INSTANCES_LIMIT + "&");
@@ -140,10 +150,6 @@ public class AttributesUtil {
       for (String includeField : includeFieldSet) {
         qidoPath.append("includefield=" + includeField + "&");
       }
-    }
-    
-    if (FUZZY_MATCHING == "true") {
-      qidoPath.append("fuzzymatching=true" + "&");
     }
 
     for (int keyTag : nonEmptyKeys) {
