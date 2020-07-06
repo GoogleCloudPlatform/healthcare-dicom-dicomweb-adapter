@@ -166,8 +166,8 @@ public final class CFindServiceTest {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
-
-    CFindService cFindService = new CFindService(dicomWebClient, null);
+    Flags flags = new Flags();
+    CFindService cFindService = new CFindService(dicomWebClient, flags);
     serviceRegistry.addDicomService(cFindService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
