@@ -117,7 +117,7 @@ public class CFindService extends BasicCFindSCP {
           if (canceled) {
             throw new CancellationException();
           }
-          if (cFINDFlags.fuzzyMatching)   {
+          if (cFINDFlags != null && cFINDFlags.fuzzyMatching)   {
 	      qidoPath += "fuzzymatching=true" + "&";
           }
           log.info("CFind QidoPath: " + qidoPath);
