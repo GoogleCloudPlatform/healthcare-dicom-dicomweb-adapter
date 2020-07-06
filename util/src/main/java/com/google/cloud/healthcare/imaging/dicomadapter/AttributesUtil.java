@@ -42,8 +42,6 @@ public class AttributesUtil {
 
   private static final int INSTANCES_LIMIT = 50000;
   private static final int STUDIES_SERIES_LIMIT = 5000;
-  
-  private static final String FUZZY_MATCHING = "true";
 
   public static String getTagValue(JSONObject json, String tag) throws JSONException {
     JSONObject jsonTag = json.getJSONObject(tag);
