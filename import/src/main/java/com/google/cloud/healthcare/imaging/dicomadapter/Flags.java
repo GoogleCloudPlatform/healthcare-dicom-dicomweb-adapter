@@ -142,6 +142,12 @@ public class Flags {
       description = "Transfer Syntax to convert instances to during C-STORE upload. See Readme for list of supported syntaxes."
   )
   String transcodeToSyntax = "";
+  
+  @Parameter(
+      names = {"--fuzzy_matching"},
+      description = "negotiate fuzzy semantic person name attribute matching. False by default."
+  )
+  Boolean fuzzyMatching = false;
 
   public Flags() {
   }
