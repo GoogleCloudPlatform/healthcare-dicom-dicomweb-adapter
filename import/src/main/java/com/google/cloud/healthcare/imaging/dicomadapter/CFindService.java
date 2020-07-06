@@ -118,8 +118,8 @@ public class CFindService extends BasicCFindSCP {
             throw new CancellationException();
           }
           if (cFINDFlags.fuzzyMatching)   {
-			      qidoPath += "fuzzymatching=true" + "&";
-		      }
+	      qidoPath += "fuzzymatching=true" + "&";
+          }
           log.info("CFind QidoPath: " + qidoPath);
           MonitoringService.addEvent(Event.CFIND_QIDORS_REQUEST);
           JSONArray qidoResult = dicomWebClient.qidoRs(qidoPath);
