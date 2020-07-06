@@ -45,10 +45,12 @@ public class CFindService extends BasicCFindSCP {
   private static Logger log = LoggerFactory.getLogger(CFindService.class);
 
   private final IDicomWebClient dicomWebClient;
+  private final Flags cFINDFlags;
 
-  CFindService(IDicomWebClient dicomWebClient) {
+  CFindService(IDicomWebClient dicomWebClient, Flags flags) {
     super(UID.StudyRootQueryRetrieveInformationModelFIND);
     this.dicomWebClient = dicomWebClient;
+    this.cFINDFlags = flags;
   }
 
   private static HashMap<String, JSONObject> uniqueResults(List<JSONArray> responses) {
@@ -115,6 +117,9 @@ public class CFindService extends BasicCFindSCP {
           if (canceled) {
             throw new CancellationException();
           }
+          if (cFINDFlags.fuzzyMatching)   {
+			      qidoPath += "fuzzymatching=true" + "&";
+		      }
           log.info("CFind QidoPath: " + qidoPath);
           MonitoringService.addEvent(Event.CFIND_QIDORS_REQUEST);
           JSONArray qidoResult = dicomWebClient.qidoRs(qidoPath);
