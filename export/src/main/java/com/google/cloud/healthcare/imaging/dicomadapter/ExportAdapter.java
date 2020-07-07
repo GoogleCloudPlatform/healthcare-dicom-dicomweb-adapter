@@ -60,7 +60,7 @@ public class ExportAdapter {
     }
 
     DicomWebClient dicomWebClient =
-        new DicomWebClient(createHttpRequestFactory(credentials), flags.dicomwebAddr, "studies");
+        new DicomWebClient(createHttpRequestFactory(credentials), StringUtil.trim(flags.dicomwebAddr), "studies");
 
     // Initialize Monitoring
     if (!flags.monitoringProjectId.isEmpty()) {
