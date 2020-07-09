@@ -47,6 +47,9 @@ public final class CFindServiceTest {
   final static String serverHostname = "localhost";
 
   final static String clientAET = "CLIENT";
+  
+  // Flags
+  Flags cFINDFlags = new Flags();
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -117,6 +120,28 @@ public final class CFindServiceTest {
       }
     }, Status.NotAuthorized);
   }
+  
+  @Test
+  public void testCFindService_withFuzzyMatching() throws Exception {
+	cFINDFlags.fuzzyMatching = true;
+    basicCFindServiceTest(new TestUtils.DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+        throw new DicomWebException("test-generated exception", Status.InvalidAttributeValue);
+      }
+    }, Status.InvalidAttributeValue);
+  }
+  
+  @Test
+  public void testCFindService_withoutFuzzyMatching() throws Exception {
+	cFINDFlags.fuzzyMatching = false;
+    basicCFindServiceTest(new TestUtils.DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+        throw new DicomWebException("test-generated exception", Status.InvalidAttributeValue);
+      }
+    }, Status.InvalidAttributeValue);
+  }
 
   public void basicCFindServiceTest(IDicomWebClient serverDicomWebClient,
       int expectedStatus) throws Exception {
@@ -166,8 +191,7 @@ public final class CFindServiceTest {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
-    Flags flags = new Flags();
-    CFindService cFindService = new CFindService(dicomWebClient, flags);
+    CFindService cFindService = new CFindService(dicomWebClient, cFINDFlags);
     serviceRegistry.addDicomService(cFindService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
