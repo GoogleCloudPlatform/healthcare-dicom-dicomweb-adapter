@@ -14,6 +14,8 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
@@ -127,9 +129,12 @@ public final class CFindServiceTest {
     basicCFindServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
-        throw new DicomWebException("test-generated exception", Status.InvalidAttributeValue);
+	assertThat(path).contains("fuzzymatching=true");
+        JSONArray instances = new JSONArray();
+        instances.put(TestUtils.dummyQidorsInstance());
+        return instances;
       }
-    }, Status.InvalidAttributeValue);
+    }, Status.Success);
   }
   
   @Test
@@ -138,9 +143,12 @@ public final class CFindServiceTest {
     basicCFindServiceTest(new TestUtils.DicomWebClientTestBase() {
       @Override
       public JSONArray qidoRs(String path) throws DicomWebException {
-        throw new DicomWebException("test-generated exception", Status.InvalidAttributeValue);
+	assertThat(path).doesNotContain("fuzzymatching");
+        JSONArray instances = new JSONArray();
+        instances.put(TestUtils.dummyQidorsInstance());
+        return instances;
       }
-    }, Status.InvalidAttributeValue);
+    }, Status.Success);
   }
 
   public void basicCFindServiceTest(IDicomWebClient serverDicomWebClient,
