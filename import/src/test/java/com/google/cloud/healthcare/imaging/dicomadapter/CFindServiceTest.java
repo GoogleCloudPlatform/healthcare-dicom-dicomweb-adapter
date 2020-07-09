@@ -14,6 +14,8 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
@@ -47,6 +49,9 @@ public final class CFindServiceTest {
   final static String serverHostname = "localhost";
 
   final static String clientAET = "CLIENT";
+  
+  // Flags
+  Flags cFINDFlags = new Flags();
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -117,6 +122,34 @@ public final class CFindServiceTest {
       }
     }, Status.NotAuthorized);
   }
+  
+  @Test
+  public void testCFindService_withFuzzyMatching() throws Exception {
+	cFINDFlags.fuzzyMatching = true;
+    basicCFindServiceTest(new TestUtils.DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+	assertThat(path).contains("fuzzymatching=true");
+        JSONArray instances = new JSONArray();
+        instances.put(TestUtils.dummyQidorsInstance());
+        return instances;
+      }
+    }, Status.Success);
+  }
+  
+  @Test
+  public void testCFindService_withoutFuzzyMatching() throws Exception {
+	cFINDFlags.fuzzyMatching = false;
+    basicCFindServiceTest(new TestUtils.DicomWebClientTestBase() {
+      @Override
+      public JSONArray qidoRs(String path) throws DicomWebException {
+	assertThat(path).doesNotContain("fuzzymatching");
+        JSONArray instances = new JSONArray();
+        instances.put(TestUtils.dummyQidorsInstance());
+        return instances;
+      }
+    }, Status.Success);
+  }
 
   public void basicCFindServiceTest(IDicomWebClient serverDicomWebClient,
       int expectedStatus) throws Exception {
@@ -166,8 +199,7 @@ public final class CFindServiceTest {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
-
-    CFindService cFindService = new CFindService(dicomWebClient);
+    CFindService cFindService = new CFindService(dicomWebClient, cFINDFlags);
     serviceRegistry.addDicomService(cFindService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
