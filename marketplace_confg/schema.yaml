@@ -1,7 +1,7 @@
 x-google-marketplace:
   schemaVersion: v2
   applicationApiVersion: v1beta1
-  publishedVersion: "0.2.7"
+  publishedVersion: "0.2.10"
   publishedVersionMetadata:
     releaseNote: >-
       A first release.
@@ -47,46 +47,46 @@ properties:
     type: string
     title: "importer - DIMSE aet"
     description: Title of DIMSE Application Entity
-  import.monitoring_project_id:
-    type: string
-    title: "importer - monitoring project id (Optional)"
-    description: >-
-      "(Optional) Stackdriver monitoring project id, must be the same as the 
-      project id in which the adapter is running."
   import.redact_remove_list:
     type: string
     title: "importer - redact remove list (Optional)"
     description:  >-
-      "(Optional - Redactor) Tags to remove during C-STORE upload, comma 
-      separated. Only one of 'redact' flags may be present."
+      (Optional - Redactor) Tags to remove during C-STORE upload, comma 
+      separated. Only one of 'redact' flags may be present.
   import.redact_keep_list:
     type: string
     title: "importer - redact keep list (Optional)"
     description:  >-
-      "(Optional - Redactor) Tags to keep during C-STORE upload, comma separated.
-      Only one of 'redact' flags may be present."
+      (Optional - Redactor) Tags to keep during C-STORE upload, comma separated.
+      Only one of 'redact' flags may be present.
   import.dimse_cmove_aet:
     type: string
     title: "importer - C-MOVE aet (Optional)"
     description:  >-
-      "(Optional - C-MOVE) Separate AET used for C-STORE calls within context of C-MOVE."
+      (Optional - C-MOVE) Separate AET used for C-STORE calls within context of C-MOVE.
   import.aet_dictionary_inline:
     type: string
     title: "importer - Inline aet dictionary (Optional)"
     description:  >-
-      "(Optional - C-MOVE) Json array containing aet definitions (name/host/port per element)"
+      (Optional - C-MOVE) Json array containing aet definitions (name/host/port per element)
   import.destination_config_inline:
     type: string
     title: "importer - destination config inline (Optional)"
     description:  >-
-      "(Optional) Json array containing destination definitions 
-      (filter/dicomweb_destination per element)."
+      (Optional) Json array containing destination definitions 
+      (filter/dicomweb_destination per element).
   import.store_compress_to_transfer_syntax:
     type: string
     title: "importer - store compress to transfer syntax (Optional)"
     description:  >-
-      "(Optional) Transfer Syntax to convert instances to during C-STORE 
-      upload. See Readme for list of supported syntaxes."
+      (Optional) Transfer Syntax to convert instances to during C-STORE 
+      upload. See Readme for list of supported syntaxes.
+  import.monitoring_project_id:
+      type: string
+      title: "importer - monitoring project id (Optional)"
+      description: >-
+        (Optional) Stackdriver monitoring project id, must be the same as the 
+        project id in which the adapter is running.
 
   export.hasexporter:
     type: boolean
@@ -99,30 +99,15 @@ properties:
   export.peer_dimse_aet:
     type: string
     title: "exporter - peer DIMSE aet"
-    description: "(CStore) Application Entity Title of DIMSE peer."
+    description: (CStore) Application Entity Title of DIMSE peer.
   export.peer_dimse_ip:
     type: string
     title: "exporter - peer DIMSE IP"
-    description: "(CStore) IP of DIMSE peer."
+    description: (CStore) IP of DIMSE peer.
   export.peer_dimse_port:
     type: integer
     title: "exporter - peer DIMSE port"
-    description: "(CStore) Port of DIMSE peer."
-  export.peer_dicomweb_address:
-    type: string
-    title: "exporter - peer dicomweb address"
-    description:  >-
-      "(StowRs) Address of peer DicomWeb API serving STOW-RS. Must be a full path up 
-      to /dicomWeb if the Cloud Healthcare API is used."
-  export.use_gcp_application_default_credentials:
-    type: boolean
-    title: "exporter - Enable gcp application default credentials"
-    description:  >-
-      "(StowRs) If true, uses GCP Application Credentials to when sending HTTP requests 
-      to peer. This is useful if the peer DICOMWeb endpoint is running in GCP."
-    enum:
-    - true
-    - false
+    description: (CStore) Port of DIMSE peer.
   export.project_id:
     type: string
     title: "exporter - pubsub project id"
@@ -141,12 +126,27 @@ properties:
     title: "exporter - oauth scopes"
     description: Comma seperated OAuth scopes used by adapter.
     default: "https://www.googleapis.com/auth/pubsub"
+  export.peer_dicomweb_address:
+    type: string
+    title: "exporter - peer dicomweb address"
+    description:  >-
+      (StowRs) Address of peer DicomWeb API serving STOW-RS. Must be a full path up 
+      to /dicomWeb if the Cloud Healthcare API is used.
+  export.use_gcp_application_default_credentials:
+    type: boolean
+    title: "exporter - Enable gcp application default credentials"
+    description:  >-
+      (StowRs) If true, uses GCP Application Credentials to when sending HTTP requests 
+      to peer. This is useful if the peer DICOMWeb endpoint is running in GCP.
+    enum:
+    - true
+    - false
   export.monitoring_project_id:
     type: string
     title: "exporter - monitoring project id (Optional)"
     description:  >-
-      "(Optional) Stackdriver monitoring project id, must be the same as the project 
-      id in which the adapter is running."
+      (Optional) Stackdriver monitoring project id, must be the same as the project 
+      id in which the adapter is running.
 
 required:
 - name
