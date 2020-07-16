@@ -42,7 +42,7 @@ public class TestUtils {
     return instance;
   }
 
-  public static abstract class DicomWebClientTestBase implements IDicomWebClient {
+  public static abstract class DicomWebClientTestBase implements   IDicomWebClient {
 
     @Override
     public InputStream wadoRs(String path) throws DicomWebException {
