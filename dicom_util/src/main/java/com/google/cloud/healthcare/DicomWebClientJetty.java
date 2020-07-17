@@ -140,16 +140,8 @@ public class DicomWebClientJetty implements IDicomWebClient {
 
       int httpStatus = responseCodeFuture.get();
       if (httpStatus != HttpStatus.OK_200) {
-        try {
-          JSONObject responseJson = new JSONObject(resultBuilder.toString());
-          log.error("STOW-RS response: " + responseJson.toString());
-          throw new DicomWebException("Http_" + httpStatus
-              + ", " + responseJson.getJSONObject("error").getString("status")
-              + ", " + responseJson.getJSONObject("error").getString("message"),
-              httpStatus, Status.ProcessingFailure);
-        } catch (JSONException e) {
-          throw new DicomWebException("Http_" + httpStatus, httpStatus, Status.ProcessingFailure);
-        }
+        String resp = resultBuilder.toString();
+        throw new DicomWebException("Http_" + httpStatus + ": " + resp, httpStatus, Status.ProcessingFailure);
       }
     } catch (Exception e) {
       if (e instanceof DicomWebException) {
