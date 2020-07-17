@@ -2,6 +2,7 @@ import:
   image:
     repo: null
     tag: null
+  deploymeny_type: null
   dimse_aet: null
   monitoring_project_id: null
   dicomweb_address: null
@@ -13,7 +14,6 @@ import:
   store_compress_to_transfer_syntax: null
 export:
   monitoring_project_id: null
-  hasexporter: null
   peer_dimse_aet: null
   peer_dimse_ip: null
   peer_dimse_port: null

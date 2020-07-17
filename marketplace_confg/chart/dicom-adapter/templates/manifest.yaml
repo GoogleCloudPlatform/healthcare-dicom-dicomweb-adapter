@@ -16,6 +16,7 @@ spec:
       labels: *DicomDeploymentLabels
     spec:
       containers:
+        {{- if or (eq .Values.import.deployment_type "import adapter") (eq .Values.import.deployment_type "both")}}
         - name: dicom-import-adapter
           image: "{{ .Values.import.image.repo }}:{{ .Values.import.image.tag }}"
           ports:
@@ -58,7 +59,9 @@ spec:
             - name: ENV_CONTAINER_NAME
               value: dicom-import-adapter
             {{- end }}
-        {{- if .Values.export.hasexporter }}
+        {{- end }}
+        
+        {{- if or (eq .Values.import.deployment_type "export adapter") (eq .Values.import.deployment_type "both")}}
         - name: dicom-export-adapter
           image: "{{ .Values.export.image.repo }}:{{ .Values.export.image.tag }}"
           args:
