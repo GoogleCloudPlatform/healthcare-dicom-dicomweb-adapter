@@ -213,6 +213,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: dicom-adapter-load-balancer
+  # The "Internal" annotation will result in an load balancer that can only
+  # be accessed from within the VPC the Kubernetes cluster is in.
+  # You can remove this annotation to get an externally accessible load balancer.
   annotations:
     cloud.google.com/load-balancer-type: "Internal"
 spec:
