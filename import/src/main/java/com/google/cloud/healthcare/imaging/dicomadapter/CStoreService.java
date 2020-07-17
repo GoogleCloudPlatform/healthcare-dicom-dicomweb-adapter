@@ -17,9 +17,13 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -58,16 +62,19 @@ public class CStoreService extends BasicCStoreSCP {
   private final Map<DestinationFilter, IDicomWebClient> destinationMap;
   private final DicomRedactor redactor;
   private final String transcodeToSyntax;
+  private final IBackupUploadService backupUploadService;
 
   CStoreService(IDicomWebClient defaultDicomWebClient,
       Map<DestinationFilter, IDicomWebClient> destinationMap,
-      DicomRedactor redactor, String transcodeToSyntax) {
+      DicomRedactor redactor, String transcodeToSyntax, IBackupUploadService backupUploadService) {
     this.defaultDicomWebClient = defaultDicomWebClient;
     this.destinationMap =
         destinationMap != null && destinationMap.size() > 0 ? destinationMap : null;
     this.redactor = redactor;
     this.transcodeToSyntax =
         transcodeToSyntax != null && transcodeToSyntax.length() > 0 ? transcodeToSyntax : null;
+
+    this.backupUploadService = backupUploadService;
 
     if(this.transcodeToSyntax != null) {
       log.info("Transcoding to: " + transcodeToSyntax);
@@ -123,6 +130,17 @@ public class CStoreService extends BasicCStoreSCP {
             transcoder.setDestinationTransferSyntax(transcodeToSyntax);
             transcoder.transcode((transcoder1, dataset) -> outputStream);
           }
+        });
+      }
+
+      if (backupUploadService != null) {
+        processorList.add((inputStream, outputStream) -> {
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          StreamUtils.copy(inputStream, baos);
+          byte[] bytes = baos.toByteArray();
+          backupUploadService.createBackup(bytes);
+
+          StreamUtils.copy(new ByteArrayInputStream(bytes), outputStream);
         });
       }
 
@@ -206,6 +224,10 @@ public class CStoreService extends BasicCStoreSCP {
           ecs.take().get();
         }
       } catch (ExecutionException e) {
+        // here we need to recognize that it`s right web Ex //todo
+//        if (backupUploadService != null) {
+//          backupUploadService.startUploading();
+//        }
         throw e.getCause();
       }
     }
