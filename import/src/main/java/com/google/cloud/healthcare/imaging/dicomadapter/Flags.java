@@ -149,6 +149,19 @@ public class Flags {
   )
   Boolean fuzzyMatching = false;
 
+  // retrying failed uploads
+  @Parameter(
+          names = {"--persistent_file_storage_location"},
+          description = "temporary location for storing files before send"
+  )
+  String persistentFileStorageLocation = "";
+
+  @Parameter(
+          names = {"--persistent_file_upload_retry_amount"},
+          description = "upload retry amount"
+  )
+  Integer persistentFileUploadRetryAmount = 1;
+
   public Flags() {
   }
 }

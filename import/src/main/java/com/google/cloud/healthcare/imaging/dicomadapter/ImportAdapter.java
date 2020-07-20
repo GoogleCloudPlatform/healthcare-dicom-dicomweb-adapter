@@ -81,6 +81,10 @@ public class ImportAdapter {
       MonitoringService.disable();
     }
 
+    // retrying upload flags
+    String uploadPath = flags.persistentFileStorageLocation;
+    int uploadRetryAmount = flags.persistentFileUploadRetryAmount;
+
     // Dicom service handlers.
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
 
@@ -108,9 +112,7 @@ public class ImportAdapter {
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
-    // get --persistent_file_storage_location and --persistent_file_upload_retry_amount
-    // create BackupService if flags preset //todo
-    IBackupUploadService backupUploadServiceStub = new LocalBackupUploadService("", 0) {
+    IBackupUploadService backupUploadServiceStub = new LocalBackupUploadService(uploadPath, uploadRetryAmount) {
       @Override
       public BackupState createBackup(byte[] backupData) {
         System.out.println("test_bytes=" + Arrays.toString(backupData));
