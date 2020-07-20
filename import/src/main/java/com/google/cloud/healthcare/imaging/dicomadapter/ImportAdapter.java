@@ -24,6 +24,7 @@ import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupState;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.LocalBackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
@@ -109,15 +110,11 @@ public class ImportAdapter {
 
     // get --persistent_file_storage_location and --persistent_file_upload_retry_amount
     // create BackupService if flags preset //todo
-    IBackupUploadService backupUploadServiceStub = new LocalBackupUploadService(defaultCstoreDicomWebClient, "", 0) {
+    IBackupUploadService backupUploadServiceStub = new LocalBackupUploadService("", 0) {
       @Override
-      public void createBackup(byte[] backupData) {
+      public BackupState createBackup(byte[] backupData) {
         System.out.println("test_bytes=" + Arrays.toString(backupData));
-      }
-
-      @Override
-      public void startUploading() {
-
+        return new BackupState("", 0);
       }
     };
 
