@@ -166,18 +166,23 @@ public class CStoreService extends BasicCStoreSCP {
         // todo: monitoring?
         // todo: logging?
       } else {
-        MonitoringService.addEvent(Event.CSTORE_ERROR);
+        reportError(e);
         DicomServiceException serviceException = new DicomServiceException(e.getStatus(), e);
         serviceException.setErrorComment(e.getMessage());
         throw serviceException;
       }
     } catch (DicomServiceException e) {
-      MonitoringService.addEvent(Event.CSTORE_ERROR);
+      reportError(e);
       throw e;
     } catch (Throwable e) {
-      MonitoringService.addEvent(Event.CSTORE_ERROR);
+      reportError(e);
       throw new DicomServiceException(Status.ProcessingFailure, e);
     }
+  }
+
+  private void reportError(Throwable e) {
+    MonitoringService.addEvent(Event.CSTORE_ERROR);
+    log.error("C-STORE request failed: ", e);
   }
 
   private void validateParam(String value, String name) throws DicomServiceException {
