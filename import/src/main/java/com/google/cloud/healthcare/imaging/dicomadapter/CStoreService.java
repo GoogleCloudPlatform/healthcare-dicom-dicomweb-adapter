@@ -145,9 +145,9 @@ public class CStoreService extends BasicCStoreSCP {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             StreamUtils.copy(inputStream, baos);
             byte[] bytes = baos.toByteArray();
-            backupState.set(backupUploadService.createBackup(bytes));
-
             StreamUtils.copy(new ByteArrayInputStream(bytes), outputStream);
+
+            backupState.set(backupUploadService.createBackup(bytes));
           });
         }
 
