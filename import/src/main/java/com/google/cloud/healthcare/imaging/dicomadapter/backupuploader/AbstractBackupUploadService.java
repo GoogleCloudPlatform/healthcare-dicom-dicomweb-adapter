@@ -51,7 +51,7 @@ public abstract class AbstractBackupUploadService implements IBackupUploadServic
                     return Optional.empty();
                 },
                 CompletableFuture.delayedExecutor(
-                        calculateExponentialDelayMillis(backupState.getAttemptsCountdown(), attemptsCount),
+                        DelayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown(), attemptsCount),
                         TimeUnit.MILLISECONDS)
             )
                 .thenApply(r -> {
@@ -65,9 +65,5 @@ public abstract class AbstractBackupUploadService implements IBackupUploadServic
                     return null;
                 });
         }
-    }
-
-    private long calculateExponentialDelayMillis(int attemptsLeft, int attemptsAmount) {
-        return 0; //todo: implement me
     }
 }
