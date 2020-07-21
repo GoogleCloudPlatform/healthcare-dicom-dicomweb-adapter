@@ -19,6 +19,7 @@ import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupState;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
@@ -142,12 +143,19 @@ public class CStoreService extends BasicCStoreSCP {
 
         if (backupUploadService != null) {
           processorList.add((inputStream, outputStream) -> {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            StreamUtils.copy(inputStream, baos);
-            byte[] bytes = baos.toByteArray();
-            StreamUtils.copy(new ByteArrayInputStream(bytes), outputStream);
+            byte[] bytes;
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+              StreamUtils.copy(inputStream, baos);
+              bytes = baos.toByteArray();
+              backupState.set(backupUploadService.createBackup(bytes));
+            } catch (IOException ioex) {
+              log.error("Backup creation failed.", ioex);
+              throw new IBackupUploader.BackupExeption("Backup creation failed.", ioex);
+            }
 
-            backupState.set(backupUploadService.createBackup(bytes));
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
+              StreamUtils.copy(bais, outputStream);
+            }
           });
         }
 
@@ -162,9 +170,8 @@ public class CStoreService extends BasicCStoreSCP {
         MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
       } catch (DicomWebException e) {
       if (backupUploadService != null) {
+        log.error("C-STORE request failed. Trying to resend... ", e);
         backupUploadService.startUploading(destinationClient.get(), backupState.get());
-        // todo: monitoring?
-        // todo: logging?
       } else {
         MonitoringService.addEvent(Event.CSTORE_ERROR);
         DicomServiceException serviceException = new DicomServiceException(e.getStatus(), e);

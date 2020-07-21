@@ -18,7 +18,7 @@ public class BackupState {
     }
 
     public boolean decrement() {
-        if ( attemptsCountdown > 0) {
+        if (attemptsCountdown > 0) {
             attemptsCountdown--;
             return true;
         }
