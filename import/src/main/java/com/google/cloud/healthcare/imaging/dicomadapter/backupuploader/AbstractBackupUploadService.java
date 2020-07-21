@@ -12,25 +12,22 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractBackupUploadService implements IBackupUploadService, IBackupUploader {
 
-    private final int attemptsCount;
-    private final int minUploadDelay;
-    private final int maxWaitingTimeBtwUploads;
+    private final DelayCalculator delayCalculator;
+    private final int attemptsAmount;
 
     private Logger log = LoggerFactory.getLogger(this.getClass());
     private String uploadFilePath;
 
-    public AbstractBackupUploadService(String uploadFilePath, int attemptsCount,
-                                      int minUploadDelay, int maxWaitingTimeBtwUploads) {
+    public AbstractBackupUploadService(String uploadFilePath, DelayCalculator delayCalculator) {
         this.uploadFilePath = uploadFilePath;
-        this.attemptsCount = attemptsCount;
-        this.minUploadDelay = minUploadDelay;
-        this.maxWaitingTimeBtwUploads = maxWaitingTimeBtwUploads;
+        this.delayCalculator = delayCalculator;
+        this.attemptsAmount = delayCalculator.getAttemptsAmount();
     }
 
     @Override
     public BackupState createBackup(byte[] backupData) throws BackupExeption {
         doWriteBackup(backupData, uploadFilePath);
-        return new BackupState(uploadFilePath, attemptsCount);
+        return new BackupState(uploadFilePath, attemptsAmount);
     }
 
     @Override //todo: guard code from second method call
@@ -45,19 +42,20 @@ public abstract class AbstractBackupUploadService implements IBackupUploadServic
 
     private void scheduleUploadWithDelay(IDicomWebClient webClient, byte [] bytes, BackupState backupState) {
         if (backupState.decrement()) {
-            log.info("Trying to upload data. {} attempt. data={}", attemptsCount - backupState.getAttemptsCountdown(), bytes);
+            int attemptNumber = attemptsAmount - backupState.getAttemptsCountdown();
+            log.info("Trying to resend data. Attempt № {}. data={}", attemptNumber, bytes);
             CompletableFuture<Optional<Exception>> completableFuture = CompletableFuture.supplyAsync(() -> {
                     try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
                         webClient.stowRs(bais);
+                        log.debug("Resend attempt № {} - successful.", attemptNumber);
                     } catch (IOException | IDicomWebClient.DicomWebException ex) {
-                        log.error("{} attempt of data upload is failed.", attemptsCount - backupState.getAttemptsCountdown(), ex);
+                        log.error("Resend attempt № {} - failed.", attemptsAmount - backupState.getAttemptsCountdown(), ex);
                         return Optional.ofNullable(ex);
                     }
                     return Optional.empty();
                 },
                 CompletableFuture.delayedExecutor(
-                        DelayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown(),
-                                attemptsCount, minUploadDelay, maxWaitingTimeBtwUploads),
+                        delayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown()),
                         TimeUnit.MILLISECONDS)
             )
                 .thenApply(r -> {
@@ -70,6 +68,8 @@ public abstract class AbstractBackupUploadService implements IBackupUploadServic
                     }
                     return null;
                 });
+        } else {
+            log.info("Backup resend attempts exhausted.");
         }
     }
 }
