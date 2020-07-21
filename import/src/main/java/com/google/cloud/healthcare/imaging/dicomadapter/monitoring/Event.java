@@ -19,6 +19,7 @@ public enum Event implements IMonitoringEvent {
 
   CSTORE_REQUEST(Constants.prefix + "cstore_requests"),
   CSTORE_ERROR(Constants.prefix + "cstore_errors"),
+  CSTORE_BACKUP_ERROR(Constants.prefix + "cstore_backup_errors"),
   CSTORE_BYTES(Constants.prefix + "cstore_bytes"),
 
   CFIND_REQUEST(Constants.prefix + "cfind_requests"),
