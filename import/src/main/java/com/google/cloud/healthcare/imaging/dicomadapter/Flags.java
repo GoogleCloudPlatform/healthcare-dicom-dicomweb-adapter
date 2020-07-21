@@ -162,6 +162,18 @@ public class Flags {
   )
   Integer persistentFileUploadRetryAmount = 1;
 
+  @Parameter(
+          names = {"--min_upload_delay"},
+          description = "minimum delay before upload backup file (ms)"
+  )
+  Integer minUploadDelay = 100;
+
+  @Parameter(
+          names = {"--max_waiting_time_btw_uploads"},
+          description = "maximum waiting time between uploads (ms)"
+  )
+  Integer maxWaitingTimeBtwUploads = 5000;
+
   public Flags() {
   }
 }
