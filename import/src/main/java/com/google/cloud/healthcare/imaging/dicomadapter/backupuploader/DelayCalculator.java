@@ -17,10 +17,10 @@ public class DelayCalculator {
                                                          int minUploadDelay, int maxWaitingTimeBtwUploads) {
         long delay = 0;
         if (attemptsLeft <= attemptsAmount) {
-            delay = minUploadDelay + Math.round(Math.pow(DELAY_CALCULATION_BASE, attemptsLeft) - DELAY_CALCULATION_BASE);
+            delay = minUploadDelay + Math.round(Math.pow(DELAY_CALCULATION_BASE, attemptsLeft) - DELAY_CALCULATION_BASE)*MILS_MUL;
         } else {
-            delay = minUploadDelay + Math.round(Math.pow(DELAY_CALCULATION_BASE, attemptsAmount) - DELAY_CALCULATION_BASE);
+            delay = minUploadDelay + Math.round(Math.pow(DELAY_CALCULATION_BASE, attemptsAmount) - DELAY_CALCULATION_BASE)*MILS_MUL;
         }
-        return (delay >= maxWaitingTimeBtwUploads * 1l)? maxWaitingTimeBtwUploads*1l : delay;
+        return (delay >= (long)maxWaitingTimeBtwUploads)? (long)maxWaitingTimeBtwUploads : delay;
     }
 }

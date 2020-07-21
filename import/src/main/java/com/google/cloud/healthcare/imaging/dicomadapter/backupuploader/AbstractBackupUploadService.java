@@ -13,21 +13,11 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractBackupUploadService implements IBackupUploadService, IBackupUploader {
 
     private final int attemptsCount;
-    private int minUploadDelay;
-    private int maxWaitingTimeBtwUploads;
-
-    {
-        minUploadDelay = 100;
-        maxWaitingTimeBtwUploads = 5000;
-    }
+    private final int minUploadDelay;
+    private final int maxWaitingTimeBtwUploads;
 
     private Logger log = LoggerFactory.getLogger(this.getClass());
     private String uploadFilePath;
-
-    public AbstractBackupUploadService(String uploadFilePath, int attemptsCount) {
-        this.uploadFilePath = uploadFilePath;
-        this.attemptsCount = attemptsCount;
-    }
 
     public AbstractBackupUploadService(String uploadFilePath, int attemptsCount,
                                       int minUploadDelay, int maxWaitingTimeBtwUploads) {

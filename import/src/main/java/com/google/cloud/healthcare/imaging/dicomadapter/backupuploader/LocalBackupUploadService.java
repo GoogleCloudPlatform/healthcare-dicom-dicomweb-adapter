@@ -5,10 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class LocalBackupUploadService extends AbstractBackupUploadService {
-    public LocalBackupUploadService(String uploadFilePath, int attemptsCount) {
-        super(uploadFilePath, attemptsCount);
-    }
-
     public LocalBackupUploadService(String uploadFilePath, int attemptsCount,
                                     int minUploadDelay, int maxWaitingTimeBtwUploads) {
         super(uploadFilePath, attemptsCount, minUploadDelay, maxWaitingTimeBtwUploads);

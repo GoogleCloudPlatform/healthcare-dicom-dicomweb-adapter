@@ -3,8 +3,9 @@ package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 import com.google.cloud.healthcare.IDicomWebClient;
 
 public class GcpBackupUploadService extends AbstractBackupUploadService {
-    public GcpBackupUploadService(String uploadFilePath, int attemptsCount) {
-        super(uploadFilePath, attemptsCount);
+    public GcpBackupUploadService(String uploadFilePath, int attemptsCount,
+                                  int minUploadDelay, int maxWaitingTimeBtwUploads) {
+        super(uploadFilePath, attemptsCount, minUploadDelay, maxWaitingTimeBtwUploads);
     }
 
     @Override
