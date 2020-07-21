@@ -13,23 +13,28 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractBackupUploadService implements IBackupUploadService, IBackupUploader {
 
     private final int attemptsCount;
+    private final int minUploadDelay;
+    private final int maxWaitingTimeBtwUploads;
 
     private Logger log = LoggerFactory.getLogger(this.getClass());
     private String uploadFilePath;
 
-    public AbstractBackupUploadService(String uploadFilePath, int attemptsCount) {
+    public AbstractBackupUploadService(String uploadFilePath, int attemptsCount,
+                                      int minUploadDelay, int maxWaitingTimeBtwUploads) {
         this.uploadFilePath = uploadFilePath;
         this.attemptsCount = attemptsCount;
+        this.minUploadDelay = minUploadDelay;
+        this.maxWaitingTimeBtwUploads = maxWaitingTimeBtwUploads;
     }
 
     @Override
-    public BackupState createBackup(byte[] backupData) {
+    public BackupState createBackup(byte[] backupData) throws BackupExeption {
         doWriteBackup(backupData, uploadFilePath);
         return new BackupState(uploadFilePath, attemptsCount);
     }
 
     @Override //todo: guard code from second method call
-    public void startUploading(IDicomWebClient webClient, BackupState backupState) {
+    public void startUploading(IDicomWebClient webClient, BackupState backupState) throws BackupExeption {
         byte[] bytes = doReadBackup(backupState.getDownloadFilePath());
 
         int uploadAttemptsCountdown = backupState.getAttemptsCountdown();
@@ -51,7 +56,8 @@ public abstract class AbstractBackupUploadService implements IBackupUploadServic
                     return Optional.empty();
                 },
                 CompletableFuture.delayedExecutor(
-                        DelayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown(), attemptsCount),
+                        DelayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown(),
+                                attemptsCount, minUploadDelay, maxWaitingTimeBtwUploads),
                         TimeUnit.MILLISECONDS)
             )
                 .thenApply(r -> {
