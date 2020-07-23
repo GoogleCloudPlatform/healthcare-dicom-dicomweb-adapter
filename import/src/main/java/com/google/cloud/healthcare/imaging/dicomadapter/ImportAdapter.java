@@ -26,7 +26,9 @@ import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomC
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.LocalBackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.LocalBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -114,12 +116,16 @@ public class ImportAdapter {
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
-    IBackupUploadService localBackupUploadService = new LocalBackupUploadService(uploadPath,
-            new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBtwUploads));
+    // backup upload service
+    IBackupUploader backupUploader = new LocalBackupUploader();
+    IBackupUploadService backupUploadService = new BackupUploadService(uploadPath,
+        backupUploader, new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBtwUploads));
+    //todo: parse --persistent_file_storage_location -> create backupUploadService instance - if present.
+    // else - null.
 
     DicomRedactor redactor = configureRedactor(flags);
     CStoreService cStoreService =
-        new CStoreService(defaultCstoreDicomWebClient, destinationMap, redactor, flags.transcodeToSyntax, localBackupUploadService);
+        new CStoreService(defaultCstoreDicomWebClient, destinationMap, redactor, flags.transcodeToSyntax, backupUploadService);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
