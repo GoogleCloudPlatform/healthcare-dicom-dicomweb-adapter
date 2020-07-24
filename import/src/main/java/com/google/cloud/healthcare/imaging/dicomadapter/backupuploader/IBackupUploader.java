@@ -4,19 +4,19 @@ import java.io.IOException;
 
 public interface IBackupUploader {
   void doWriteBackup(byte[] backupData, String uploadFilePath, String uniqueFileName)
-      throws BackupExeption;
+      throws BackupException;
 
   byte[] doReadBackup(String uploadFilePath, String uniqueFileName)
-      throws BackupExeption; // todo: implement processing of this ex in CStore and Backup Services
+      throws BackupException; // todo: implement processing of this ex in CStore and Backup Services
 
-  void removeBackup(String uploadFilePath, String uniqueFileName) throws BackupExeption;
+  void removeBackup(String uploadFilePath, String uniqueFileName) throws BackupException;
 
-  class BackupExeption extends IOException {
-    public BackupExeption(String message, Throwable cause) {
+  class BackupException extends IOException {
+    public BackupException(String message, Throwable cause) {
       super(message, cause);
     }
 
-    public BackupExeption(String message) {
+    public BackupException(String message) {
       super(message);
     }
   }

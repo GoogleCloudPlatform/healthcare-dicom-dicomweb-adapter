@@ -96,6 +96,7 @@ public class CStoreService extends BasicCStoreSCP {
 
       AtomicReference<BackupState> backupState = new AtomicReference<>();
       AtomicReference<IDicomWebClient> destinationClient = new AtomicReference<>();
+      boolean firstUploadedAttemptFailed = false;
 
       try {
         MonitoringService.addEvent(Event.CSTORE_REQUEST);
@@ -150,7 +151,7 @@ public class CStoreService extends BasicCStoreSCP {
               backupState.set(backupUploadService.createBackup(bytes, sopInstanceUID));
             } catch (IOException ioex) {
               log.error("Backup creation failed.", ioex);
-              throw new IBackupUploader.BackupExeption("Backup creation failed.", ioex);
+              throw new IBackupUploader.BackupException("Backup creation failed.", ioex);
             }
 
             try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
@@ -172,6 +173,7 @@ public class CStoreService extends BasicCStoreSCP {
       if (backupUploadService != null) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
         log.error("C-STORE request failed. Trying to resend...", e);
+        firstUploadedAttemptFailed = true;
         backupUploadService.startUploading(destinationClient.get(), backupState.get());
       } else {
         MonitoringService.addEvent(Event.CSTORE_ERROR);
@@ -182,12 +184,16 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (DicomServiceException e) {
       reportError(e);
       throw e;
-    } catch (IBackupUploader.BackupExeption e) {
+    } catch (IBackupUploader.BackupException e) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
         log.error("Backup io processing during C-STORE request is failed : ", e);
     } catch (Throwable e) {
       reportError(e);
       throw new DicomServiceException(Status.ProcessingFailure, e);
+    } finally {
+      if (firstUploadedAttemptFailed == false && backupUploadService != null) {
+        backupUploadService.removeBackup(backupState.get());
+      }
     }
   }
 
