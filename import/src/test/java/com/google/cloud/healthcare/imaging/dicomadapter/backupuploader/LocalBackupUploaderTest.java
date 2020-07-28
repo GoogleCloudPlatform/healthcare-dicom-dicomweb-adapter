@@ -34,7 +34,7 @@ public class LocalBackupUploaderTest {
 
   @Before
   public void setUp() {
-    localBackupUploader = new LocalBackupUploader();
+    localBackupUploader = new LocalBackupUploader(BACKUP_PATH_STR);
   }
 
   /**
@@ -50,7 +50,7 @@ public class LocalBackupUploaderTest {
 
   @Test
   public void doWriteBackupWithBackupPathCreation() throws IOException {
-    localBackupUploader.doWriteBackup(BYTE_SEQ_1, BACKUP_PATH_STR, UNIQUE_FILE_NAME_1);
+    localBackupUploader.doWriteBackup(BYTE_SEQ_1, UNIQUE_FILE_NAME_1);
 
     assertThat(Files.exists(UNIQUE_FILE_PATH_1)).isTrue();
     assertThat(Files.readAllBytes(UNIQUE_FILE_PATH_1)).isEqualTo(BYTE_SEQ_1);
@@ -58,16 +58,16 @@ public class LocalBackupUploaderTest {
 
   @Test
   public void readWriteAndRemoveDifferentFiles() throws IBackupUploader.BackupException {
-    localBackupUploader.doWriteBackup(BYTE_SEQ_1, BACKUP_PATH_STR, UNIQUE_FILE_NAME_1);
-    localBackupUploader.doWriteBackup(BYTE_SEQ_2, BACKUP_PATH_STR, UNIQUE_FILE_NAME_2);
-    byte[] expectedBytesFile1 = localBackupUploader.doReadBackup(BACKUP_PATH_STR, UNIQUE_FILE_NAME_1);
-    byte[] expectedBytesFile2 = localBackupUploader.doReadBackup(BACKUP_PATH_STR, UNIQUE_FILE_NAME_2);
+    localBackupUploader.doWriteBackup(BYTE_SEQ_1,  UNIQUE_FILE_NAME_1);
+    localBackupUploader.doWriteBackup(BYTE_SEQ_2,  UNIQUE_FILE_NAME_2);
+    byte[] expectedBytesFile1 = localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_1);
+    byte[] expectedBytesFile2 = localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_2);
 
     assertThat(expectedBytesFile1).isEqualTo(BYTE_SEQ_1);
     assertThat(expectedBytesFile2).isEqualTo(BYTE_SEQ_2);
 
-    localBackupUploader.removeBackup(BACKUP_PATH_STR, UNIQUE_FILE_NAME_1);
-    localBackupUploader.removeBackup(BACKUP_PATH_STR, UNIQUE_FILE_NAME_2);
+    localBackupUploader.removeBackup(UNIQUE_FILE_NAME_1);
+    localBackupUploader.removeBackup(UNIQUE_FILE_NAME_2);
 
     assertThat(Files.exists(UNIQUE_FILE_PATH_1)).isFalse();
     assertThat(Files.exists(UNIQUE_FILE_PATH_2)).isFalse();
@@ -75,9 +75,10 @@ public class LocalBackupUploaderTest {
 
   @Test
   public void doWriteBackup_Failed_OnInvalidPath() throws IBackupUploader.BackupException {
+    localBackupUploader = new LocalBackupUploader("");
     exceptionRule.expect(IBackupUploader.BackupException.class);
     exceptionRule.expectMessage("Error with writing backup file");
-    localBackupUploader.doWriteBackup(BYTE_SEQ_1, "", "");
+    localBackupUploader.doWriteBackup(BYTE_SEQ_1, "");
   }
 
   @Test
@@ -87,7 +88,7 @@ public class LocalBackupUploaderTest {
     exceptionRule.expect(IBackupUploader.BackupException.class);
     exceptionRule.expectMessage(
         "Error with reading backup file");
-    localBackupUploader.doReadBackup(BACKUP_PATH_STR, "no_file");
+    localBackupUploader.doReadBackup("no_file");
   }
 
   @Test
@@ -96,7 +97,7 @@ public class LocalBackupUploaderTest {
 
     exceptionRule.expect(IBackupUploader.BackupException.class);
     exceptionRule.expectMessage("Error with removing backup file.");
-    localBackupUploader.removeBackup(BACKUP_PATH_STR, "some_file");
+    localBackupUploader.removeBackup("some_file");
   }
 
   @Test
@@ -107,6 +108,6 @@ public class LocalBackupUploaderTest {
 
     exceptionRule.expect(IBackupUploader.BackupException.class);
     exceptionRule.expectMessage("Error with reading backup file : No data in backup file.");
-    localBackupUploader.doReadBackup(BACKUP_PATH_STR, UNIQUE_FILE_NAME_2);
+    localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_2);
   }
 }

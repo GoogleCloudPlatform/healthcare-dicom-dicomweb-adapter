@@ -117,9 +117,9 @@ public class ImportAdapter {
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
     // backup upload service
-    IBackupUploader backupUploader = new LocalBackupUploader();
-    IBackupUploadService backupUploadService = new BackupUploadService(uploadPath,
-        backupUploader, new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBtwUploads));
+    IBackupUploader backupUploader = new LocalBackupUploader(uploadPath);
+    IBackupUploadService backupUploadService = new BackupUploadService(backupUploader,
+        new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBtwUploads));
     //todo: parse --persistent_file_storage_location -> create backupUploadService instance - if present.
     // else - null.
 
