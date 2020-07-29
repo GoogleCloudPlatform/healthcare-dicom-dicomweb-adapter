@@ -3,8 +3,8 @@ package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -32,26 +32,29 @@ public class BackupUploadService implements IBackupUploadService {
   }
 
   @Override
-  public BackupState createBackup(byte[] backupData, String uniqueFileName) throws IBackupUploader.BackupException {
-    backupUploader.doWriteBackup(backupData, uniqueFileName);
+  public BackupState createBackup(InputStream inputStream, String uniqueFileName) throws IBackupUploader.BackupException {
+    backupUploader.doWriteBackup(inputStream, uniqueFileName);
     log.debug("sopInstanceUID={}, backup saved.", uniqueFileName);
     return new BackupState(uniqueFileName, attemptsAmount);
   }
 
+  @Override
+  public InputStream getBackupStream(String uniqueFileName) throws IBackupUploader.BackupException {
+    return backupUploader.doReadBackup(uniqueFileName);
+  }
+
   @Override // todo: guard code from second method call
   public void startUploading(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
-    byte[] bytes = backupUploader.doReadBackup(backupState.getUniqueFileName());
-
     int uploadAttemptsCountdown = backupState.getAttemptsCountdown();
     if (uploadAttemptsCountdown > 0) {
-      scheduleUploadWithDelay(webClient, bytes, backupState);
+      scheduleUploadWithDelay(webClient, backupState);
     }
   }
 
   @Override
   public void removeBackup(BackupState backupState) {
     try {
-      backupUploader.removeBackup(backupState.getUniqueFileName());
+      backupUploader.doRemoveBackup(backupState.getUniqueFileName());
       log.debug("sopInstanceUID={}, removeBackup successful.", backupState.getUniqueFileName());
     } catch (IOException ex) {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
@@ -59,7 +62,7 @@ public class BackupUploadService implements IBackupUploadService {
     }
   }
 
-  private void scheduleUploadWithDelay(IDicomWebClient webClient, byte[] bytes, BackupState backupState) {
+  private void scheduleUploadWithDelay(IDicomWebClient webClient, BackupState backupState) {
     String fileName = backupState.getUniqueFileName();
     if (backupState.decrement()) {
       int attemptNumber = attemptsAmount - backupState.getAttemptsCountdown();
@@ -68,12 +71,13 @@ public class BackupUploadService implements IBackupUploadService {
       CompletableFuture completableFuture =
           CompletableFuture.supplyAsync(
               () -> {
-                try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
-                  webClient.stowRs(bais);
+                try {
+                  InputStream inputStream = backupUploader.doReadBackup(backupState.getUniqueFileName());
+                  webClient.stowRs(inputStream);
                   removeBackup(backupState);
                   log.debug(
-                      "sopInstanceUID={}, bytes={},\n resend attempt № {}, - successful.", fileName, bytes, attemptNumber);
-                } catch (IOException | IDicomWebClient.DicomWebException ex) {
+                      "sopInstanceUID={}, resend attempt № {}, - successful.", fileName, attemptNumber);
+                } catch (IBackupUploader.BackupException | IDicomWebClient.DicomWebException ex) {
                   log.error("sopInstanceUID={}, resend attempt № {} - failed.",
                       fileName, attemptsAmount - backupState.getAttemptsCountdown(), ex);
                   throw new CompletionException(ex);
@@ -87,7 +91,7 @@ public class BackupUploadService implements IBackupUploadService {
               ex -> {
                 if (ex.getCause() instanceof IDicomWebClient.DicomWebException) {
                   if (backupState.getAttemptsCountdown() > 0) {
-                    scheduleUploadWithDelay(webClient, bytes, backupState);
+                    scheduleUploadWithDelay(webClient, backupState);
                   } else {
                     log.debug("sopInstanceUID={}, No resend attempt left.", fileName);
                   }

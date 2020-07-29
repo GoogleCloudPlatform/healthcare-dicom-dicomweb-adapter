@@ -2,7 +2,9 @@ package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,24 +52,28 @@ public class LocalBackupUploaderTest {
 
   @Test
   public void doWriteBackupWithBackupPathCreation() throws IOException {
-    localBackupUploader.doWriteBackup(BYTE_SEQ_1, UNIQUE_FILE_NAME_1);
+    localBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_1), UNIQUE_FILE_NAME_1);
 
     assertThat(Files.exists(UNIQUE_FILE_PATH_1)).isTrue();
     assertThat(Files.readAllBytes(UNIQUE_FILE_PATH_1)).isEqualTo(BYTE_SEQ_1);
   }
 
   @Test
-  public void readWriteAndRemoveDifferentFiles() throws IBackupUploader.BackupException {
-    localBackupUploader.doWriteBackup(BYTE_SEQ_1,  UNIQUE_FILE_NAME_1);
-    localBackupUploader.doWriteBackup(BYTE_SEQ_2,  UNIQUE_FILE_NAME_2);
-    byte[] expectedBytesFile1 = localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_1);
-    byte[] expectedBytesFile2 = localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_2);
+  public void readWriteAndRemoveDifferentFiles() throws IOException {
+    localBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_1),  UNIQUE_FILE_NAME_1);
+    localBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_2),  UNIQUE_FILE_NAME_2);
+    InputStream expectedStreamFile1 = localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_1);
+    InputStream expectedStreamFile2 = localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_2);
 
-    assertThat(expectedBytesFile1).isEqualTo(BYTE_SEQ_1);
-    assertThat(expectedBytesFile2).isEqualTo(BYTE_SEQ_2);
+    assertThat(expectedStreamFile1).isNotNull();
+    assertThat(expectedStreamFile2).isNotNull();
+    assertThat(expectedStreamFile1).isInstanceOf(InputStream.class);
+    assertThat(expectedStreamFile2).isInstanceOf(InputStream.class);
+    assertThat(expectedStreamFile1.readAllBytes()).isEqualTo(BYTE_SEQ_1);
+    assertThat(expectedStreamFile2.readAllBytes()).isEqualTo(BYTE_SEQ_2);
 
-    localBackupUploader.removeBackup(UNIQUE_FILE_NAME_1);
-    localBackupUploader.removeBackup(UNIQUE_FILE_NAME_2);
+    localBackupUploader.doRemoveBackup(UNIQUE_FILE_NAME_1);
+    localBackupUploader.doRemoveBackup(UNIQUE_FILE_NAME_2);
 
     assertThat(Files.exists(UNIQUE_FILE_PATH_1)).isFalse();
     assertThat(Files.exists(UNIQUE_FILE_PATH_2)).isFalse();
@@ -78,7 +84,7 @@ public class LocalBackupUploaderTest {
     localBackupUploader = new LocalBackupUploader("");
     exceptionRule.expect(IBackupUploader.BackupException.class);
     exceptionRule.expectMessage("Error with writing backup file");
-    localBackupUploader.doWriteBackup(BYTE_SEQ_1, "");
+    localBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_1), "");
   }
 
   @Test
@@ -97,17 +103,10 @@ public class LocalBackupUploaderTest {
 
     exceptionRule.expect(IBackupUploader.BackupException.class);
     exceptionRule.expectMessage("Error with removing backup file.");
-    localBackupUploader.removeBackup("some_file");
+    localBackupUploader.doRemoveBackup("some_file");
   }
 
-  @Test
-  public void doReadBackup_Failed_OnEmptyFile() throws IOException {
-    Files.createDirectories(BACKUP_PATH);
-    byte [] emptyBytes = {};
-    Files.write(UNIQUE_FILE_PATH_2, emptyBytes);
-
-    exceptionRule.expect(IBackupUploader.BackupException.class);
-    exceptionRule.expectMessage("Error with reading backup file : No data in backup file.");
-    localBackupUploader.doReadBackup(UNIQUE_FILE_NAME_2);
+  private InputStream getInputStreamFromBytes(byte[] seq) {
+    return new ByteArrayInputStream(seq);
   }
 }

@@ -1,5 +1,7 @@
 package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 
+import java.io.InputStream;
+
 public class GcpBackupUploader extends AbstractBackupUploader {
 
   public GcpBackupUploader(String uploadFilePath) {
@@ -7,19 +9,17 @@ public class GcpBackupUploader extends AbstractBackupUploader {
   }
 
   @Override
-  public void doWriteBackup(byte[] backupData, String uniqueFileName)
-      throws BackupException {
-    // todo: implement_me
+  public void doWriteBackup(InputStream inputStream, String uniqueFileName) throws BackupException {
+    
   }
 
   @Override
-  public byte[] doReadBackup(String uniqueFileName) throws BackupException {
-    return new byte[0];
-    // todo: implement_me
+  public InputStream doReadBackup(String uniqueFileName) throws BackupException {
+    return null;
   }
 
   @Override
-  public void removeBackup(String uniqueFileName) throws BackupException {
-    // todo: implement_me
+  public void doRemoveBackup(String uniqueFileName) throws BackupException {
+
   }
 }

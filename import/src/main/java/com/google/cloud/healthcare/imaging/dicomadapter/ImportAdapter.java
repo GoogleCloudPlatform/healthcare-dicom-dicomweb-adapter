@@ -87,7 +87,7 @@ public class ImportAdapter {
     String uploadPath = flags.persistentFileStorageLocation;
     int uploadRetryAmount = flags.persistentFileUploadRetryAmount;
     int minUploadDelay = flags.minUploadDelay;
-    int maxWaitingTimeBtwUploads = flags.maxWaitingTimeBtwUploads;
+    int maxWaitingTimeBetweenUploads = flags.maxWaitingTimeBetweenUploads;
 
     // Dicom service handlers.
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
@@ -119,7 +119,7 @@ public class ImportAdapter {
     // backup upload service
     IBackupUploader backupUploader = new LocalBackupUploader(uploadPath);
     IBackupUploadService backupUploadService = new BackupUploadService(backupUploader,
-        new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBtwUploads));
+        new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBetweenUploads));
     //todo: parse --persistent_file_storage_location -> create backupUploadService instance - if present.
     // else - null.
 

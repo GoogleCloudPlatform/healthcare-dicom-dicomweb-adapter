@@ -169,10 +169,10 @@ public class Flags {
   Integer minUploadDelay = 100;
 
   @Parameter(
-          names = {"--max_waiting_time_btw_uploads"},
+          names = {"--max_waiting_time_between_uploads"},
           description = "maximum waiting time between uploads (ms)"
   )
-  Integer maxWaitingTimeBtwUploads = 5000;
+  Integer maxWaitingTimeBetweenUploads = 5000;
 
   public Flags() {
   }

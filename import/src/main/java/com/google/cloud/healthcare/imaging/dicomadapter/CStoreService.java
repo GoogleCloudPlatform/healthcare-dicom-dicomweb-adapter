@@ -24,8 +24,6 @@ import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -144,19 +142,14 @@ public class CStoreService extends BasicCStoreSCP {
 
         if (backupUploadService != null) {
           processorList.add((inputStream, outputStream) -> {
-            byte[] bytes;
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-              StreamUtils.copy(inputStream, baos);
-              bytes = baos.toByteArray();
-              backupState.set(backupUploadService.createBackup(bytes, sopInstanceUID));
-            } catch (IOException ioex) {
-              log.error("Backup creation failed.", ioex);
-              throw new IBackupUploader.BackupException("Backup creation failed.", ioex);
+            try {
+              backupState.set(backupUploadService.createBackup(inputStream, sopInstanceUID));
+            } catch (IBackupUploader.BackupException ex) {
+              log.error("Backup creation failed.", ex);
+              throw new IBackupUploader.BackupException("Backup creation failed.", ex);
             }
 
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
-              StreamUtils.copy(bais, outputStream);
-            }
+            backupUploadService.getBackupStream(sopInstanceUID).transferTo(outputStream);
           });
         }
 
