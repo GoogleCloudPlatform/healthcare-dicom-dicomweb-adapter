@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,64 +47,84 @@ public class BackupUploadService implements IBackupUploadService {
 
   @Override // todo: guard code from second method call
   public void startUploading(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
-    int uploadAttemptsCountdown = backupState.getAttemptsCountdown();
-    if (uploadAttemptsCountdown > 0) {
+    if (backupState.getAttemptsCountdown() > 0) {
       scheduleUploadWithDelay(webClient, backupState);
     }
   }
 
   @Override
-  public void removeBackup(BackupState backupState) {
+  public void removeBackup(String fileName) {
     try {
-      backupUploader.doRemoveBackup(backupState.getUniqueFileName());
-      log.debug("sopInstanceUID={}, removeBackup successful.", backupState.getUniqueFileName());
+      backupUploader.doRemoveBackup(fileName);
+      log.debug("sopInstanceUID={}, removeBackup successful.", fileName);
     } catch (IOException ex) {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-      log.error("sopInstanceUID={}, removeBackup failed.", backupState.getUniqueFileName(), ex);
+      log.error("sopInstanceUID={}, removeBackup failed.", fileName, ex);
     }
   }
 
-  private void scheduleUploadWithDelay(IDicomWebClient webClient, BackupState backupState) {
-    String fileName = backupState.getUniqueFileName();
+  private void scheduleUploadWithDelay(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
+    String uniqueFileName = backupState.getUniqueFileName();
     if (backupState.decrement()) {
       int attemptNumber = attemptsAmount - backupState.getAttemptsCountdown();
 
-      log.info("Trying to resend data, sopInstanceUID={}, attempt № {}. ", fileName, attemptNumber);
+      log.info("Trying to resend data, sopInstanceUID={}, attempt № {}. ", uniqueFileName, attemptNumber);
       CompletableFuture completableFuture =
-          CompletableFuture.supplyAsync(
+          CompletableFuture.runAsync(
               () -> {
                 try {
-                  InputStream inputStream = backupUploader.doReadBackup(backupState.getUniqueFileName());
+                  InputStream inputStream = readBackupExceptionally(uniqueFileName);
                   webClient.stowRs(inputStream);
-                  removeBackup(backupState);
-                  log.debug(
-                      "sopInstanceUID={}, resend attempt № {}, - successful.", fileName, attemptNumber);
-                } catch (IBackupUploader.BackupException | IDicomWebClient.DicomWebException ex) {
-                  log.error("sopInstanceUID={}, resend attempt № {} - failed.",
-                      fileName, attemptsAmount - backupState.getAttemptsCountdown(), ex);
-                  throw new CompletionException(ex);
+                  removeBackup(uniqueFileName);
+                  log.debug("sopInstanceUID={}, resend attempt № {}, - successful.", uniqueFileName, attemptNumber);
+                } catch (IDicomWebClient.DicomWebException ex) {
+                  log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, ex);
+
+                  if (backupState.getAttemptsCountdown() > 0 /* + todo: http_code_filter*/) {
+                    scheduleUploadWithDelayExceptionally(webClient, backupState);
+                    MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
+                  } else {
+                    throwOnNoResendAttemptsLeft(uniqueFileName);
+                  }
                 }
-                return null;
               },
               CompletableFuture.delayedExecutor(
                   delayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown()),
-                  TimeUnit.MILLISECONDS))
-          .exceptionally(
-              ex -> {
-                if (ex.getCause() instanceof IDicomWebClient.DicomWebException) {
-                  if (backupState.getAttemptsCountdown() > 0) {
-                    scheduleUploadWithDelay(webClient, backupState);
-                  } else {
-                    log.debug("sopInstanceUID={}, No resend attempt left.", fileName);
-                  }
-                } else {
-                  MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-                  log.error("sopInstanceUID={}, read backup failed.", fileName, ex.getCause());
-                }
-                return null;
-              });
+                  TimeUnit.MILLISECONDS));
+
+      try {
+        completableFuture.get();
+      } catch (InterruptedException ie) {
+        log.error("scheduleUploadWithDelay Runnable task canceled.", ie);
+        Thread.currentThread().interrupt();
+      } catch (ExecutionException eex) {
+        throw new IBackupUploader.BackupException(eex.getCause());
+      }
     } else {
-      log.info("sopInstanceUID={}, Backup resend attempts exhausted.", fileName);
+      throwOnNoResendAttemptsLeft(uniqueFileName);
+    }
+  }
+
+  private void scheduleUploadWithDelayExceptionally(IDicomWebClient webClient, BackupState backupState) {
+    try {
+      scheduleUploadWithDelay(webClient, backupState);
+      } catch (IBackupUploader.BackupException ex) {
+      throw new CompletionException(ex);
+    }
+  }
+
+  private void throwOnNoResendAttemptsLeft(String uniqueFileName) throws CompletionException {
+    log.debug("sopInstanceUID={}, No resend attempt left.", uniqueFileName);
+    throw new CompletionException(
+        new IBackupUploader.BackupException("sopInstanceUID=" + uniqueFileName + ". No resend attempt left."));
+  }
+
+  private InputStream readBackupExceptionally(String fileName) throws CompletionException {
+    try {
+      return backupUploader.doReadBackup(fileName);
+    } catch (IBackupUploader.BackupException ex) {
+      log.error("sopInstanceUID={}, read backup failed.", fileName, ex.getCause());
+      throw new CompletionException(ex);
     }
   }
 }

@@ -11,5 +11,5 @@ public interface IBackupUploadService {
 
   void startUploading(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException;
 
-  void removeBackup(BackupState backupState);
+  void removeBackup(String uniqueFileName);
 }

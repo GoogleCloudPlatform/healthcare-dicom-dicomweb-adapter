@@ -90,11 +90,12 @@ public class CStoreService extends BasicCStoreSCP {
       Attributes request,
       PDVInputStream inPdvStream,
       Attributes response)
-      throws DicomServiceException, IOException {
+      throws IOException {
 
       AtomicReference<BackupState> backupState = new AtomicReference<>();
       AtomicReference<IDicomWebClient> destinationClient = new AtomicReference<>();
       boolean firstUploadedAttemptFailed = false;
+      long uploadedBytesCount = 0;
 
       try {
         MonitoringService.addEvent(Event.CSTORE_REQUEST);
@@ -142,13 +143,7 @@ public class CStoreService extends BasicCStoreSCP {
 
         if (backupUploadService != null) {
           processorList.add((inputStream, outputStream) -> {
-            try {
-              backupState.set(backupUploadService.createBackup(inputStream, sopInstanceUID));
-            } catch (IBackupUploader.BackupException ex) {
-              log.error("Backup creation failed.", ex);
-              throw new IBackupUploader.BackupException("Backup creation failed.", ex);
-            }
-
+            backupState.set(backupUploadService.createBackup(inputStream, sopInstanceUID));
             backupUploadService.getBackupStream(sopInstanceUID).transferTo(outputStream);
           });
         }
@@ -157,37 +152,54 @@ public class CStoreService extends BasicCStoreSCP {
           destinationClient.get().stowRs(inputStream);
         });
 
-        processStream(association.getApplicationEntity().getDevice().getExecutor(),
-            inWithHeader, processorList);
+        processStream(association.getApplicationEntity().getDevice().getExecutor(), inWithHeader, processorList);
+        uploadedBytesCount = countingStream.getCount();
 
-        response.setInt(Tag.Status, VR.US, Status.Success);
-        MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
-      } catch (DicomWebException e) {
-      if (backupUploadService != null) {
+        updateResponseToSuccess(response, uploadedBytesCount);
+      } catch (DicomWebException dwe) {
+        if (backupUploadService != null) {
+          firstUploadedAttemptFailed = true;
+          MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
+          log.error("C-STORE request failed. Trying to resend...", dwe);
+
+          resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
+          updateResponseToSuccess(response, uploadedBytesCount);
+        } else {
+          reportError(dwe);
+          throwDicomServiceException(dwe.getStatus(), dwe);
+        }
+      } catch (IBackupUploader.BackupException e) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-        log.error("C-STORE request failed. Trying to resend...", e);
-        firstUploadedAttemptFailed = true;
-        backupUploadService.startUploading(destinationClient.get(), backupState.get());
-      } else {
-        MonitoringService.addEvent(Event.CSTORE_ERROR);
-        DicomServiceException serviceException = new DicomServiceException(e.getStatus(), e);
-        serviceException.setErrorComment(e.getMessage());
-        throw serviceException;
+        log.error("Backup io processing during C-STORE request is failed: ", e);
+      } catch (Throwable e) {
+        reportError(e);
+        throw new DicomServiceException(Status.ProcessingFailure, e);
+      } finally {
+        if (firstUploadedAttemptFailed == false && backupUploadService != null) {
+          backupUploadService.removeBackup(backupState.get().getUniqueFileName());
+        }
       }
-    } catch (DicomServiceException e) {
-      reportError(e);
-      throw e;
-    } catch (IBackupUploader.BackupException e) {
-        MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-        log.error("Backup io processing during C-STORE request is failed : ", e);
-    } catch (Throwable e) {
-      reportError(e);
-      throw new DicomServiceException(Status.ProcessingFailure, e);
-    } finally {
-      if (firstUploadedAttemptFailed == false && backupUploadService != null) {
-        backupUploadService.removeBackup(backupState.get());
-      }
+  }
+
+  private void updateResponseToSuccess(Attributes response, long countingStreamCount) {
+    response.setInt(Tag.Status, VR.US, Status.Success);
+    MonitoringService.addEvent(Event.CSTORE_BYTES, countingStreamCount);
+  }
+
+  private void resendWithDelayRecursivelyExceptionally(AtomicReference<BackupState> backupState, AtomicReference<IDicomWebClient> destinationClient)
+      throws DicomServiceException {
+    try {
+      backupUploadService.startUploading(destinationClient.get(), backupState.get());
+    } catch (IBackupUploader.BackupException bae) {
+      MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
+      throwDicomServiceException(Status.ProcessingFailure, bae);
     }
+  }
+
+  private void throwDicomServiceException(int status, Exception ioe) throws DicomServiceException {
+    DicomServiceException serviceException = new DicomServiceException(status, ioe);
+    serviceException.setErrorComment(ioe.getMessage());
+    throw serviceException;
   }
 
   private void reportError(Throwable e) {
@@ -252,10 +264,6 @@ public class CStoreService extends BasicCStoreSCP {
           ecs.take().get();
         }
       } catch (ExecutionException e) {
-        // here we need to recognize that it`s right web Ex //todo
-//        if (backupUploadService != null) {
-//          backupUploadService.startUploading();
-//        }
         throw e.getCause();
       }
     }
