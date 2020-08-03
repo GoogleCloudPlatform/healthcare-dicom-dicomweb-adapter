@@ -99,7 +99,7 @@ public class BackupUploadService implements IBackupUploadService {
         throw new IBackupUploader.BackupException(eex.getCause());
       }
     } else {
-      throwOnNoResendAttemptsLeft(uniqueFileName);
+      throw getNoResendAttemptLeftException(uniqueFileName);
     }
   }
 
@@ -112,9 +112,12 @@ public class BackupUploadService implements IBackupUploadService {
   }
 
   private void throwOnNoResendAttemptsLeft(String uniqueFileName) throws CompletionException {
+    throw new CompletionException(getNoResendAttemptLeftException(uniqueFileName));
+  }
+
+  private IBackupUploader.BackupException getNoResendAttemptLeftException(String uniqueFileName) {
     log.debug("sopInstanceUID={}, No resend attempt left.", uniqueFileName);
-    throw new CompletionException(
-        new IBackupUploader.BackupException("sopInstanceUID=" + uniqueFileName + ". No resend attempt left."));
+    return  new IBackupUploader.BackupException("sopInstanceUID=" + uniqueFileName + ". No resend attempt left.");
   }
 
   private InputStream readBackupExceptionally(String fileName) throws CompletionException {
