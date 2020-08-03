@@ -47,9 +47,7 @@ public class BackupUploadService implements IBackupUploadService {
 
   @Override // todo: guard code from second method call
   public void startUploading(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
-    if (backupState.getAttemptsCountdown() > 0) {
-      scheduleUploadWithDelay(webClient, backupState);
-    }
+    scheduleUploadWithDelay(webClient, backupState);
   }
 
   @Override

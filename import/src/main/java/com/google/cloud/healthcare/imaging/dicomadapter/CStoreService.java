@@ -157,7 +157,7 @@ public class CStoreService extends BasicCStoreSCP {
 
         updateResponseToSuccess(response, uploadedBytesCount);
       } catch (DicomWebException dwe) {
-        if (backupUploadService != null) {
+        if (backupUploadService != null && backupState.get().getAttemptsCountdown() > 0) {
           firstUploadedAttemptFailed = true;
           MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
           log.error("C-STORE request failed. Trying to resend...", dwe);
