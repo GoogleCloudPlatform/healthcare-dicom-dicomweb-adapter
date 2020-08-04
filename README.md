@@ -19,6 +19,7 @@ Table of Contents
       * [Building from source](#building-from-source)
          * [Building and publishing Docker Images](#building-and-publishing-docker-images)
       * [Wiki](#wiki)
+      * [Troubleshooting](#troubleshooting)
 
 ## Import Adapter
 
