@@ -95,6 +95,7 @@ public class BackupUploadService implements IBackupUploadService {
       } catch (InterruptedException ie) {
         log.error("scheduleUploadWithDelay Runnable task canceled.", ie);
         Thread.currentThread().interrupt();
+        throw new IBackupUploader.BackupException(ie);
       } catch (ExecutionException eex) {
         throw new IBackupUploader.BackupException(eex.getCause());
       }

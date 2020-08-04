@@ -14,11 +14,30 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import com.google.cloud.healthcare.util.TestUtils;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
@@ -50,6 +69,7 @@ public final class CStoreServiceTest {
   // Server properties.
   private static String serverAET = "SERVER";
   private static String serverHostname = "localhost";
+  private static String SOP_INSTANCE_UID = "1.0.0.0";
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -67,15 +87,13 @@ public final class CStoreServiceTest {
 
   // Creates a DICOM service and returns the port it is listening on.
   private int createDicomServer(
-      boolean connectError,
-      int responseCode,
       MockDestinationConfig[] destinationConfigs,
-      String transcodeToSyntax) throws Exception {
+      String transcodeToSyntax,
+      BackupUploadService backupUploadService,
+      IDicomWebClient dicomWebClient) throws Exception {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
-    IDicomWebClient dicomWebClient =
-        new MockStowClient(connectError, responseCode);
     Map<DestinationFilter, IDicomWebClient> destinationMap = new LinkedHashMap<>();
     if(destinationConfigs != null) {
       for (MockDestinationConfig conf : destinationConfigs) {
@@ -86,7 +104,7 @@ public final class CStoreServiceTest {
       }
     }
     CStoreService cStoreService =
-        new CStoreService(dicomWebClient, destinationMap, null, transcodeToSyntax, null);
+        new CStoreService(dicomWebClient, destinationMap, null, transcodeToSyntax, backupUploadService);
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
@@ -149,6 +167,7 @@ public final class CStoreServiceTest {
         UID.MRImageStorage,
         null,
         TestUtils.TEST_MR_FILE,
+        null,
         null);
   }
 
@@ -287,7 +306,80 @@ public final class CStoreServiceTest {
         UID.SecondaryCaptureImageStorage,
         "1.2.276.0.7230010.3.1.4.1784944219.230771.1519337370.699151",
         TestUtils.TEST_IMG_FILE,
-        UID.JPEG2000);
+        UID.JPEG2000,
+        null);
+  }
+
+  @Test
+  public void testBackupUploadService_ExceptionOnWriteToBackup_bytesToStowRsNotAvailable() throws Exception {
+    IBackupUploader mockBackupUploader = mock(IBackupUploader.class);
+    DelayCalculator mockDelayCalculator = mock(DelayCalculator.class);
+    MockStowClient spyStowClient = spy(new MockStowClient(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK));
+
+    doThrow(new IBackupUploader.BackupException("errMsg")).when(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
+    doNothing().when(spyStowClient).stowRs(any(InputStream.class));
+
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+
+    basicCStoreServiceTest(
+        Status.ProcessingFailure,
+        backupUploadService,
+        spyStowClient);
+
+    verify(mockBackupUploader, never()).doReadBackup(anyString());
+    verify(spyStowClient).stowRs(argThat(is -> equalInputStreamAvailableBytes(is, 0)));
+  }
+
+  @Test
+  public void testBackupUploadService_backupWriteAndReadSuccess() throws Exception {
+    IBackupUploader mockBackupUploader = mock(IBackupUploader.class);
+    DelayCalculator mockDelayCalculator = mock(DelayCalculator.class);
+    MockStowClient spyStowClient = spy(new MockStowClient(
+        false,
+        HttpStatusCodes.STATUS_CODE_OK));
+
+    final InputStream INPUT_STREAM = new ByteArrayInputStream(new byte []{1,2,3,4});
+
+    doAnswer(invocation -> {
+      Object[] args = invocation.getArguments();
+      assertThat(equalInputStreamAvailableBytes(((InputStream)args[0]), 4)).isTrue(); //count available IS bytes before callRealMethod
+      invocation.callRealMethod(); // where bytes is readed
+      return null;
+    }).when(spyStowClient).stowRs(any(InputStream.class));
+
+    when(mockBackupUploader.doReadBackup(SOP_INSTANCE_UID)).thenReturn(INPUT_STREAM);
+
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+
+    basicCStoreServiceTest(
+        Status.Success,
+        backupUploadService,
+        spyStowClient);
+
+    verify(mockBackupUploader, times(1)).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
+    verify(mockBackupUploader, times(1)).doReadBackup(eq(SOP_INSTANCE_UID));
+    verify(spyStowClient, times(1)).stowRs(any(InputStream.class));
+    verify(mockBackupUploader, times(1)).doRemoveBackup(eq(SOP_INSTANCE_UID));
+  }
+
+  private boolean equalInputStreamAvailableBytes(InputStream is, int expectedByteAmount) {
+    try {
+      int attempts = 3;
+      while (attempts > 0) {
+        if (is.available() == expectedByteAmount) {
+          return true;
+        } else {
+          attempts--;
+          Thread.sleep(5);
+        }
+      }
+      return false;
+    } catch (IOException | InterruptedException e) {
+      e.printStackTrace();
+    }
+    return false;
   }
 
   private void basicCStoreServiceTest(
@@ -300,9 +392,25 @@ public final class CStoreServiceTest {
         expectedDimseStatus,
         null,
         UID.MRImageStorage,
-        "1.0.0.0",
+        SOP_INSTANCE_UID,
         TestUtils.TEST_MR_FILE,
+        null,
         null);
+  }
+
+  private void basicCStoreServiceTest(
+      int expectedDimseStatus,
+      BackupUploadService backupUploadService,
+      IDicomWebClient dicomWebClient) throws Exception {
+    basicCStoreServiceTest(
+        expectedDimseStatus,
+        null,
+        UID.MRImageStorage,
+        SOP_INSTANCE_UID,
+        TestUtils.TEST_MR_FILE,
+        null,
+        backupUploadService,
+        dicomWebClient);
   }
 
   private void basicCStoreServiceTest(
@@ -316,8 +424,9 @@ public final class CStoreServiceTest {
         expectedDimseStatus,
         destinationConfigs,
         UID.MRImageStorage,
-        "1.0.0.0",
+        SOP_INSTANCE_UID,
         TestUtils.TEST_MR_FILE,
+        null,
         null);
   }
 
@@ -329,13 +438,36 @@ public final class CStoreServiceTest {
       String sopClassUID,
       String sopInstanceUID,
       String testFile,
-      String transcodeToSyntax) throws Exception {
+      String transcodeToSyntax,
+      BackupUploadService backupUploadService)
+      throws Exception {
+    basicCStoreServiceTest(
+        expectedDimseStatus,
+        destinationConfigs,
+        sopClassUID,
+        sopInstanceUID,
+        testFile,
+        transcodeToSyntax,
+        backupUploadService,
+        new MockStowClient(connectionError, httpStatus));
+  }
+
+  private void basicCStoreServiceTest(
+      int expectedDimseStatus,
+      MockDestinationConfig[] destinationConfigs,
+      String sopClassUID,
+      String sopInstanceUID,
+      String testFile,
+      String transcodeToSyntax,
+      BackupUploadService backupUploadService,
+      IDicomWebClient dicomWebClient)
+      throws Exception {
     DicomInputStream in = (DicomInputStream) TestUtils.streamDICOMStripHeaders(testFile);
     InputStreamDataWriter data = new InputStreamDataWriter(in);
 
     // Create C-STORE DICOM server.
     int serverPort =
-        createDicomServer(connectionError, httpStatus, destinationConfigs, transcodeToSyntax);
+        createDicomServer(destinationConfigs, transcodeToSyntax, backupUploadService, dicomWebClient);
 
     // Associate with peer AE.
     Association association =
@@ -354,6 +486,7 @@ public final class CStoreServiceTest {
 
     // Close the association.
     association.release();
+
     association.waitForSocketClose();
 
     rspAssert.assertResult();

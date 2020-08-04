@@ -81,7 +81,6 @@ public class BackupUploadServiceTest {
 
   @Test
   public void createBackup_success() throws BackupException {
-
     BackupState actualBackupState = backupUploadService.createBackup(backupInputStream, UNIQUE_FILE_NAME);
 
     verify(backupUploaderMock).doWriteBackup(eq(backupInputStream), eq(UNIQUE_FILE_NAME));
@@ -118,7 +117,7 @@ public class BackupUploadServiceTest {
   @Test
   public void startUploading_firstTry_success() throws IOException, DicomWebException {
     doNothing().when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(100L);
+    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
@@ -127,7 +126,7 @@ public class BackupUploadServiceTest {
 
     InOrder inOrder = Mockito.inOrder(webClientMock, backupUploaderMock);
 
-    inOrder.verify(webClientMock, timeout(130)).stowRs(argumentCaptor.capture());
+    inOrder.verify(webClientMock).stowRs(argumentCaptor.capture());
     byte [] actualBytes = argumentCaptor.getValue().readNBytes(5);
     assertThat(Arrays.equals(actualBytes, BACKUP_BYTES)).isTrue();
 
@@ -137,7 +136,7 @@ public class BackupUploadServiceTest {
   @Test
   public void startUploading_DicomWebExceptionOnStowRs_secondTry_success() throws DicomWebException, IOException {
     doThrow(new DicomWebException("Reason")).doNothing().when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(50L);
+    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
@@ -145,7 +144,7 @@ public class BackupUploadServiceTest {
     ArgumentCaptor<InputStream> argumentCaptor = ArgumentCaptor.forClass(InputStream.class);
 
     verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
-    verify(webClientMock, timeout(52).times(2)).stowRs(argumentCaptor.capture());
+    verify(webClientMock, times(2)).stowRs(argumentCaptor.capture());
     byte [] actualBytes = argumentCaptor.getValue().readNBytes(5);
     assertThat(Arrays.equals(actualBytes, BACKUP_BYTES)).isTrue();
 
@@ -181,7 +180,7 @@ public class BackupUploadServiceTest {
     spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ONE);
 
     doThrow(new DicomWebException("Reason2")).doNothing().when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(50L);
+    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     exceptionRule.expect(BackupException.class);
@@ -190,17 +189,7 @@ public class BackupUploadServiceTest {
     backupUploadService.startUploading(webClientMock, spyBackupState);
 
     verify(backupUploaderMock, times(1)).doReadBackup(eq(UNIQUE_FILE_NAME));
-    verify(webClientMock, timeout(52).times(1)).stowRs(any(InputStream.class));
+    verify(webClientMock, times(1)).stowRs(any(InputStream.class));
     verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
-  }
-
-  //@Test
-  public void startUploading_httpErr409_noMoreUploads()  {
-
-  }
-
-  //@Test
-  public void startUploading_httpErr500Plus_secondTrySuccess()  {
-
   }
 }

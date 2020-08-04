@@ -312,7 +312,7 @@ If you are using Kubernetes, then in the file `dicom_adapter.yaml` change the ar
             - "--max_waiting_time_between_uploads=5000"
 ```
 
-if you are using import adapter locally : 
+if you are using import adapter locally: 
 ```shell
 gradle run -Dexec.args="--dimse_aet=IMPORTADAPTER --dimse_port=4008 --dicomweb_address=http://localhost:80 --persistent_file_storage_location=/tmp/backupfile --persistent_file_upload_retry_amount=5 --min_upload_delay=100 --max_waiting_time_between_uploads=5000"
 ```

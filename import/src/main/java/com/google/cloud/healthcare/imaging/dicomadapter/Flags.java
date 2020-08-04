@@ -149,7 +149,6 @@ public class Flags {
   )
   Boolean fuzzyMatching = false;
 
-  // retrying failed uploads
   @Parameter(
           names = {"--persistent_file_storage_location"},
           description = "temporary location for storing files before send"

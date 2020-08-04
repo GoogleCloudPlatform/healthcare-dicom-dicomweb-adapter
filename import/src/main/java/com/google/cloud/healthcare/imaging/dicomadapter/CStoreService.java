@@ -23,7 +23,6 @@ import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUp
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -37,7 +36,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -166,16 +164,21 @@ public class CStoreService extends BasicCStoreSCP {
           updateResponseToSuccess(response, uploadedBytesCount);
         } else {
           reportError(dwe);
-          throwDicomServiceException(dwe.getStatus(), dwe);
+          throw new DicomServiceException(dwe.getStatus(), dwe);
         }
       } catch (IBackupUploader.BackupException e) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
         log.error("Backup io processing during C-STORE request is failed: ", e);
+        reportError(e);
+        throw new DicomServiceException(Status.ProcessingFailure, e);
+      } catch (DicomServiceException e) {
+        reportError(e);
+        throw e;
       } catch (Throwable e) {
         reportError(e);
         throw new DicomServiceException(Status.ProcessingFailure, e);
       } finally {
-        if (firstUploadedAttemptFailed == false && backupUploadService != null) {
+        if (firstUploadedAttemptFailed == false && backupState.get() != null && backupUploadService != null) {
           backupUploadService.removeBackup(backupState.get().getUniqueFileName());
         }
       }
@@ -192,14 +195,8 @@ public class CStoreService extends BasicCStoreSCP {
       backupUploadService.startUploading(destinationClient.get(), backupState.get());
     } catch (IBackupUploader.BackupException bae) {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-      throwDicomServiceException(Status.ProcessingFailure, bae);
+      throw new DicomServiceException(Status.ProcessingFailure, bae);
     }
-  }
-
-  private void throwDicomServiceException(int status, Exception ioe) throws DicomServiceException {
-    DicomServiceException serviceException = new DicomServiceException(status, ioe);
-    serviceException.setErrorComment(ioe.getMessage());
-    throw serviceException;
   }
 
   private void reportError(Throwable e) {
