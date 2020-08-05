@@ -36,6 +36,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.eclipse.jetty.http.HttpStatus;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -155,17 +157,22 @@ public class CStoreService extends BasicCStoreSCP {
 
         updateResponseToSuccess(response, uploadedBytesCount);
       } catch (DicomWebException dwe) {
-        if (backupUploadService != null && backupState.get().getAttemptsCountdown() > 0) {
-          firstUploadedAttemptFailed = true;
-          MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-          log.error("C-STORE request failed. Trying to resend...", dwe);
+        IBackupUploadService.filterHttpCode500Plus(dwe.getHttpStatus(), log);
+        boolean httpStatus409 = IBackupUploadService.filterHttpCode409(dwe.getHttpStatus(), log);
 
-          resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
-          updateResponseToSuccess(response, uploadedBytesCount);
-        } else {
-          reportError(dwe);
-          throw new DicomServiceException(dwe.getStatus(), dwe);
+        if (backupUploadService != null) {
+          firstUploadedAttemptFailed = true;
+          if (httpStatus409 == false) {
+            if (backupState.get().getAttemptsCountdown() > 0) {
+              log.error("C-STORE request failed. Trying to resend...", dwe);
+              resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
+              updateResponseToSuccess(response, uploadedBytesCount);
+              return;
+            }
+          }
         }
+        reportError(dwe);
+        throw new DicomServiceException(dwe.getStatus(), dwe);
       } catch (IBackupUploader.BackupException e) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
         log.error("Backup io processing during C-STORE request is failed: ", e);

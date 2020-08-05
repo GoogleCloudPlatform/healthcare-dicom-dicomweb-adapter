@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class BackupUploadService implements IBackupUploadService {
 
   private final DelayCalculator delayCalculator;
@@ -74,10 +73,16 @@ public class BackupUploadService implements IBackupUploadService {
                   webClient.stowRs(inputStream);
                   removeBackup(uniqueFileName);
                   log.debug("sopInstanceUID={}, resend attempt № {}, - successful.", uniqueFileName, attemptNumber);
-                } catch (IDicomWebClient.DicomWebException ex) {
-                  log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, ex);
+                } catch (IDicomWebClient.DicomWebException dwe) {
+                  log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, dwe);
 
-                  if (backupState.getAttemptsCountdown() > 0 /* + todo: http_code_filter*/) {
+                  IBackupUploadService.filterHttpCode500Plus(dwe.getHttpStatus(), log);
+                  boolean httpStatus409 = IBackupUploadService.filterHttpCode409(dwe.getHttpStatus(), log);
+
+                  if (backupState.getAttemptsCountdown() > 0) {
+                    if (httpStatus409 == true) {
+                      throwOnHttpStatus409(uniqueFileName);
+                    }
                     scheduleUploadWithDelayExceptionally(webClient, backupState);
                     MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
                   } else {
@@ -113,6 +118,10 @@ public class BackupUploadService implements IBackupUploadService {
 
   private void throwOnNoResendAttemptsLeft(String uniqueFileName) throws CompletionException {
     throw new CompletionException(getNoResendAttemptLeftException(uniqueFileName));
+  }
+
+  private void throwOnHttpStatus409(String uniqueFileName) throws CompletionException {
+    throw new CompletionException(new IBackupUploader.BackupException("Failed on httpStatus=409; sopInstanceUID=" + uniqueFileName));
   }
 
   private IBackupUploader.BackupException getNoResendAttemptLeftException(String uniqueFileName) {
