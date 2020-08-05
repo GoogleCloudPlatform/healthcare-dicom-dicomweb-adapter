@@ -72,6 +72,40 @@
           --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
 
+# run adapter with local backup
+
+- name: 'gcr.io/${_IMAGEPROJECT}/healthcare-api-dicom-dicomweb-adapter-import:${SHORT_SHA}'
+  id: adapter-with-local-backup
+  entrypoint: 'bash'
+  args: [ '-c',
+          "java -Dorg.dcm4che3.imageio.codec.ImageReaderFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageReaderFactory.properties \
+            -Dorg.dcm4che3.imageio.codec.ImageWriterFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageWriterFactory.properties \
+            -cp /app/resources:/app/classes:/app/libs/* com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter \
+      --dimse_aet=IMPORTADAPTER \
+      --dimse_port=${_ADAPTER_PORT_WITH_LOCAL_BACKUP} \
+      --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
+      --persistent_file_storage_location=tmp/backupfile \
+      --persistent_file_upload_retry_amount=5 \
+      --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+  waitFor: ['adapter-build']
+
+# run adapter with gcs backup
+
+- name: 'gcr.io/${_IMAGEPROJECT}/healthcare-api-dicom-dicomweb-adapter-import:${SHORT_SHA}'
+  id: adapter-with-gcs-backup
+  entrypoint: 'bash'
+  args: [ '-c',
+          "java -Dorg.dcm4che3.imageio.codec.ImageReaderFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageReaderFactory.properties \
+            -Dorg.dcm4che3.imageio.codec.ImageWriterFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageWriterFactory.properties \
+            -cp /app/resources:/app/classes:/app/libs/* com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter \
+      --dimse_aet=IMPORTADAPTER \
+      --dimse_port=${_ADAPTER_PORT_WITH_GCS_BACKUP} \
+      --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
+      --persistent_file_storage_location=gs://${_PROJECT}/${_BUCKET}/backup \
+      --persistent_file_upload_retry_amount=2 \
+      --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
+  waitFor: ['adapter-build']
+
 # create dataset if not exists, re-create store (delete if exists, then create)
 - name: ${_CLOUD_SDK_IMAGE}
   id: setup-dataset-and-dicom-store
@@ -82,6 +116,17 @@
   - ${_LOCATION}
   - ${_DATASET}
   - ${_STORE_NAME}
+  waitFor: ['-']
+
+# create storage if not exists, re-create bucket (delete if exists, then create)
+- name: ${_CLOUD_SDK_IMAGE}
+  id: setup-backup-bucket
+  args:
+  - bash
+  - integration_test/scripts/setup-backup-bucket.sh
+  - ${_PROJECT}
+  - ${_LOCATION}
+  - ${_BUCKET}
   waitFor: ['-']
 
 # busybox is a compact utility image
@@ -111,6 +156,35 @@
   - build-tools
   - adapter-build
   - setup-dataset-and-dicom-store
+
+# busybox is a compact utility image
+- name: 'busybox:latest'
+  id: wait-for-adapter-with-local-backup
+  args:
+  - ash
+  - integration_test/scripts/wait-for-port.sh
+  - ${_ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP}
+  - ${_ADAPTER_PORT_WITH_LOCAL_BACKUP}
+  timeout: 300s
+  waitFor:
+  - build-tools
+  - adapter-build
+  - setup-dataset-and-dicom-store
+
+  # busybox is a compact utility image
+- name: 'busybox:latest'
+  id: wait-for-adapter-with-gcs-backup
+  args:
+  - ash
+  - integration_test/scripts/wait-for-port.sh
+  - ${_ADAPTER_RUN_STEP_WITH_GCS_BACKUP}
+  - ${_ADAPTER_PORT_WITH_GCS_BACKUP}
+  timeout: 300s
+  waitFor:
+  - build-tools
+  - adapter-build
+  - setup-dataset-and-dicom-store
+  - setup-backup-bucket
 
 - name: 'busybox:latest'
   id: wait-for-storescp
@@ -152,6 +226,36 @@
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter-http2
+
+- name: ${_MAVEN_IMAGE}
+  id: run-store-scu-with-local-backup
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP}:${_ADAPTER_PORT_WITH_LOCAL_BACKUP} ../../../integration_test/data/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+  waitFor:
+  - wait-for-adapter-with-local-backup
+
+- name: ${_MAVEN_IMAGE}
+  id: run-store-scu-with-gcs-backup
+  volumes:
+  - name: 'vol1'
+    path: '/root/.m2'
+  args:
+  - mvn
+  - '-ntp'
+  - 'exec:java'
+  - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_WITH_GCS_BACKUP}:${_ADAPTER_PORT_WITH_GCS_BACKUP} ../../../integration_test/data/example.dcm'
+  dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
+  waitFor:
+  - wait-for-adapter-with-gcs-backup
 
 - name: ${_MAVEN_IMAGE}
   id: run-store-scu-destination-2
@@ -247,6 +351,8 @@
   waitFor:
   - run-store-scu
   - run-store-scu-destination-2
+  - run-store-scu-with-local-backup
+  - run-store-scu-with-gcs-backup
   - run-find-scu-instance
   - run-find-scu-series
   - run-find-scu-study
@@ -263,6 +369,8 @@
   waitFor:
   - run-store-scu
   - run-store-scu-destination-2
+  - run-store-scu-with-local-backup
+  - run-store-scu-with-gcs-backup
   - run-find-scu-instance
   - run-find-scu-series
   - run-find-scu-study
@@ -298,7 +406,6 @@
   - 'integration_test/data/example-redacted-jp2k.dcm'
   waitFor:
   - check-store-curl
-
 - name: ${_CLOUD_SDK_IMAGE}
   id: check-store-curl-destination-2
   args:
@@ -408,9 +515,17 @@
   - delete-dicom-store
 
 - name: ${_CLOUD_SDK_IMAGE}
+  id: delete-backup-bucket
+  args:
+  - gsutil
+  - rm
+  - "-r"
+  - "gs://${_BUCKET}"
+
+- name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
   args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "${REPO_NAME}" , "${_ACCESS_TOKEN_BASE64}", "${PROJECT_ID}", "${_KMS_LOCATION}", "${_KMS_KEYRING}", "${_KMS_KEY}" ]
-  waitFor: ['delete-dicom-store-destination-2']
+  waitFor: ['delete-dicom-store-destination-2', 'delete-backup-bucket']
 
 timeout: 1800s
 substitutions:
@@ -420,6 +535,7 @@ substitutions:
   _LOCATION: us-central1
   _DATASET: healthcare-dicom-dicomweb-adapter-test
   _STORE_NAME: integration-test-store
+  _BUCKET: healthcare-dicom-dicomweb-adapter-integration-test
   _ADAPTER_PORT: '2575'
   _STORE_SCP_PORT: '2576'
   _ADAPTER_PORT_HTTP2: '2577'
@@ -433,6 +549,8 @@ substitutions:
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
   _ADAPTER_RUN_STEP_HTTP2: 'step_6'
+  _ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP: 'step_33'
+  _ADAPTER_RUN_STEP_WITH_GCS_BACKUP: 'step_34'
   _STORE_SCP_RUN_STEP: 'step_3'
   _COMMITMENT_SCU_STEP: 'step_18'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
