@@ -1,7 +1,7 @@
 x-google-marketplace:
   schemaVersion: v2
   applicationApiVersion: v1beta1
-  publishedVersion: "0.2.10"
+  publishedVersion: "0.2.14"
   publishedVersionMetadata:
     releaseNote: >-
       A first release.
@@ -30,7 +30,7 @@ properties:
   
   lb.internal:
     type: boolean
-    title: "disable external access"
+    title: "Disable external access"
     description: >-
       Set to true for internal access in the same VPC network only. Choose false
       to expose the adapter to an external IP address.
@@ -55,7 +55,7 @@ properties:
       - both
   import.dicomweb_address:
     type: string
-    title: "importer - dicom web address"
+    title: "importer - Dicom web address"
     description: >- 
       Address for DicomWeb service. Must be a full path up to /dicomWeb if 
       the Cloud Healthcare API is used. e.g. 
@@ -66,13 +66,13 @@ properties:
     description: Title of DIMSE Application Entity
   import.redact_remove_list:
     type: string
-    title: "importer - redact remove list (Optional)"
+    title: "importer - Redact remove list (Optional)"
     description:  >-
       (Optional - Redactor) Tags to remove during C-STORE upload, comma 
       separated. Only one of 'redact' flags may be present.
   import.redact_keep_list:
     type: string
-    title: "importer - redact keep list (Optional)"
+    title: "importer - Redact keep list (Optional)"
     description:  >-
       (Optional - Redactor) Tags to keep during C-STORE upload, comma separated.
       Only one of 'redact' flags may be present.
@@ -93,58 +93,64 @@ properties:
       https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter#import-adapter
   import.destination_config_inline:
     type: string
-    title: "importer - destination config inline (Optional)"
+    title: "importer - Destination config inline (Optional)"
     description:  >-
       (Optional) Json array containing destination definitions 
       (filter/dicomweb_destination per element).
   import.store_compress_to_transfer_syntax:
     type: string
-    title: "importer - store compress to transfer syntax (Optional)"
+    title: "importer - Store compress to transfer syntax (Optional)"
     description:  >-
       (Optional) Transfer Syntax to convert instances to during C-STORE 
       upload. See Readme for list of supported syntaxes.
   import.monitoring_project_id:
       type: string
-      title: "importer - monitoring project id (Optional)"
+      title: "importer - Monitoring project id (Optional)"
       description: >-
         (Optional) Stackdriver monitoring project id, must be the same as the 
         project id in which the adapter is running.
+  import.custom_flags:
+      type: string
+      title: "Extra import adapter flag (Optional)"
+      description: >-
+        (Optional) Addtional flag for import adapter.
+        e.g. "--flag_a=valueA"
 
   export.peer_dimse_aet:
     type: string
-    title: "exporter - peer DIMSE aet"
+    title: "exporter - Peer DIMSE aet"
     description: (CStore) Application Entity Title of DIMSE peer.
   export.peer_dimse_ip:
     type: string
-    title: "exporter - peer DIMSE IP"
+    title: "exporter - Peer DIMSE IP"
     description: (CStore) IP of DIMSE peer.
   export.peer_dimse_port:
     type: integer
-    title: "exporter - peer DIMSE port"
+    title: "exporter - Peer DIMSE port"
     description: (CStore) Port of DIMSE peer.
   export.project_id:
     type: string
-    title: "exporter - pubsub project id"
+    title: "exporter - Pubsub project id"
     description:  >-
       Pubsub project id, must be the same as the project id in which the adapter is running.
   export.subscription_id:
     type: string
-    title: "exporter - pubsub subscription id"
+    title: "exporter - Pubsub subscription id"
     description: The pubsub subscription id
   export.dicomweb_addr:
     type: string
-    title: "exporter - dicom web address"
+    title: "exporter - Dicom web address"
     description: >-
       Address for DicomWeb service that sources the DICOM. e.g. 
       https://healthcare.googleapis.com/v1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
   export.oauth_scopes:
     type: string
-    title: "exporter - oauth scopes"
+    title: "exporter - Oauth scopes"
     description: Comma seperated OAuth scopes used by adapter.
     default: "https://www.googleapis.com/auth/pubsub"
   export.peer_dicomweb_address:
     type: string
-    title: "exporter - peer dicomweb address"
+    title: "exporter - Peer dicomweb address"
     description:  >-
       (StowRs) Address of peer DicomWeb API serving STOW-RS. Must be a full path up 
       to /dicomWeb if the Cloud Healthcare API is used. e.g. 
@@ -160,10 +166,16 @@ properties:
     - false
   export.monitoring_project_id:
     type: string
-    title: "exporter - monitoring project id (Optional)"
+    title: "exporter - Monitoring project id (Optional)"
     description:  >-
       (Optional) Stackdriver monitoring project id, must be the same as the project 
       id in which the adapter is running.
+  export.custom_flags:
+      type: string
+      title: "Extra export adapter flag (Optional)"
+      description: >-
+        (Optional) Addtional flag for export adapter.
+        e.g. "--flag_a=valueA"
 
 required:
 - name

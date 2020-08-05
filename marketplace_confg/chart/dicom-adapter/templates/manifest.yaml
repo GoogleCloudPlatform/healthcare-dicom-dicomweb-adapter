@@ -45,6 +45,9 @@ spec:
             {{- if .Values.import.store_compress_to_transfer_syntax }}
             - "--store_compress_to_transfer_syntax={{ .Values.import.store_compress_to_transfer_syntax }}"
             {{- end }}
+            {{- if .Values.import.custom_flags }}
+            - "{{ .Values.import.custom_flags }}"
+            {{- end }}
             {{- if .Values.import.monitoring_project_id }}
             - "--monitoring_project_id={{ .Values.import.monitoring_project_id }}"
           env:
@@ -91,6 +94,9 @@ spec:
             {{- end }}
             {{- if .Values.export.use_gcp_application_default_credentials }}
             - "--use_gcp_application_default_credentials"
+            {{- end }}
+            {{- if .Values.export.custom_flags }}
+            - "{{ .Values.export.custom_flags }}"
             {{- end }}
             {{- if .Values.export.monitoring_project_id }}
             - "--monitoring_project_id={{ .Values.export.monitoring_project_id }}"
