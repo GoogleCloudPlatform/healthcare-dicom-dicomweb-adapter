@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,7 @@ public class BackupUploadService implements IBackupUploadService {
     return backupUploader.doReadBackup(uniqueFileName);
   }
 
-  @Override // todo: guard code from second method call
+  @Override
   public void startUploading(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
     scheduleUploadWithDelay(webClient, backupState);
   }
@@ -107,7 +106,7 @@ public class BackupUploadService implements IBackupUploadService {
   private void scheduleUploadWithDelayExceptionally(IDicomWebClient webClient, BackupState backupState) {
     try {
       scheduleUploadWithDelay(webClient, backupState);
-      } catch (IBackupUploader.BackupException ex) {
+    } catch (IBackupUploader.BackupException ex) {
       throw new CompletionException(ex);
     }
   }

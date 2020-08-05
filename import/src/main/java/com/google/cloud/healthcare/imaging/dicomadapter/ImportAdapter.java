@@ -113,7 +113,6 @@ public class ImportAdapter {
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
-    // backup upload service
     IBackupUploadService backupUploadService = configureBackupUploadService(flags);
 
     DicomRedactor redactor = configureRedactor(flags);
@@ -142,7 +141,7 @@ public class ImportAdapter {
     device.bindConnections();
   }
 
-  private static IBackupUploadService configureBackupUploadService(Flags flags) {
+  private static IBackupUploadService configureBackupUploadService(Flags flags) throws IOException {
     String uploadPath = flags.persistentFileStorageLocation;
     int uploadRetryAmount = flags.persistentFileUploadRetryAmount;
     int minUploadDelay = flags.minUploadDelay;
