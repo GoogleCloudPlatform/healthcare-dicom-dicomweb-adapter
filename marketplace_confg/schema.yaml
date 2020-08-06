@@ -45,9 +45,11 @@ properties:
       description: >-
         Choose adapter components to deploy.
         for details on importer:
-        https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter#import-adapter,
+        https://github.com/GoogleCloudPlatform/
+        healthcare-dicom-dicomweb-adapter#import-adapter,
         for details on exporter:
-        https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter#export-adapter
+        https://github.com/GoogleCloudPlatform/
+        healthcare-dicom-dicomweb-adapter#export-adapter
       default: import adapter
       enum:
       - import adapter
@@ -59,7 +61,8 @@ properties:
     description: >- 
       Address for DicomWeb service. Must be a full path up to /dicomWeb if 
       the Cloud Healthcare API is used. e.g. 
-      https://healthcare.googleapis.com/v1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
+      https://healthcare.googleapis.com/v1/projects/myproject/locations/
+      us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
   import.dimse_aet:
     type: string
     title: "importer - DIMSE aet"
@@ -88,7 +91,8 @@ properties:
     title: "importer - Inline aet dictionary (Optional)"
     description:  >-
       (Optional - C-MOVE) Json array containing aet definitions (name/host/port per element).
-      e.g. [{"name":"DEVICE_A","host":"localhost","port":11113},{"name":"DEVICE_B","host":"192.168.0.1","port": 11114},...]
+      e.g. [{"name":"DEVICE_A","host":"localhost","port":11113},
+      {"name":"DEVICE_B","host":"192.168.0.1","port": 11114},...]
       For details, go to:
       https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter#import-adapter
   import.destination_config_inline:
@@ -142,7 +146,8 @@ properties:
     title: "exporter - Dicom web address"
     description: >-
       Address for DicomWeb service that sources the DICOM. e.g. 
-      https://healthcare.googleapis.com/v1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
+      https://healthcare.googleapis.com/v1/projects/myproject/locations/
+      us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
   export.oauth_scopes:
     type: string
     title: "exporter - Oauth scopes"
@@ -154,7 +159,8 @@ properties:
     description:  >-
       (StowRs) Address of peer DicomWeb API serving STOW-RS. Must be a full path up 
       to /dicomWeb if the Cloud Healthcare API is used. e.g. 
-      https://healthcare.googleapis.com/v1/projects/myproject/locations/us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
+      https://healthcare.googleapis.com/v1/projects/myproject/locations/
+      us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
   export.use_gcp_application_default_credentials:
     type: boolean
     title: "exporter - Enable gcp application default credentials"

@@ -8,7 +8,7 @@ metadata:
   annotations:
     kubernetes-engine.cloud.google.com/icon: >-
       data:image/png;base64,{{ .Files.Get "logo.png" | b64enc }}
-    marketplace.cloud.google.com/deploy-info: '{"partner_id": "hcls-dicom-adapter-ctd-public", "product_id": "dicom-adapter", "partner_name": "hcls-dicom-adapter-ctd-public"}'
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "", "product_id": "", "partner_name": ""}'
 spec:
   selector:
     matchLabels:
