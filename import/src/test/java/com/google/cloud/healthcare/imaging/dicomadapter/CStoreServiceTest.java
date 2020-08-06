@@ -329,7 +329,8 @@ public final class CStoreServiceTest {
         spyStowClient);
 
     verify(mockBackupUploader, never()).doReadBackup(anyString());
-    verify(spyStowClient).stowRs(argThat(is -> equalInputStreamAvailableBytes(is, 0)));
+    verify(spyStowClient).stowRs(any(InputStream.class));
+    verify(mockBackupUploader, never()).doRemoveBackup(anyString());
   }
 
   @Test
@@ -341,13 +342,6 @@ public final class CStoreServiceTest {
         HttpStatusCodes.STATUS_CODE_OK));
 
     final InputStream INPUT_STREAM = new ByteArrayInputStream(new byte []{1,2,3,4});
-
-    doAnswer(invocation -> {
-      Object[] args = invocation.getArguments();
-      assertThat(equalInputStreamAvailableBytes(((InputStream)args[0]), 4)).isTrue(); //count available IS bytes before callRealMethod
-      invocation.callRealMethod(); // where bytes is readed
-      return null;
-    }).when(spyStowClient).stowRs(any(InputStream.class));
 
     when(mockBackupUploader.doReadBackup(SOP_INSTANCE_UID)).thenReturn(INPUT_STREAM);
 
@@ -362,24 +356,6 @@ public final class CStoreServiceTest {
     verify(mockBackupUploader, times(1)).doReadBackup(eq(SOP_INSTANCE_UID));
     verify(spyStowClient, times(1)).stowRs(any(InputStream.class));
     verify(mockBackupUploader, times(1)).doRemoveBackup(eq(SOP_INSTANCE_UID));
-  }
-
-  private boolean equalInputStreamAvailableBytes(InputStream is, int expectedByteAmount) {
-    try {
-      int attempts = 3;
-      while (attempts > 0) {
-        if (is.available() == expectedByteAmount) {
-          return true;
-        } else {
-          attempts--;
-          Thread.sleep(5);
-        }
-      }
-      return false;
-    } catch (IOException | InterruptedException e) {
-      e.printStackTrace();
-    }
-    return false;
   }
 
   private void basicCStoreServiceTest(
