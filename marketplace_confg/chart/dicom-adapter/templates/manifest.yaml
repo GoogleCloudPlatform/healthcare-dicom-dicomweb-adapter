@@ -16,6 +16,7 @@ spec:
       labels: *DicomDeploymentLabels
     spec:
       containers:
+        {{- if or (eq .Values.import.deployment_type "import adapter") (eq .Values.import.deployment_type "both")}}
         - name: dicom-import-adapter
           image: "{{ .Values.import.image.repo }}:{{ .Values.import.image.tag }}"
           ports:
@@ -44,6 +45,9 @@ spec:
             {{- if .Values.import.store_compress_to_transfer_syntax }}
             - "--store_compress_to_transfer_syntax={{ .Values.import.store_compress_to_transfer_syntax }}"
             {{- end }}
+            {{- if .Values.import.custom_flags }}
+            - "{{ .Values.import.custom_flags }}"
+            {{- end }}
             {{- if .Values.import.monitoring_project_id }}
             - "--monitoring_project_id={{ .Values.import.monitoring_project_id }}"
           env:
@@ -58,7 +62,9 @@ spec:
             - name: ENV_CONTAINER_NAME
               value: dicom-import-adapter
             {{- end }}
-        {{- if .Values.export.hasexporter }}
+        {{- end }}
+        
+        {{- if or (eq .Values.import.deployment_type "export adapter") (eq .Values.import.deployment_type "both")}}
         - name: dicom-export-adapter
           image: "{{ .Values.export.image.repo }}:{{ .Values.export.image.tag }}"
           args:
@@ -88,6 +94,9 @@ spec:
             {{- end }}
             {{- if .Values.export.use_gcp_application_default_credentials }}
             - "--use_gcp_application_default_credentials"
+            {{- end }}
+            {{- if .Values.export.custom_flags }}
+            - "{{ .Values.export.custom_flags }}"
             {{- end }}
             {{- if .Values.export.monitoring_project_id }}
             - "--monitoring_project_id={{ .Values.export.monitoring_project_id }}"
