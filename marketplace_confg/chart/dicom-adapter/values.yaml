@@ -2,7 +2,7 @@ import:
   image:
     repo: null
     tag: null
-  deploymeny_type: null
+  deployment_type: null
   dimse_aet: null
   monitoring_project_id: null
   dicomweb_address: null

@@ -145,9 +145,8 @@ properties:
     type: string
     title: "exporter - Dicom web address"
     description: >-
-      Address for DicomWeb service that sources the DICOM. e.g. 
-      https://healthcare.googleapis.com/v1/projects/myproject/locations/
-      us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
+      Base api endpoint. e.g. 
+      https://healthcare.googleapis.com/v1
   export.oauth_scopes:
     type: string
     title: "exporter - Oauth scopes"
