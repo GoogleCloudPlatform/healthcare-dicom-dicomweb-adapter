@@ -18,6 +18,7 @@ Table of Contents
       * [Deployment using Data Protection Toolkit](#deployment-using-data-protection-toolkit)
       * [Building from source](#building-from-source)
          * [Building and publishing Docker Images](#building-and-publishing-docker-images)
+      * [Backup and retry upload](#backup-and-retry-upload)
       * [Wiki](#wiki)
 
 ## Import Adapter
@@ -286,6 +287,36 @@ TAG=gcr.io/${PROJECT}/dicom-export-adapter
 gradle dockerBuildImage -Pdocker_tag=${TAG}
 docker push ${TAG}
 ```
+## Backup and retry upload
+In C-STORE to STOW-RS mode, the Import Adapter can use additional flags to improve the reliability of file uploading. Before uploading a file to the dicomweb endpoint, the file is saved to temporary storage from which the Import Adapter tries to upload the file the specified number of times. The file can be saved locally or loaded into a GCS bucket.
+After a successful upload, the temporary file will be deleted. Also, the user can independently configure a TTL to automatically delete files from GCS.
+
+The following arguments are used to configure the mode:
+* --persistent_file_storage_location: temporary location for storing files before send.
+* --persistent_file_upload_retry_amount: upload retry amount.
+* --min_upload_delay: minimum delay before upload backup file (ms) (default 100ms).
+* --max_waiting_time_between_uploads: maximum waiting time between uploads (ms) (default 5000ms).
+
+If the flag --persistent_file_storage_location is not used then loading occurs without writing a temporary file.
+
+if the value for the flag --persistent_file_storage_location is specified in the format gs://project-id/bucket-id/some-object,
+ the file will be written to the specified project bucket. It is also necessary to set the system variable [GOOGLE_APPLICATION_CREDENTIALS](https://cloud.google.com/healthcare/docs/how-tos/authentication#setting_the_environment_variables) = path_to_file_with_json_data.
+
+If you are using Kubernetes, then in the file `dicom_adapter.yaml` change the arguments in the file as follows:
+
+```yaml
+          args:
+            - "--persistent_file_storage_location=/tmp/backupfile"
+            - "--persistent_file_upload_retry_amount=5"
+            - "--min_upload_delay=100"
+            - "--max_waiting_time_between_uploads=5000"
+```
+
+if you are using import adapter locally: 
+```shell
+gradle run -Dexec.args="--dimse_aet=IMPORTADAPTER --dimse_port=4008 --dicomweb_address=http://localhost:80 --persistent_file_storage_location=/tmp/backupfile --persistent_file_upload_retry_amount=5 --min_upload_delay=100 --max_waiting_time_between_uploads=5000"
+```
+
 ## Wiki
 
 For addition documentation please check out the [Wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki).

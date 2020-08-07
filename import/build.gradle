@@ -77,6 +77,7 @@ dependencies {
     compile "com.github.red1408:deid-redactor:233908ca"
 
     testCompile "com.google.truth:truth:1.0"
+    testCompile "org.mockito:mockito-core:3.+"
     testCompile "junit:junit:4.2"
     testCompile project(path: ":dicom_util", configuration: 'testArtifacts')
     testCompile project(path: ":util", configuration: 'testArtifacts')

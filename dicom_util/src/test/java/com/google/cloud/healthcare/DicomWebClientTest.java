@@ -104,7 +104,7 @@ public final class DicomWebClientTest {
     ByteBuffer lastItem;
 
     @Override
-    public boolean content​(ByteBuffer item, boolean last) {
+    public boolean content(ByteBuffer item, boolean last) {
       lastItem = item;
 
       // Returning true seems to trigger early abort of the parser.

@@ -149,6 +149,30 @@ public class Flags {
   )
   Boolean fuzzyMatching = false;
 
+  @Parameter(
+          names = {"--persistent_file_storage_location"},
+          description = "temporary location for storing files before send"
+  )
+  String persistentFileStorageLocation = "";
+
+  @Parameter(
+          names = {"--persistent_file_upload_retry_amount"},
+          description = "upload retry amount"
+  )
+  Integer persistentFileUploadRetryAmount = 1;
+
+  @Parameter(
+          names = {"--min_upload_delay"},
+          description = "minimum delay before upload backup file (ms)"
+  )
+  Integer minUploadDelay = 100;
+
+  @Parameter(
+          names = {"--max_waiting_time_between_uploads"},
+          description = "maximum waiting time between uploads (ms)"
+  )
+  Integer maxWaitingTimeBetweenUploads = 5000;
+
   public Flags() {
   }
 }
