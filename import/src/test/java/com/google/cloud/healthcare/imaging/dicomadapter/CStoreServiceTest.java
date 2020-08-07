@@ -14,17 +14,14 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,11 +54,16 @@ import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
 import org.dcm4che3.util.TagUtils;
+import org.eclipse.jetty.http.HttpStatus;
 import org.json.JSONArray;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class CStoreServiceTest {
@@ -70,6 +72,15 @@ public final class CStoreServiceTest {
   private static String serverAET = "SERVER";
   private static String serverHostname = "localhost";
   private static String SOP_INSTANCE_UID = "1.0.0.0";
+
+  @Rule
+  public MockitoRule rule = MockitoJUnit.rule();
+
+  @Mock
+  IBackupUploader mockBackupUploader;
+
+  @Mock
+  DelayCalculator mockDelayCalculator;
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -123,6 +134,8 @@ public final class CStoreServiceTest {
     clientAE.addConnection(conn);
     device.setExecutor(Executors.newSingleThreadExecutor());
     device.setScheduledExecutor(Executors.newSingleThreadScheduledExecutor());
+
+    when(mockBackupUploader.doReadBackup(SOP_INSTANCE_UID)).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
   }
 
   @Test
@@ -311,9 +324,7 @@ public final class CStoreServiceTest {
   }
 
   @Test
-  public void testBackupUploadService_ExceptionOnWriteToBackup_bytesToStowRsNotAvailable() throws Exception {
-    IBackupUploader mockBackupUploader = mock(IBackupUploader.class);
-    DelayCalculator mockDelayCalculator = mock(DelayCalculator.class);
+  public void testBackupUploadService_ExceptionOnWriteToBackup() throws Exception {
     MockStowClient spyStowClient = spy(new MockStowClient(
         false,
         HttpStatusCodes.STATUS_CODE_OK));
@@ -334,16 +345,58 @@ public final class CStoreServiceTest {
   }
 
   @Test
+  public void testBackupUploadService_httpCode409_failed() throws Exception {
+    MockStowClient spyStowClient = spy(new MockStowClient(
+        false,
+        HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
+
+    when(mockBackupUploader.doReadBackup(anyString())).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
+    doThrow(new IDicomWebClient.DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, Status.ProcessingFailure))
+        .when(spyStowClient).stowRs(any(InputStream.class));
+
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+
+    basicCStoreServiceTest(
+        Status.ProcessingFailure,
+        backupUploadService,
+        spyStowClient);
+
+    verify(mockBackupUploader, times(1)).doWriteBackup(any(InputStream.class), anyString());
+    verify(mockBackupUploader, times(1)).doReadBackup(anyString());
+    verify(spyStowClient).stowRs(any(InputStream.class));
+    verify(mockBackupUploader, times(1)).doRemoveBackup(anyString());
+  }
+
+  @Test
+  public void testBackupUploadService_httpCode500Then502_ThirdTrySuccess() throws Exception {
+    MockStowClient spyStowClient = spy(new MockStowClient(
+        false,
+        HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
+
+    when(mockDelayCalculator.getAttemptsAmount()).thenReturn(3);
+    doThrow(new IDicomWebClient.DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
+        .doThrow(new IDicomWebClient.DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
+        .doNothing()
+        .when(spyStowClient).stowRs(any(InputStream.class));
+
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+
+    basicCStoreServiceTest(
+        Status.Success,
+        backupUploadService,
+        spyStowClient);
+
+    verify(mockBackupUploader, timeout(100).times(1)).doWriteBackup(any(InputStream.class), anyString());
+    verify(mockBackupUploader, timeout(100).times(3)).doReadBackup(anyString());
+    verify(spyStowClient, timeout(100).times(3)).stowRs(any(InputStream.class));
+    verify(mockBackupUploader, timeout(100).times(1)).doRemoveBackup(anyString());
+  }
+
+  @Test
   public void testBackupUploadService_backupWriteAndReadSuccess() throws Exception {
-    IBackupUploader mockBackupUploader = mock(IBackupUploader.class);
-    DelayCalculator mockDelayCalculator = mock(DelayCalculator.class);
     MockStowClient spyStowClient = spy(new MockStowClient(
         false,
         HttpStatusCodes.STATUS_CODE_OK));
-
-    final InputStream INPUT_STREAM = new ByteArrayInputStream(new byte []{1,2,3,4});
-
-    when(mockBackupUploader.doReadBackup(SOP_INSTANCE_UID)).thenReturn(INPUT_STREAM);
 
     BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
 

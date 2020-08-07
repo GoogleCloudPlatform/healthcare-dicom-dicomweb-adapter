@@ -160,16 +160,14 @@ public class CStoreService extends BasicCStoreSCP {
         IBackupUploadService.filterHttpCode500Plus(dwe.getHttpStatus(), log);
         boolean httpStatus409 = IBackupUploadService.filterHttpCode409(dwe.getHttpStatus(), log);
 
-        if (backupUploadService != null) {
+        if (backupUploadService != null
+            && httpStatus409 == false
+            && backupState.get().getAttemptsCountdown() > 0) {
           firstUploadedAttemptFailed = true;
-          if (httpStatus409 == false) {
-            if (backupState.get().getAttemptsCountdown() > 0) {
-              log.error("C-STORE request failed. Trying to resend...", dwe);
-              resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
-              updateResponseToSuccess(response, uploadedBytesCount);
-              return;
-            }
-          }
+          log.error("C-STORE request failed. Trying to resend...", dwe);
+          resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
+          updateResponseToSuccess(response, uploadedBytesCount);
+          return;
         }
         reportError(dwe);
         throw new DicomServiceException(dwe.getStatus(), dwe);

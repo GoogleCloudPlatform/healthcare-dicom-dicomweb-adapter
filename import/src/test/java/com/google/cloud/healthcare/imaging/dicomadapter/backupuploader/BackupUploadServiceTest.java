@@ -15,8 +15,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
+import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -191,5 +193,43 @@ public class BackupUploadServiceTest {
     verify(backupUploaderMock, times(1)).doReadBackup(eq(UNIQUE_FILE_NAME));
     verify(webClientMock, times(1)).stowRs(any(InputStream.class));
     verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+  }
+
+  @Test
+  public void startUploading_DicomWebException409Code_failed() throws DicomWebException, IOException {
+    doThrow(new DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, HttpStatusCodes.STATUS_CODE_BAD_REQUEST))
+        .when(webClientMock).stowRs(any(InputStream.class));
+    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
+    when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
+
+    exceptionRule.expect(BackupException.class);
+    exceptionRule.expectMessage("Failed on httpStatus=409; sopInstanceUID=" + UNIQUE_FILE_NAME);
+
+    backupUploadService.startUploading(webClientMock, spyBackupState);
+
+    verify(backupUploaderMock, times(2)).doWriteBackup(any(InputStream.class), eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
+    verify(webClientMock, times(2)).stowRs(any(InputStream.class));
+    verify(backupUploaderMock, times(1)).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+  }
+
+  @Test
+  public void startUploading_DicomWebException500CodeThen501Code_noMoreTry_BackupException() throws IOException, DicomWebException {
+      doThrow(new DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
+        .doThrow(new DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
+        .doNothing()
+            .when(webClientMock).stowRs(any(InputStream.class));
+    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
+    when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
+
+    exceptionRule.expect(BackupException.class);
+    exceptionRule.expectMessage("sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.");
+
+    backupUploadService.startUploading(webClientMock, spyBackupState);
+
+    verify(backupUploaderMock, times(3)).doWriteBackup(any(InputStream.class), eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock, times(3)).doReadBackup(eq(UNIQUE_FILE_NAME));
+    verify(webClientMock, times(3)).stowRs(any(InputStream.class));
+    verify(backupUploaderMock, times(1)).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 }

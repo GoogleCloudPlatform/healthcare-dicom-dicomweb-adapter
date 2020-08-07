@@ -28,7 +28,7 @@ public interface IBackupUploadService {
   }
 
   static boolean filterHttpCode500Plus(int actualHttpStatus, Logger log) {
-    boolean httpStatusMoreThan500 = actualHttpStatus > HttpStatus.INTERNAL_SERVER_ERROR_500;
+    boolean httpStatusMoreThan500 = actualHttpStatus >= HttpStatus.INTERNAL_SERVER_ERROR_500;
     if (httpStatusMoreThan500) {
       MonitoringService.addEvent(Event.CSTORE_5xx_ERROR);
       log.error("C-STORE request failed. Got http error with status 5xx.");
