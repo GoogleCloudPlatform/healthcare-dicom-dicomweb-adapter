@@ -27,20 +27,18 @@ public class GcpBackupUploaderTest {
 
     private static final String UNIQUE_FILE_NAME_1 = "uniq1";
     private static final String UNIQUE_FILE_NAME_2 = "uniq2";
-    private static final String NOT_EXISTS_UPLOAD_PATH = "gs://dev-idg-uvs/testing-healthcare-adapter/some-backup";
+    private static final String NOT_EXISTS_UPLOAD_PATH = "gs://testing-healthcare-adapter/some-backup";
     private static final String UNIQ_NAME = "uniq";
     private static final String UNIQ_NAME_REMOVE = "uniq_remove";
     private static final String ENV_CREDS = "GOOGLE_APPLICATION_CREDENTIALS";
     private static final String AUTH_TYPE = "OAuth2";
-    private static final String NOT_EXISTS_ENV = "SOME_ENV";
-    private static final String INVALID_ENV = "USER";
-    private static final String UPLOAD_PATH = "gs://dev-idg-uvs/testing-healthcare-adapter/test-backup";
-    private static final String UPLOAD_PATH_EMPTY_PROGECT_NAME = "gs:/// ";
-    private static final String UPLOAD_PATH_SPACE_PROGECT_NAME = "gs:// / ";
-    private static final String UPLOAD_PATH_EMPTY_BUCKET_NAME = "gs:///some// ";
-    private static final String UPLOAD_PATH_SPACE_BUCKET_NAME = "gs://some/ / ";
-    private static final String UPLOAD_PATH_EMPTY_UPLOAD_OBJECT = "gs:///some/some//";
-    private static final String UPLOAD_PATH_SPACE_UPLOAD_OBJECT = "gs://some/some/ ";
+    private static final String UPLOAD_PATH = "gs://testing-healthcare-adapter/test-backup";
+    private static final String GCP_PROJECT_ID = "dev-idg-uvs";
+    private static final String OAUTHSCOPES = "https://www.googleapis.com/auth/cloud-healthcare";
+    private static final String UPLOAD_PATH_EMPTY_BUCKET_NAME = "gs:/// ";
+    private static final String UPLOAD_PATH_SPACE_BUCKET_NAME = "gs:// / ";
+    private static final String UPLOAD_PATH_EMPTY_UPLOAD_OBJECT = "gs:///some//";
+    private static final String UPLOAD_PATH_SPACE_UPLOAD_OBJECT = "gs://some/ ";
     private static final String PROJECT_NAME = "dev-idg-uvs";
     private static final String BUCKET_NAME = "testing-healthcare-adapter";
     private static final String UPLOAD_OBJECT = "test-backup";
@@ -83,7 +81,7 @@ public class GcpBackupUploaderTest {
     public void parseUri() throws IOException {
         gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, localStorage);
 
-        assertThat(gcpBackupUploader.getProjectName()).isEqualTo(PROJECT_NAME);
+        assertThat(gcpBackupUploader.getProjectId()).isEqualTo(PROJECT_NAME);
         assertThat(gcpBackupUploader.getBucketName()).isEqualTo(BUCKET_NAME);
         assertThat(gcpBackupUploader.getUploadObject()).isEqualTo(UPLOAD_OBJECT);
     }
@@ -102,22 +100,6 @@ public class GcpBackupUploaderTest {
         exceptionRule.expectMessage("Invalid upload path");
 
         new GcpBackupUploader(" ", localStorage);
-    }
-
-    @Test
-    public void parseUri_Failed_OnInvalidProjectName() throws IOException {
-        exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
-        exceptionRule.expectMessage("Invalid upload path");
-
-        new GcpBackupUploader(UPLOAD_PATH_EMPTY_PROGECT_NAME, localStorage);
-    }
-
-    @Test
-    public void parseUri_Failed_OnSpaceProjectName() throws IOException {
-        exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
-        exceptionRule.expectMessage("Invalid upload path");
-
-        new GcpBackupUploader(UPLOAD_PATH_SPACE_PROGECT_NAME, localStorage);
     }
 
     @Test
@@ -154,8 +136,8 @@ public class GcpBackupUploaderTest {
 
     @Test
     public void getCredential() throws IOException {
-        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH);
-        Credentials creds = gcpBackupUploader.getCredential(ENV_CREDS);
+        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, OAUTHSCOPES);
+        Credentials creds = gcpBackupUploader.getCredential(OAUTHSCOPES);
 
         assertThat(creds).isInstanceOf(Credentials.class);
         assertThat(creds).isNotNull();
@@ -164,24 +146,14 @@ public class GcpBackupUploaderTest {
 
     @Test
     public void getCredential_Failed_OnEmptyEnv() throws IOException {
-        exceptionRule.expect(NullPointerException.class);
+        exceptionRule.expect(IBackupUploader.BackupException.class);
+        exceptionRule.expectMessage("oauthScopes is blank");
         gcpBackupUploader.getCredential("");
     }
 
     @Test
-    public void getCredential_Failed_OnNotExistsEnv() throws IOException {
-        exceptionRule.expect(NullPointerException.class);
-        gcpBackupUploader.getCredential(NOT_EXISTS_ENV);
-    }
-
-    @Test
-    public void getCredential_Failed_OnInvalidEnv() throws IOException {
-        exceptionRule.expect(NullPointerException.class);
-        gcpBackupUploader.getCredential(INVALID_ENV);
-    }
-
-    @Test
     public void readWriteAndRemoveDifferentFiles() throws IOException {
+        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, localStorage);
         gcpBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_1), UNIQUE_FILE_NAME_1);
         gcpBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_2), UNIQUE_FILE_NAME_2);
         InputStream inputStream1 = gcpBackupUploader.doReadBackup(UNIQUE_FILE_NAME_1);

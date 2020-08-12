@@ -150,7 +150,7 @@ public class ImportAdapter {
     if (StringUtils.isNoneBlank(uploadPath)) {
       final IBackupUploader backupUploader;
       if (uploadPath.startsWith(GCP_PATH_PREFIX)) {
-        backupUploader = new GcpBackupUploader(uploadPath);
+        backupUploader = new GcpBackupUploader(uploadPath, flags.gcsBackupProjectId, flags.oauthScopes);
       } else {
         backupUploader = new LocalBackupUploader(uploadPath);
       }

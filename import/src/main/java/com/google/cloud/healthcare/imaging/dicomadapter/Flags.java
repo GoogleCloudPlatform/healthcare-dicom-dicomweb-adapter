@@ -156,6 +156,12 @@ public class Flags {
   String persistentFileStorageLocation = "";
 
   @Parameter(
+          names = {"--gcs_backup_project_id"},
+          description = "Google Cloud progect id"
+  )
+  String gcsBackupProjectId = "";
+
+  @Parameter(
           names = {"--persistent_file_upload_retry_amount"},
           description = "upload retry amount"
   )
