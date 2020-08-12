@@ -8,31 +8,33 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
-import java.util.List;
-import org.apache.http.client.utils.URIBuilder;
+import java.util.Arrays;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class GcpBackupUploader extends AbstractBackupUploader {
-  private String projectName;
+  private String projectId;
   private String bucketName;
   private String uploadObject;
   private Storage storage;
 
-  private static final String ENV_CREDS = "GOOGLE_APPLICATION_CREDENTIALS";
-
-  public GcpBackupUploader(String uploadFilePath) throws IOException {
-    super(uploadFilePath);
-    parseUploadFilePath(getUploadFilePath());
-    storage = getStorage();
-  }
+  private static final String GCP_PATH_PREFIX = "gs://";
 
   public GcpBackupUploader(String uploadFilePath, Storage storage) throws IOException {
     super(uploadFilePath);
+    this.projectId = storage.getOptions().getProjectId();
     parseUploadFilePath(getUploadFilePath());
     this.storage = storage;
+  }
+
+  public GcpBackupUploader(String uploadFilePath, String gcpProjectId, String oauthScopes) throws IOException {
+    super(uploadFilePath);
+    this.projectId = gcpProjectId;
+    parseUploadFilePath(getUploadFilePath());
+    storage = getStorage(oauthScopes);
   }
 
   @Override
@@ -75,14 +77,15 @@ public class GcpBackupUploader extends AbstractBackupUploader {
 
   private void parseUploadFilePath(String uploadFilePath) throws GcpUriParseException {
     try {
+      if (!uploadFilePath.startsWith(GCP_PATH_PREFIX)){
+        throw new GcpUriParseException("Not gcs link");
+      }
       validatePathParameter(uploadFilePath, "upload file path");
-      List<String> segments = new URIBuilder().setPath(getUploadFilePath()).getPathSegments();
-      projectName = segments.get(2);
-      bucketName = segments.get(3);
-      uploadObject = new URIBuilder()
-              .setPathSegments(segments.subList(4, segments.size()))
-              .getPath().substring(1);
-      validatePathParameter(projectName, "project name");
+      String route = uploadFilePath.replaceAll(GCP_PATH_PREFIX, "");
+      String[] ar = route.split("/");
+      bucketName = ar[0];
+      uploadObject = String.join("/", Arrays.copyOfRange(ar, 1, ar.length));
+      validatePathParameter(projectId, "project name");
       validatePathParameter(bucketName, "bucket name");
       validatePathParameter(uploadObject, "upload object");
     } catch (Exception e) {
@@ -90,8 +93,8 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     }
   }
 
-  public String getProjectName() {
-    return projectName;
+  public String getProjectId() {
+    return projectId;
   }
 
   public String getBucketName() {
@@ -102,19 +105,22 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     return uploadObject;
   }
 
-  public Credentials getCredential(String env) throws IOException {
-    return GoogleCredentials
-            .fromStream(new FileInputStream(System.getenv(env)));
+  public Credentials getCredential(String oauthScopes) throws IOException {
+    validatePathParameter(oauthScopes, "oauthScopes");
+    GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+    if (!StringUtils.isBlank(oauthScopes)) {
+      credentials = credentials.createScoped(Arrays.asList(oauthScopes.split(",")));
+    }
+    return credentials;
   }
 
   private String getFullUploadObject(String uniqueFileName) {
-    return new URIBuilder().setPathSegments(uploadObject, uniqueFileName)
-            .getPath().substring(1);
+    return uploadObject.concat("/").concat(uniqueFileName);
   }
 
-  private Storage getStorage() throws IOException {
-    return StorageOptions.newBuilder().setCredentials(getCredential(ENV_CREDS))
-            .setProjectId(projectName).build().getService();
+  private Storage getStorage(String oauthScopes) throws IOException {
+    return StorageOptions.newBuilder().setCredentials(getCredential(oauthScopes))
+            .setProjectId(projectId).build().getService();
   }
 
   class GcpUriParseException extends IOException {
