@@ -101,7 +101,7 @@
       --dimse_aet=IMPORTADAPTER \
       --dimse_port=${_ADAPTER_PORT_WITH_GCS_BACKUP} \
       --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
-      --persistent_file_storage_location=gs://${_PROJECT}/${_BUCKET}/backup \
+      --persistent_file_storage_location=gs://${_BUCKET}/backup \
       --persistent_file_upload_retry_amount=2 \
       --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
@@ -116,17 +116,6 @@
   - ${_LOCATION}
   - ${_DATASET}
   - ${_STORE_NAME}
-  waitFor: ['-']
-
-# create storage if not exists, re-create bucket (delete if exists, then create)
-- name: ${_CLOUD_SDK_IMAGE}
-  id: setup-backup-bucket
-  args:
-  - bash
-  - integration_test/scripts/setup-backup-bucket.sh
-  - ${_PROJECT}
-  - ${_LOCATION}
-  - ${_BUCKET}
   waitFor: ['-']
 
 # busybox is a compact utility image
@@ -184,7 +173,6 @@
   - build-tools
   - adapter-build
   - setup-dataset-and-dicom-store
-  - setup-backup-bucket
 
 - name: 'busybox:latest'
   id: wait-for-storescp
@@ -515,17 +503,9 @@
   - delete-dicom-store
 
 - name: ${_CLOUD_SDK_IMAGE}
-  id: delete-backup-bucket
-  args:
-  - gsutil
-  - rm
-  - "-r"
-  - "gs://${_BUCKET}"
-
-- name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
   args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "${REPO_NAME}" , "${_ACCESS_TOKEN_BASE64}", "${PROJECT_ID}", "${_KMS_LOCATION}", "${_KMS_KEYRING}", "${_KMS_KEY}" ]
-  waitFor: ['delete-dicom-store-destination-2', 'delete-backup-bucket']
+  waitFor: ['delete-dicom-store-destination-2']
 
 timeout: 1800s
 substitutions:
@@ -549,10 +529,10 @@ substitutions:
 # Update to correct value if adding/removing steps before adapter run.
   _ADAPTER_RUN_STEP: 'step_5'
   _ADAPTER_RUN_STEP_HTTP2: 'step_6'
-  _ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP: 'step_33'
-  _ADAPTER_RUN_STEP_WITH_GCS_BACKUP: 'step_34'
+  _ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP: 'step_7'
+  _ADAPTER_RUN_STEP_WITH_GCS_BACKUP: 'step_8'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_18'
+  _COMMITMENT_SCU_STEP: 'step_25'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'

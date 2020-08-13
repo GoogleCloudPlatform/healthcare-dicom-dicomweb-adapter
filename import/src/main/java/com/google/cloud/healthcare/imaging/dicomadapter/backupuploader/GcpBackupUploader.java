@@ -22,9 +22,9 @@ public class GcpBackupUploader extends AbstractBackupUploader {
 
   private static final String GCP_PATH_PREFIX = "gs://";
 
-  public GcpBackupUploader(String uploadFilePath, Storage storage) throws IOException {
+  public GcpBackupUploader(String uploadFilePath, String gcpProjectId, Storage storage) throws IOException {
     super(uploadFilePath);
-    this.projectId = storage.getOptions().getProjectId();
+    this.projectId = gcpProjectId;
     parseUploadFilePath(getUploadFilePath());
     this.storage = storage;
   }
