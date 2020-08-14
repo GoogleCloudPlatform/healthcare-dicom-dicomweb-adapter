@@ -12,8 +12,16 @@ public interface IBackupUploader {
   void doRemoveBackup(String uniqueFileName) throws BackupException;
 
   class BackupException extends IOException {
+
+    private Integer dicomStatus;
+
     public BackupException(String message, Throwable cause) {
       super(message, cause);
+    }
+
+    public BackupException(int dicomStatus, Throwable cause) {
+      super(cause);
+      this.dicomStatus = dicomStatus;
     }
 
     public BackupException(String message) {
@@ -22,6 +30,15 @@ public interface IBackupUploader {
 
     public BackupException(Throwable cause) {
       super(cause);
+    }
+
+    public BackupException(int dicomStatus, String message) {
+      super(message);
+      this.dicomStatus = dicomStatus;
+    }
+
+    public Integer getDicomStatus() {
+      return dicomStatus;
     }
   }
 }

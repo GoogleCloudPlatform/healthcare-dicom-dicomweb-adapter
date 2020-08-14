@@ -21,13 +21,13 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupFlags;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
@@ -38,6 +38,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import org.dcm4che3.data.Tag;
@@ -81,6 +82,9 @@ public final class CStoreServiceTest {
 
   @Mock
   DelayCalculator mockDelayCalculator;
+
+  @Mock
+  private BackupFlags backupFlagsMock;
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -135,7 +139,7 @@ public final class CStoreServiceTest {
     device.setExecutor(Executors.newSingleThreadExecutor());
     device.setScheduledExecutor(Executors.newSingleThreadScheduledExecutor());
 
-    when(mockBackupUploader.doReadBackup(SOP_INSTANCE_UID)).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
+    when(mockBackupUploader.doReadBackup(anyString())).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
   }
 
   @Test
@@ -332,7 +336,7 @@ public final class CStoreServiceTest {
     doThrow(new IBackupUploader.BackupException("errMsg")).when(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
     doNothing().when(spyStowClient).stowRs(any(InputStream.class));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
 
     basicCStoreServiceTest(
         Status.ProcessingFailure,
@@ -350,46 +354,71 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
 
-    when(mockBackupUploader.doReadBackup(anyString())).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
     doThrow(new IDicomWebClient.DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, Status.ProcessingFailure))
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
 
     basicCStoreServiceTest(
         Status.ProcessingFailure,
         backupUploadService,
         spyStowClient);
 
-    verify(mockBackupUploader, times(1)).doWriteBackup(any(InputStream.class), anyString());
-    verify(mockBackupUploader, times(1)).doReadBackup(anyString());
+    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
+    verify(mockBackupUploader).doReadBackup(anyString());
     verify(spyStowClient).stowRs(any(InputStream.class));
-    verify(mockBackupUploader, times(1)).doRemoveBackup(anyString());
+    verify(mockBackupUploader, never()).doRemoveBackup(anyString());
   }
 
   @Test
-  public void testBackupUploadService_httpCode500Then502_ThirdTrySuccess() throws Exception {
+  public void testBackupUploadService_retryOn_DicomWebException408Code_Success() throws Exception {
     MockStowClient spyStowClient = spy(new MockStowClient(
         false,
         HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
 
-    when(mockDelayCalculator.getAttemptsAmount()).thenReturn(3);
-    doThrow(new IDicomWebClient.DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
-        .doThrow(new IDicomWebClient.DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
+    when(backupFlagsMock.getHttpErrorCodesToRetry()).thenReturn(List.of(408));
+    when(backupFlagsMock.getAttemptsAmount()).thenReturn(2);
+
+    doThrow(new IDicomWebClient.DicomWebException(" Request Timeout 408", HttpStatus.REQUEST_TIMEOUT_408, Status.ProcessingFailure))
         .doNothing()
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
 
     basicCStoreServiceTest(
         Status.Success,
         backupUploadService,
         spyStowClient);
 
-    verify(mockBackupUploader, timeout(100).times(1)).doWriteBackup(any(InputStream.class), anyString());
-    verify(mockBackupUploader, timeout(100).times(3)).doReadBackup(anyString());
-    verify(spyStowClient, timeout(100).times(3)).stowRs(any(InputStream.class));
-    verify(mockBackupUploader, timeout(100).times(1)).doRemoveBackup(anyString());
+    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
+    verify(mockBackupUploader, times(2)).doReadBackup(anyString());
+    verify(spyStowClient, times(2)).stowRs(any(InputStream.class));
+    verify(mockBackupUploader).doRemoveBackup(anyString());
+  }
+
+  @Test
+  public void testBackupUploadService_httpCode500_ThirdTrySuccess() throws Exception {
+    MockStowClient spyStowClient = spy(new MockStowClient(
+        false,
+        HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
+
+    when(backupFlagsMock.getAttemptsAmount()).thenReturn(3);
+    doThrow(new IDicomWebClient.DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
+        .doThrow(new IDicomWebClient.DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
+        .doNothing()
+        .when(spyStowClient).stowRs(any(InputStream.class));
+
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
+
+    basicCStoreServiceTest(
+        Status.Success,
+        backupUploadService,
+        spyStowClient);
+
+    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
+    verify(mockBackupUploader, times(3)).doReadBackup(anyString());
+    verify(spyStowClient, times(3)).stowRs(any(InputStream.class));
+    verify(mockBackupUploader).doRemoveBackup(anyString());
   }
 
   @Test
@@ -398,17 +427,17 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_OK));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, mockDelayCalculator);
+    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
 
     basicCStoreServiceTest(
         Status.Success,
         backupUploadService,
         spyStowClient);
 
-    verify(mockBackupUploader, times(1)).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
-    verify(mockBackupUploader, times(1)).doReadBackup(eq(SOP_INSTANCE_UID));
-    verify(spyStowClient, times(1)).stowRs(any(InputStream.class));
-    verify(mockBackupUploader, times(1)).doRemoveBackup(eq(SOP_INSTANCE_UID));
+    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
+    verify(mockBackupUploader).doReadBackup(eq(SOP_INSTANCE_UID));
+    verify(spyStowClient).stowRs(any(InputStream.class));
+    verify(mockBackupUploader).doRemoveBackup(eq(SOP_INSTANCE_UID));
   }
 
   private void basicCStoreServiceTest(

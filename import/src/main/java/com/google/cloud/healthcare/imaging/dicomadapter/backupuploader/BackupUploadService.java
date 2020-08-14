@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.dcm4che3.net.service.DicomServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +18,7 @@ public class BackupUploadService implements IBackupUploadService {
   private final DelayCalculator delayCalculator;
   private final IBackupUploader backupUploader;
   private final int attemptsAmount;
+  private final BackupFlags backupFlags;
 
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -25,10 +27,11 @@ public class BackupUploadService implements IBackupUploadService {
    * @param backupUploader DAO with simple write/read/remove operations.
    * @param delayCalculator util class for reSend tasks schedule delay calculation.
    */
-  public BackupUploadService(IBackupUploader backupUploader, DelayCalculator delayCalculator) {
+  public BackupUploadService(IBackupUploader backupUploader, BackupFlags backupFlags, DelayCalculator delayCalculator) {
     this.backupUploader = backupUploader;
     this.delayCalculator = delayCalculator;
-    this.attemptsAmount = delayCalculator.getAttemptsAmount();
+    this.attemptsAmount = backupFlags.getAttemptsAmount();
+    this.backupFlags = backupFlags;
   }
 
   @Override
@@ -59,6 +62,10 @@ public class BackupUploadService implements IBackupUploadService {
     }
   }
 
+  public boolean filterHttpCode(Integer actualHttpStatus) {
+    return actualHttpStatus >= 500 || backupFlags.getHttpErrorCodesToRetry().contains(actualHttpStatus);
+  }
+
   private void scheduleUploadWithDelay(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
     String uniqueFileName = backupState.getUniqueFileName();
     if (backupState.decrement()) {
@@ -75,23 +82,22 @@ public class BackupUploadService implements IBackupUploadService {
                   log.debug("sopInstanceUID={}, resend attempt № {}, - successful.", uniqueFileName, attemptNumber);
                 } catch (IDicomWebClient.DicomWebException dwe) {
                   log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, dwe);
+                  int dicomStatus = dwe.getStatus();
 
-                  IBackupUploadService.filterHttpCode500Plus(dwe.getHttpStatus(), log);
-                  boolean httpStatus409 = IBackupUploadService.filterHttpCode409(dwe.getHttpStatus(), log);
-
-                  if (backupState.getAttemptsCountdown() > 0) {
-                    if (httpStatus409 == true) {
-                      throwOnHttpStatus409(uniqueFileName);
+                  if (filterHttpCode(dwe.getHttpStatus())) {
+                    if (backupState.getAttemptsCountdown() > 0) {
+                      scheduleUploadWithDelayExceptionally(webClient, backupState);
+                      MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
+                    } else {
+                      throwOnNoResendAttemptsLeft(dicomStatus, uniqueFileName);
                     }
-                    scheduleUploadWithDelayExceptionally(webClient, backupState);
-                    MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
                   } else {
-                    throwOnNoResendAttemptsLeft(uniqueFileName);
+                    throwOnHttpFilterFail(dicomStatus, uniqueFileName);
                   }
                 }
               },
               CompletableFuture.delayedExecutor(
-                  delayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown()),
+                  delayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown(), backupFlags),
                   TimeUnit.MILLISECONDS));
 
       try {
@@ -104,7 +110,7 @@ public class BackupUploadService implements IBackupUploadService {
         throw new IBackupUploader.BackupException(eex.getCause());
       }
     } else {
-      throw getNoResendAttemptLeftException(uniqueFileName);
+      throw getNoResendAttemptLeftException(null, uniqueFileName);
     }
   }
 
@@ -116,17 +122,24 @@ public class BackupUploadService implements IBackupUploadService {
     }
   }
 
-  private void throwOnNoResendAttemptsLeft(String uniqueFileName) throws CompletionException {
-    throw new CompletionException(getNoResendAttemptLeftException(uniqueFileName));
+  private void throwOnNoResendAttemptsLeft(int dicomStatus, String uniqueFileName) throws CompletionException {
+    throw new CompletionException(getNoResendAttemptLeftException(dicomStatus, uniqueFileName));
   }
 
-  private void throwOnHttpStatus409(String uniqueFileName) throws CompletionException {
-    throw new CompletionException(new IBackupUploader.BackupException("Failed on httpStatus=409; sopInstanceUID=" + uniqueFileName));
+  private void throwOnHttpFilterFail(int dicomStatus, String uniqueFileName) throws CompletionException {
+    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". Filtered by httpCode.";
+    log.debug(errorMessage);
+    throw new CompletionException(new DicomServiceException(dicomStatus, errorMessage));
   }
 
-  private IBackupUploader.BackupException getNoResendAttemptLeftException(String uniqueFileName) {
-    log.debug("sopInstanceUID={}, No resend attempt left.", uniqueFileName);
-    return  new IBackupUploader.BackupException("sopInstanceUID=" + uniqueFileName + ". No resend attempt left.");
+  private IBackupUploader.BackupException getNoResendAttemptLeftException(Integer dicomStatus, String uniqueFileName) {
+    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". No resend attempt left.";
+    log.debug(errorMessage);
+    if (dicomStatus != null) {
+      return new IBackupUploader.BackupException(dicomStatus, errorMessage);
+    } else {
+      return new IBackupUploader.BackupException(errorMessage);
+    }
   }
 
   private InputStream readBackupExceptionally(String fileName) throws CompletionException {
