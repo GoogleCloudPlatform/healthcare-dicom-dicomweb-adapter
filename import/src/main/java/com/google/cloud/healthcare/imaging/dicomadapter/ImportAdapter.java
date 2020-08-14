@@ -24,6 +24,7 @@ import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupFlags;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.GcpBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
@@ -113,7 +114,7 @@ public class ImportAdapter {
     Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
         flags.destinationConfigInline, flags.destinationConfigPath, credentials);
 
-    IBackupUploadService backupUploadService = configureBackupUploadService(flags);
+    BackupUploadService backupUploadService = configureBackupUploadService(flags);
 
     DicomRedactor redactor = configureRedactor(flags);
     CStoreService cStoreService =
@@ -141,11 +142,13 @@ public class ImportAdapter {
     device.bindConnections();
   }
 
-  private static IBackupUploadService configureBackupUploadService(Flags flags) throws IOException {
+  private static BackupUploadService configureBackupUploadService(Flags flags) throws IOException {
     String uploadPath = flags.persistentFileStorageLocation;
-    int uploadRetryAmount = flags.persistentFileUploadRetryAmount;
-    int minUploadDelay = flags.minUploadDelay;
-    int maxWaitingTimeBetweenUploads = flags.maxWaitingTimeBetweenUploads;
+    BackupFlags backupFlags = new BackupFlags(
+        flags.persistentFileUploadRetryAmount,
+        flags.minUploadDelay,
+        flags.maxWaitingTimeBetweenUploads,
+        flags.httpErrorCodesToRetry);
 
     if (StringUtils.isNoneBlank(uploadPath)) {
       final IBackupUploader backupUploader;
@@ -154,7 +157,7 @@ public class ImportAdapter {
       } else {
         backupUploader = new LocalBackupUploader(uploadPath);
       }
-      return new BackupUploadService(backupUploader, new DelayCalculator(uploadRetryAmount, minUploadDelay, maxWaitingTimeBetweenUploads));
+      return new BackupUploadService(backupUploader, backupFlags, new DelayCalculator());
       }
     return null;
   }

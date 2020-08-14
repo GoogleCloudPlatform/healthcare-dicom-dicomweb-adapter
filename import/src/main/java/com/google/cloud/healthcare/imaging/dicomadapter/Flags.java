@@ -17,6 +17,9 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Parameters(separators = "= ")
 public class Flags {
 
@@ -165,7 +168,7 @@ public class Flags {
           names = {"--persistent_file_upload_retry_amount"},
           description = "upload retry amount"
   )
-  Integer persistentFileUploadRetryAmount = 1;
+  Integer persistentFileUploadRetryAmount = 0;
 
   @Parameter(
           names = {"--min_upload_delay"},
@@ -178,6 +181,12 @@ public class Flags {
           description = "maximum waiting time between uploads (ms)"
   )
   Integer maxWaitingTimeBetweenUploads = 5000;
+
+  @Parameter(
+      names = {"--http_error_codes_to_retry"},
+      description = "http codes list to retry that less than 500."
+  )
+  List<Integer> httpErrorCodesToRetry = new ArrayList<>();
 
   public Flags() {
   }

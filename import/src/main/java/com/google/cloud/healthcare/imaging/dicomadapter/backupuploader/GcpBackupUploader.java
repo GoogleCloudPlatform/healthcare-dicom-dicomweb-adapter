@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.util.Arrays;
-
 import org.apache.commons.lang3.StringUtils;
 
 public class GcpBackupUploader extends AbstractBackupUploader {
@@ -38,8 +37,7 @@ public class GcpBackupUploader extends AbstractBackupUploader {
   }
 
   @Override
-  public void doWriteBackup(InputStream backupData, String uniqueFileName)
-          throws BackupException {
+  public void doWriteBackup(InputStream backupData, String uniqueFileName) throws BackupException {
     try {
       if (backupData == null) {
         throw new BackupException("Backup data is null");
@@ -77,7 +75,7 @@ public class GcpBackupUploader extends AbstractBackupUploader {
 
   private void parseUploadFilePath(String uploadFilePath) throws GcpUriParseException {
     try {
-      if (!uploadFilePath.startsWith(GCP_PATH_PREFIX)){
+      if (!uploadFilePath.startsWith(GCP_PATH_PREFIX)) {
         throw new GcpUriParseException("Not gcs link");
       }
       validatePathParameter(uploadFilePath, "upload file path");

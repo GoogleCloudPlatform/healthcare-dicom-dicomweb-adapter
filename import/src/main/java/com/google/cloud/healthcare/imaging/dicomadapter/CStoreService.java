@@ -18,7 +18,7 @@ import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupState;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -37,7 +37,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.jetty.http.HttpStatus;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -64,11 +63,11 @@ public class CStoreService extends BasicCStoreSCP {
   private final Map<DestinationFilter, IDicomWebClient> destinationMap;
   private final DicomRedactor redactor;
   private final String transcodeToSyntax;
-  private final IBackupUploadService backupUploadService;
+  private final BackupUploadService backupUploadService;
 
   CStoreService(IDicomWebClient defaultDicomWebClient,
       Map<DestinationFilter, IDicomWebClient> destinationMap,
-      DicomRedactor redactor, String transcodeToSyntax, IBackupUploadService backupUploadService) {
+      DicomRedactor redactor, String transcodeToSyntax, BackupUploadService backupUploadService) {
     this.defaultDicomWebClient = defaultDicomWebClient;
     this.destinationMap =
         destinationMap != null && destinationMap.size() > 0 ? destinationMap : null;
@@ -94,7 +93,6 @@ public class CStoreService extends BasicCStoreSCP {
 
       AtomicReference<BackupState> backupState = new AtomicReference<>();
       AtomicReference<IDicomWebClient> destinationClient = new AtomicReference<>();
-      boolean firstUploadedAttemptFailed = false;
       long uploadedBytesCount = 0;
 
       try {
@@ -156,14 +154,14 @@ public class CStoreService extends BasicCStoreSCP {
         uploadedBytesCount = countingStream.getCount();
 
         updateResponseToSuccess(response, uploadedBytesCount);
-      } catch (DicomWebException dwe) {
-        IBackupUploadService.filterHttpCode500Plus(dwe.getHttpStatus(), log);
-        boolean httpStatus409 = IBackupUploadService.filterHttpCode409(dwe.getHttpStatus(), log);
 
+        if (backupUploadService != null && backupState.get() != null) {
+          backupUploadService.removeBackup(backupState.get().getUniqueFileName());
+        }
+      } catch (DicomWebException dwe) {
         if (backupUploadService != null
-            && httpStatus409 == false
+            && backupUploadService.filterHttpCode(dwe.getHttpStatus())
             && backupState.get().getAttemptsCountdown() > 0) {
-          firstUploadedAttemptFailed = true;
           log.error("C-STORE request failed. Trying to resend...", dwe);
           resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
           updateResponseToSuccess(response, uploadedBytesCount);
@@ -182,10 +180,6 @@ public class CStoreService extends BasicCStoreSCP {
       } catch (Throwable e) {
         reportError(e);
         throw new DicomServiceException(Status.ProcessingFailure, e);
-      } finally {
-        if (firstUploadedAttemptFailed == false && backupState.get() != null && backupUploadService != null) {
-          backupUploadService.removeBackup(backupState.get().getUniqueFileName());
-        }
       }
   }
 
@@ -200,7 +194,7 @@ public class CStoreService extends BasicCStoreSCP {
       backupUploadService.startUploading(destinationClient.get(), backupState.get());
     } catch (IBackupUploader.BackupException bae) {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-      throw new DicomServiceException(Status.ProcessingFailure, bae);
+      throw new DicomServiceException(bae.getDicomStatus() != null ? bae.getDicomStatus() : Status.ProcessingFailure, bae);
     }
   }
 

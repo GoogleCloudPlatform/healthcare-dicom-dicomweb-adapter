@@ -10,7 +10,6 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +17,7 @@ import static org.mockito.Mockito.when;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
+import org.dcm4che3.net.Status;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
@@ -37,6 +37,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.List;
 
 @RunWith(JUnit4.class)
 public class BackupUploadServiceTest {
@@ -46,6 +47,7 @@ public class BackupUploadServiceTest {
   private final int ATTEMPTS_AMOUNT_ZERO = 0;
   private final int ATTEMPTS_AMOUNT_ONE = 1;
   private final int ATTEMPTS_AMOUNT_TWO = 2;
+  private final String EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE = "sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.";
 
   private InputStream backupInputStream;
 
@@ -62,6 +64,9 @@ public class BackupUploadServiceTest {
   private DelayCalculator delayCalculatorMock;
 
   @Mock
+  private BackupFlags backupFlagsMock;
+
+  @Mock
   private IDicomWebClient webClientMock;
 
   @Spy
@@ -71,8 +76,9 @@ public class BackupUploadServiceTest {
 
   @Before
   public void before() {
-    when(delayCalculatorMock.getAttemptsAmount()).thenReturn(ATTEMPTS_AMOUNT_ONE);
-    backupUploadService = new BackupUploadService(backupUploaderMock, delayCalculatorMock);
+    when(backupFlagsMock.getAttemptsAmount()).thenReturn(ATTEMPTS_AMOUNT_ONE);
+    when(delayCalculatorMock.getExponentialDelayMillis(anyInt(), any(BackupFlags.class))).thenReturn(0L);
+    backupUploadService = new BackupUploadService(backupUploaderMock, backupFlagsMock, delayCalculatorMock);
     backupInputStream = new ByteArrayInputStream(BACKUP_BYTES);
   }
 
@@ -119,7 +125,6 @@ public class BackupUploadServiceTest {
   @Test
   public void startUploading_firstTry_success() throws IOException, DicomWebException {
     doNothing().when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
@@ -137,8 +142,8 @@ public class BackupUploadServiceTest {
 
   @Test
   public void startUploading_DicomWebExceptionOnStowRs_secondTry_success() throws DicomWebException, IOException {
-    doThrow(new DicomWebException("Reason")).doNothing().when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
+    doThrow(new DicomWebException("Reason", HttpStatus.INTERNAL_SERVER_ERROR_500, Status.ProcessingFailure))
+        .doNothing().when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
@@ -150,13 +155,12 @@ public class BackupUploadServiceTest {
     byte [] actualBytes = argumentCaptor.getValue().readNBytes(5);
     assertThat(Arrays.equals(actualBytes, BACKUP_BYTES)).isTrue();
 
-    verify(backupUploaderMock, times(1)).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
   @Test
   public void startUploading_BackupExceptionOnDoReadBackup_failed() throws BackupException {
     String exMsg = "reason";
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(100L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenThrow(new BackupException(exMsg));
 
     exceptionRule.expect(BackupException.class);
@@ -172,7 +176,7 @@ public class BackupUploadServiceTest {
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     exceptionRule.expect(BackupException.class);
-    exceptionRule.expectMessage("sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.");
+    exceptionRule.expectMessage(EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
   }
@@ -181,17 +185,14 @@ public class BackupUploadServiceTest {
   public void startUploading_lastAttempt_noNewSchedule_BackupException() throws IOException, DicomWebException {
     spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ONE);
 
-    doThrow(new DicomWebException("Reason2")).doNothing().when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
+    doThrow(new DicomWebException("Reason2", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
+        .doNothing().when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    exceptionRule.expect(BackupException.class);
-    exceptionRule.expectMessage("sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.");
+    catchAndAssertExceptionOnStartUploading(BackupException.class, EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE);
 
-    backupUploadService.startUploading(webClientMock, spyBackupState);
-
-    verify(backupUploaderMock, times(1)).doReadBackup(eq(UNIQUE_FILE_NAME));
-    verify(webClientMock, times(1)).stowRs(any(InputStream.class));
+    verify(backupUploaderMock).doReadBackup(eq(UNIQUE_FILE_NAME));
+    verify(webClientMock).stowRs(any(InputStream.class));
     verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
@@ -199,18 +200,14 @@ public class BackupUploadServiceTest {
   public void startUploading_DicomWebException409Code_failed() throws DicomWebException, IOException {
     doThrow(new DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, HttpStatusCodes.STATUS_CODE_BAD_REQUEST))
         .when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    exceptionRule.expect(BackupException.class);
-    exceptionRule.expectMessage("Failed on httpStatus=409; sopInstanceUID=" + UNIQUE_FILE_NAME);
+    catchAndAssertExceptionOnStartUploading(BackupException.class,
+        "sopInstanceUID=" + UNIQUE_FILE_NAME + ". Filtered by httpCode.");
 
-    backupUploadService.startUploading(webClientMock, spyBackupState);
-
-    verify(backupUploaderMock, times(2)).doWriteBackup(any(InputStream.class), eq(UNIQUE_FILE_NAME));
-    verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
-    verify(webClientMock, times(2)).stowRs(any(InputStream.class));
-    verify(backupUploaderMock, times(1)).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock).doReadBackup(eq(UNIQUE_FILE_NAME));
+    verify(webClientMock).stowRs(any(InputStream.class));
+    verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
   @Test
@@ -219,17 +216,40 @@ public class BackupUploadServiceTest {
         .doThrow(new DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
         .doNothing()
             .when(webClientMock).stowRs(any(InputStream.class));
-    when(delayCalculatorMock.getExponentialDelayMillis(anyInt())).thenReturn(0L);
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    exceptionRule.expect(BackupException.class);
-    exceptionRule.expectMessage("sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.");
+    catchAndAssertExceptionOnStartUploading(BackupException.class, EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE);
+
+    verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
+    verify(webClientMock, times(2)).stowRs(any(InputStream.class));
+    verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+  }
+
+  @Test
+  public void startUploading_retryOn_DicomWebException408Code_Success() throws DicomWebException, IOException {
+    when(backupFlagsMock.getHttpErrorCodesToRetry()).thenReturn(List.of(408));
+    when(backupFlagsMock.getAttemptsAmount()).thenReturn(ATTEMPTS_AMOUNT_TWO);
+
+    doThrow(new DicomWebException(" Request Timeout 408", HttpStatus.REQUEST_TIMEOUT_408, HttpStatusCodes.STATUS_CODE_BAD_REQUEST))
+        .doNothing()
+        .when(webClientMock).stowRs(any(InputStream.class));
+    when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
 
-    verify(backupUploaderMock, times(3)).doWriteBackup(any(InputStream.class), eq(UNIQUE_FILE_NAME));
-    verify(backupUploaderMock, times(3)).doReadBackup(eq(UNIQUE_FILE_NAME));
-    verify(webClientMock, times(3)).stowRs(any(InputStream.class));
-    verify(backupUploaderMock, times(1)).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
+    verify(webClientMock, times(2)).stowRs(any(InputStream.class));
+    verify(backupUploaderMock).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+  }
+
+  private void catchAndAssertExceptionOnStartUploading(Class expectedExceptionClass, String expectedMessage) {
+    Exception expectedException = null;
+    try {
+      backupUploadService.startUploading(webClientMock, spyBackupState);
+    } catch (Exception e) {
+      expectedException = e;
+    }
+    assertThat(expectedException).isInstanceOf(expectedExceptionClass);
+    assertThat(expectedException).hasMessageThat().contains(expectedMessage);
   }
 }
