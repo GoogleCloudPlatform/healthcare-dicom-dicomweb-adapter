@@ -5,13 +5,15 @@ import static com.google.common.truth.Truth.assertThat;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+
 public class DelayCalculatorTest {
   private BackupFlags backupFlags;
   private DelayCalculator calc;
 
   @Before
   public void setup() {
-    backupFlags = new BackupFlags(5, 100, 5000);
+    backupFlags = new BackupFlags(5, 100, 5000, new ArrayList<>());
     calc = new DelayCalculator();
   }
 
