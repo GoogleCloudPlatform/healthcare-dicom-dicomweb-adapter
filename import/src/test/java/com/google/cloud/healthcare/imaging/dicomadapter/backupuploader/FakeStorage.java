@@ -5,15 +5,25 @@ import com.google.cloud.Policy;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.RestorableState;
 import com.google.cloud.WriteChannel;
-import com.google.cloud.storage.*;
+import com.google.cloud.storage.Acl;
+import com.google.cloud.storage.Bucket;
+import com.google.cloud.storage.BucketInfo;
+import com.google.cloud.storage.CopyWriter;
+import com.google.cloud.storage.HmacKey;
+import com.google.cloud.storage.PostPolicyV4;
+import com.google.cloud.storage.ServiceAccount;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageBatch;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.StorageOptions;
 import org.mockito.Mockito;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
@@ -146,7 +156,7 @@ public class FakeStorage implements Storage {
         try {
             fakeObjects.remove(Paths.get(bucket, blob).toString());
             return true;
-        } catch (Exception igrored){
+        } catch (Exception ignored) {
             return false;
         }
     }

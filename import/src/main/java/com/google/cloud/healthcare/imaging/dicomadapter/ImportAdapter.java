@@ -150,7 +150,7 @@ public class ImportAdapter {
         flags.maxWaitingTimeBetweenUploads,
         flags.httpErrorCodesToRetry);
 
-    if (StringUtils.isNoneBlank(uploadPath)) {
+    if (!uploadPath.isBlank()) {
       final IBackupUploader backupUploader;
       if (uploadPath.startsWith(GCP_PATH_PREFIX)) {
         backupUploader = new GcpBackupUploader(uploadPath, flags.gcsBackupProjectId, flags.oauthScopes);

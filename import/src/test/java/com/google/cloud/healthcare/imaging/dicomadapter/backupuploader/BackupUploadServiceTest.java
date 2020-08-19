@@ -185,7 +185,7 @@ public class BackupUploadServiceTest {
   public void startUploading_lastAttempt_noNewSchedule_BackupException() throws IOException, DicomWebException {
     spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ONE);
 
-    doThrow(new DicomWebException("Reason2", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
+    doThrow(new DicomWebException("Reason2", HttpStatus.INTERNAL_SERVER_ERROR_500, Status.ProcessingFailure))
         .doNothing().when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
@@ -198,12 +198,12 @@ public class BackupUploadServiceTest {
 
   @Test
   public void startUploading_DicomWebException409Code_failed() throws DicomWebException, IOException {
-    doThrow(new DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, HttpStatusCodes.STATUS_CODE_BAD_REQUEST))
+    doThrow(new DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, Status.ProcessingFailure))
         .when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     catchAndAssertExceptionOnStartUploading(BackupException.class,
-        "sopInstanceUID=" + UNIQUE_FILE_NAME + ". Filtered by httpCode.");
+        "Not retried due to HTTP code=" + HttpStatus.CONFLICT_409);
 
     verify(backupUploaderMock).doReadBackup(eq(UNIQUE_FILE_NAME));
     verify(webClientMock).stowRs(any(InputStream.class));
@@ -213,7 +213,7 @@ public class BackupUploadServiceTest {
   @Test
   public void startUploading_DicomWebException500CodeThen501Code_noMoreTry_BackupException() throws IOException, DicomWebException {
       doThrow(new DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
-        .doThrow(new DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
+        .doThrow(new DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, Status.ProcessingFailure))
         .doNothing()
             .when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);

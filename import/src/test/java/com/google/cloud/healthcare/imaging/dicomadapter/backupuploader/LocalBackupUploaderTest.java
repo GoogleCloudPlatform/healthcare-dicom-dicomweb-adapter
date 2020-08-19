@@ -32,7 +32,8 @@ public class LocalBackupUploaderTest {
 
   private IBackupUploader localBackupUploader;
 
-  @Rule public ExpectedException exceptionRule = ExpectedException.none();
+  @Rule
+  public ExpectedException exceptionRule = ExpectedException.none();
 
   @Before
   public void setUp() {

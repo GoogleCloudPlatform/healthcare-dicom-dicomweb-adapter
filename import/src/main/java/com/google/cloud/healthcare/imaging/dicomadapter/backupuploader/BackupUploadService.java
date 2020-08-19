@@ -92,7 +92,7 @@ public class BackupUploadService implements IBackupUploadService {
                       throwOnNoResendAttemptsLeft(dicomStatus, uniqueFileName);
                     }
                   } else {
-                    throwOnHttpFilterFail(dicomStatus, uniqueFileName);
+                    throwOnHttpFilterFail(dicomStatus, dwe.getHttpStatus());
                   }
                 }
               },
@@ -126,8 +126,8 @@ public class BackupUploadService implements IBackupUploadService {
     throw new CompletionException(getNoResendAttemptLeftException(dicomStatus, uniqueFileName));
   }
 
-  private void throwOnHttpFilterFail(int dicomStatus, String uniqueFileName) throws CompletionException {
-    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". Filtered by httpCode.";
+  private void throwOnHttpFilterFail(int dicomStatus, int httpCode) throws CompletionException {
+    String errorMessage = "Not retried due to HTTP code=" + httpCode;
     log.debug(errorMessage);
     throw new CompletionException(new DicomServiceException(dicomStatus, errorMessage));
   }

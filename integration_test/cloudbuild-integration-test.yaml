@@ -532,7 +532,7 @@ substitutions:
   _ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP: 'step_7'
   _ADAPTER_RUN_STEP_WITH_GCS_BACKUP: 'step_8'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_25'
+  _COMMITMENT_SCU_STEP: 'step_24'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'

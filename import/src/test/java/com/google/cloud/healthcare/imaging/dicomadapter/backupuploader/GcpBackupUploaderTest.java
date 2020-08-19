@@ -2,8 +2,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 
 import com.google.auth.Credentials;
 import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.testing.RemoteStorageHelper;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -21,7 +19,6 @@ public class GcpBackupUploaderTest {
     private static byte[] BYTE_SEQ_2 = new byte[]{1, 5, 7, 3, 5, 4, 0, 1, 3};
     private static byte[] BYTES_SEQ = new byte[]{0, 1, 2, 5, 4, 3, 5, 4, 2, 0, 4, 5, 4, 7};
     private static String UPLOAD_PATH = "";
-    private static String BUCKET_NAME = "";
 
     private static final String UNIQUE_FILE_NAME_1 = "uniq1";
     private static final String UNIQUE_FILE_NAME_2 = "uniq2";
@@ -36,17 +33,11 @@ public class GcpBackupUploaderTest {
     private static final String UPLOAD_PATH_EMPTY_UPLOAD_OBJECT = "gs:///some//";
     private static final String UPLOAD_PATH_SPACE_UPLOAD_OBJECT = "gs://some/ ";
     private static final String UPLOAD_OBJECT = "test-backup";
+    private static final String BUCKET_NAME = "test-bucket";
 
-    /**
-    * To create an instance of the Storage class, the tests used RemoteStorageHelper
-    * because LocalStorageHelper returns an "method not implemented yet" error when
-    * trying to write data to the bucket. The tests use a temporary bucket with random
-    * id that is deleted after all tests have run
-     */
     @BeforeClass
     public static void setUp() {
         try {
-            BUCKET_NAME = RemoteStorageHelper.generateBucketName();
             UPLOAD_PATH = "gs://".concat(BUCKET_NAME).concat("/test-backup");
             localStorage = new FakeStorage();
             gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, localStorage);
@@ -56,7 +47,7 @@ public class GcpBackupUploaderTest {
     }
 
     @Rule
-    public ExpectedException exceptionRule = ExpectedException.none();
+        public ExpectedException exceptionRule = ExpectedException.none();
 
     @Test
     public void parseUri() throws IOException {
@@ -64,7 +55,7 @@ public class GcpBackupUploaderTest {
 
         assertThat(gcpBackupUploader.getProjectId()).isEqualTo(GCP_PROJECT_ID);
         assertThat(gcpBackupUploader.getBucketName()).isEqualTo(BUCKET_NAME);
-        assertThat(gcpBackupUploader.getUploadObject()).isEqualTo(UPLOAD_OBJECT);
+        assertThat(gcpBackupUploader.getUploadFolder()).isEqualTo(UPLOAD_OBJECT);
     }
 
     @Test

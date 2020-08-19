@@ -160,7 +160,7 @@ public class Flags {
 
   @Parameter(
           names = {"--gcs_backup_project_id"},
-          description = "Google Cloud progect id"
+          description = "Google Cloud project ID"
   )
   String gcsBackupProjectId = "";
 
