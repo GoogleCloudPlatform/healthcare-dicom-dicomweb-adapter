@@ -3,7 +3,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 import static com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader.BackupException;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;

@@ -44,7 +44,7 @@ public class GcpBackupUploader extends AbstractBackupUploader {
       validatePathParameter(uniqueFileName, "unique file name");
       BlobId blobId = BlobId.of(bucketName, getFullUploadObject(uniqueFileName));
       BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
-      storage.createFrom(blobInfo, backupData);
+      storage.create(blobInfo, backupData);
     } catch (Exception e) {
       throw new BackupException("Error with writing backup file: " + e.getMessage(), e);
     }

@@ -1,20 +1,38 @@
 package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 
 import com.google.auth.Credentials;
+import com.google.cloud.ReadChannel;
+import com.google.cloud.RestorableState;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 public class GcpBackupUploaderTest {
     private static GcpBackupUploader gcpBackupUploader;
-    private static Storage localStorage;
     private static byte[] BYTE_SEQ_1 = new byte[]{0, 1, 2, 5, 4, 3, 5, 4, 2, 0, 4, 5, 4, 7};
     private static byte[] BYTE_SEQ_2 = new byte[]{1, 5, 7, 3, 5, 4, 0, 1, 3};
     private static byte[] BYTES_SEQ = new byte[]{0, 1, 2, 5, 4, 3, 5, 4, 2, 0, 4, 5, 4, 7};
@@ -35,23 +53,73 @@ public class GcpBackupUploaderTest {
     private static final String UPLOAD_OBJECT = "test-backup";
     private static final String BUCKET_NAME = "test-bucket";
 
+    @Rule
+    public MockitoRule rule = MockitoJUnit.rule();
+
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
+
+    @Mock
+    private static Storage storageMock;
+
+    @Mock
+    private Blob blobMock;
+
+    private HashMap<String, byte[]> fakeStorageObjects;
+
     @BeforeClass
     public static void setUp() {
         try {
             UPLOAD_PATH = "gs://".concat(BUCKET_NAME).concat("/test-backup");
-            localStorage = new FakeStorage();
-            gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, localStorage);
+            gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, storageMock);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    @Rule
-        public ExpectedException exceptionRule = ExpectedException.none();
+    @Before
+    public void before() {
+        fakeStorageObjects = new HashMap<>();
+        AtomicReference<BlobId> tmpBlobId = new AtomicReference<>();
+
+        // GCP Storage work imitation.
+        doAnswer(invocation -> {
+            String name = tmpBlobId.get().getName();
+            return new FakeChannel(fakeStorageObjects.get(name));
+        }).when(blobMock).reader();
+
+        doAnswer(invocation -> {
+            tmpBlobId.set(invocation.getArgument(0, BlobId.class));
+            return blobMock;
+        }).when(storageMock).get(any(BlobId.class));
+
+        doAnswer(invocation -> {
+            fakeStorageObjects.put(invocation.getArgument(0, BlobInfo.class).getName(),
+                invocation.getArgument(1, InputStream.class).readAllBytes());
+            return null;
+        }).when(storageMock).create(any(BlobInfo.class), any(InputStream.class));
+
+        doAnswer(invocation -> {
+            try {
+                fakeStorageObjects.remove(Paths.get(
+                    invocation.getArgument(0, String.class),
+                    invocation.getArgument(1, String.class))
+                        .toString());
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
+        }).when(storageMock).delete(any(String.class), any(String.class));
+    }
+
+    @After
+    public void after() {
+        fakeStorageObjects.clear();
+    }
 
     @Test
     public void parseUri() throws IOException {
-        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, localStorage);
+        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, storageMock);
 
         assertThat(gcpBackupUploader.getProjectId()).isEqualTo(GCP_PROJECT_ID);
         assertThat(gcpBackupUploader.getBucketName()).isEqualTo(BUCKET_NAME);
@@ -63,7 +131,7 @@ public class GcpBackupUploaderTest {
         exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
         exceptionRule.expectMessage("Invalid upload path");
 
-        new GcpBackupUploader("", GCP_PROJECT_ID, localStorage);
+        new GcpBackupUploader("", GCP_PROJECT_ID, storageMock);
     }
 
     @Test
@@ -71,7 +139,7 @@ public class GcpBackupUploaderTest {
         exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
         exceptionRule.expectMessage("Invalid upload path");
 
-        new GcpBackupUploader(" ", GCP_PROJECT_ID, localStorage);
+        new GcpBackupUploader(" ", GCP_PROJECT_ID, storageMock);
     }
 
     @Test
@@ -79,7 +147,7 @@ public class GcpBackupUploaderTest {
         exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
         exceptionRule.expectMessage("Invalid upload path");
 
-        new GcpBackupUploader(UPLOAD_PATH_EMPTY_BUCKET_NAME, GCP_PROJECT_ID, localStorage);
+        new GcpBackupUploader(UPLOAD_PATH_EMPTY_BUCKET_NAME, GCP_PROJECT_ID, storageMock);
     }
 
     @Test
@@ -87,7 +155,7 @@ public class GcpBackupUploaderTest {
         exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
         exceptionRule.expectMessage("Invalid upload path");
 
-        new GcpBackupUploader(UPLOAD_PATH_SPACE_BUCKET_NAME, GCP_PROJECT_ID, localStorage);
+        new GcpBackupUploader(UPLOAD_PATH_SPACE_BUCKET_NAME, GCP_PROJECT_ID, storageMock);
     }
 
     @Test
@@ -95,7 +163,7 @@ public class GcpBackupUploaderTest {
         exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
         exceptionRule.expectMessage("Invalid upload path");
 
-        new GcpBackupUploader(UPLOAD_PATH_EMPTY_UPLOAD_OBJECT, GCP_PROJECT_ID, localStorage);
+        new GcpBackupUploader(UPLOAD_PATH_EMPTY_UPLOAD_OBJECT, GCP_PROJECT_ID, storageMock);
     }
 
     @Test
@@ -103,7 +171,7 @@ public class GcpBackupUploaderTest {
         exceptionRule.expect(GcpBackupUploader.GcpUriParseException.class);
         exceptionRule.expectMessage("Invalid upload path");
 
-        new GcpBackupUploader(UPLOAD_PATH_SPACE_UPLOAD_OBJECT, GCP_PROJECT_ID, localStorage);
+        new GcpBackupUploader(UPLOAD_PATH_SPACE_UPLOAD_OBJECT, GCP_PROJECT_ID, storageMock);
     }
 
     @Test
@@ -125,7 +193,7 @@ public class GcpBackupUploaderTest {
 
     @Test
     public void readWriteAndRemoveDifferentFiles() throws IOException {
-        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, localStorage);
+        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, storageMock);
         gcpBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_1), UNIQUE_FILE_NAME_1);
         gcpBackupUploader.doWriteBackup(getInputStreamFromBytes(BYTE_SEQ_2), UNIQUE_FILE_NAME_2);
         InputStream inputStream1 = gcpBackupUploader.doReadBackup(UNIQUE_FILE_NAME_1);
@@ -172,10 +240,51 @@ public class GcpBackupUploaderTest {
 
     @Test
     public void removeBackup_Failed_OnNotExistsUploadPath() throws IOException {
-       new GcpBackupUploader(NOT_EXISTS_UPLOAD_PATH, GCP_PROJECT_ID, localStorage).doRemoveBackup(UNIQ_NAME_REMOVE);
+       new GcpBackupUploader(NOT_EXISTS_UPLOAD_PATH, GCP_PROJECT_ID, storageMock).doRemoveBackup(UNIQ_NAME_REMOVE);
     }
 
     private InputStream getInputStreamFromBytes(byte[] seq) {
         return new ByteArrayInputStream(seq);
+    }
+
+    static class FakeChannel implements ReadChannel {
+
+        ReadableByteChannel readableByteChannel;
+
+        public FakeChannel(byte[] buffer) {
+            this.readableByteChannel = Channels.newChannel(new ByteArrayInputStream(buffer));
+        }
+
+        @Override
+        public boolean isOpen() {
+            return readableByteChannel.isOpen();
+        }
+
+        @Override
+        public void close() {
+            try {
+                readableByteChannel.close();
+            } catch (IOException e) { }
+        }
+
+        @Override
+        public void seek(long position) throws IOException {
+
+        }
+
+        @Override
+        public void setChunkSize(int chunkSize) {
+
+        }
+
+        @Override
+        public RestorableState<ReadChannel> capture() {
+            return null;
+        }
+
+        @Override
+        public int read(ByteBuffer dst) throws IOException {
+            return readableByteChannel.read(dst);
+        }
     }
 }
