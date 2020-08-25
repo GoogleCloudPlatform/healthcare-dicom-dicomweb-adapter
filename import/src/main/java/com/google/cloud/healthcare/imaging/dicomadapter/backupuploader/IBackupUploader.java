@@ -19,8 +19,8 @@ public interface IBackupUploader {
       super(message, cause);
     }
 
-    public BackupException(int dicomStatus, Throwable cause) {
-      super(cause);
+    public BackupException(int dicomStatus, Throwable cause, String message) {
+      super(message, cause);
       this.dicomStatus = dicomStatus;
     }
 

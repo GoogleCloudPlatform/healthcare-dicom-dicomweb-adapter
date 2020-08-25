@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import org.dcm4che3.net.service.DicomServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,10 +88,10 @@ public class BackupUploadService implements IBackupUploadService {
                       scheduleUploadWithDelayExceptionally(webClient, backupState);
                       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
                     } else {
-                      throwOnNoResendAttemptsLeft(dicomStatus, uniqueFileName);
+                      throwOnNoResendAttemptsLeft(dwe, uniqueFileName);
                     }
                   } else {
-                    throwOnHttpFilterFail(dicomStatus, dwe.getHttpStatus());
+                    throwOnHttpFilterFail(dwe, dwe.getHttpStatus());
                   }
                 }
               },
@@ -122,21 +121,21 @@ public class BackupUploadService implements IBackupUploadService {
     }
   }
 
-  private void throwOnNoResendAttemptsLeft(int dicomStatus, String uniqueFileName) throws CompletionException {
-    throw new CompletionException(getNoResendAttemptLeftException(dicomStatus, uniqueFileName));
+  private void throwOnNoResendAttemptsLeft(IDicomWebClient.DicomWebException dwe, String uniqueFileName) throws CompletionException {
+    throw new CompletionException(getNoResendAttemptLeftException(dwe, uniqueFileName));
   }
 
-  private void throwOnHttpFilterFail(int dicomStatus, int httpCode) throws CompletionException {
+  private void throwOnHttpFilterFail(IDicomWebClient.DicomWebException dwe, int httpCode) throws CompletionException {
     String errorMessage = "Not retried due to HTTP code=" + httpCode;
     log.debug(errorMessage);
-    throw new CompletionException(new DicomServiceException(dicomStatus, errorMessage));
+    throw new CompletionException(new IBackupUploader.BackupException(dwe.getStatus(), dwe, errorMessage));
   }
 
-  private IBackupUploader.BackupException getNoResendAttemptLeftException(Integer dicomStatus, String uniqueFileName) {
+  private IBackupUploader.BackupException getNoResendAttemptLeftException(IDicomWebClient.DicomWebException dwe, String uniqueFileName) {
     String errorMessage = "sopInstanceUID=" + uniqueFileName + ". No resend attempt left.";
     log.debug(errorMessage);
-    if (dicomStatus != null) {
-      return new IBackupUploader.BackupException(dicomStatus, errorMessage);
+    if (dwe != null) {
+      return new IBackupUploader.BackupException(dwe.getStatus(), dwe, errorMessage);
     } else {
       return new IBackupUploader.BackupException(errorMessage);
     }

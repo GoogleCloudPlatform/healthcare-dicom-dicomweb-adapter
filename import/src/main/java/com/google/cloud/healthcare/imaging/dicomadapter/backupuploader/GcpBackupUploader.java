@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.util.Arrays;
-import org.apache.commons.lang3.StringUtils;
 
 public class GcpBackupUploader extends AbstractBackupUploader {
   private String projectId;
