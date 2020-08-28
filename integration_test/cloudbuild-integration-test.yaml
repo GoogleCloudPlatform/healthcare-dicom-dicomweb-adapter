@@ -102,6 +102,7 @@
       --dimse_port=${_ADAPTER_PORT_WITH_GCS_BACKUP} \
       --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
       --persistent_file_storage_location=gs://${_BUCKET}/backup \
+      --gcs_backup_project_id=${_PROJECT} \
       --persistent_file_upload_retry_amount=2 \
       --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
