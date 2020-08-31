@@ -1,4 +1,4 @@
-package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -19,30 +19,42 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.healthcare.*;
+import com.google.cloud.healthcare.DicomWebClientJetty;
+import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.StringUtil;
+import com.google.cloud.healthcare.DicomWebValidation;
+import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupFlags;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.GcpBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.LocalBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.DelayCalculator;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.GcpBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.LocalBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.CMoveSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.MultipleDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.SingleDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationSendService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
+import com.google.common.collect.ImmutableList;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,14 +122,35 @@ public class ImportAdapter {
         new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
     }
 
-    Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
-        flags.destinationConfigInline, flags.destinationConfigPath, credentials);
+    Pair<Map<DestinationFilter, AetDictionary.Aet>, Map<DestinationFilter, IDicomWebClient>> destinationMapPair = configureMultipleDestinationTypesMap(
+        flags.destinationConfigInline, flags.destinationConfigPath, null, credentials);
 
     BackupUploadService backupUploadService = configureBackupUploadService(flags);
 
     DicomRedactor redactor = configureRedactor(flags);
+
+    final IDestinationClientFactory destinationClientFactory;
+    if (flags.sendToAllMatchingDestinations) {
+      destinationClientFactory = new MultipleDestinationClientFactory(
+          destinationMapPair.getRight(),
+          destinationMapPair.getLeft(),
+          defaultCstoreDicomWebClient);
+    } else {
+      destinationClientFactory = new SingleDestinationClientFactory(
+          configureDestinationMap(
+              flags.destinationConfigInline, flags.destinationConfigPath, credentials),
+          defaultCstoreDicomWebClient);
+    }
+    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
+
+    CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet);
+    MultipleDestinationSendService multipleDestinationSendService = new MultipleDestinationSendService(
+        cStoreSenderFactory,
+        backupUploadService,
+        flags.persistentFileUploadRetryAmount);
+
     CStoreService cStoreService =
-        new CStoreService(defaultCstoreDicomWebClient, destinationMap, redactor, flags.transcodeToSyntax, backupUploadService);
+        new CStoreService(destinationClientFactory, redactor, flags.transcodeToSyntax, multipleDestinationSendService);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
@@ -127,10 +160,9 @@ public class ImportAdapter {
     serviceRegistry.addDicomService(cFindService);
 
     // Handle C-MOVE
-    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
-    CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet, dicomWebClient);
+    CMoveSenderFactory cMoveSenderFactory = new CMoveSenderFactory(cstoreSubAet, dicomWebClient);
     AetDictionary aetDict = new AetDictionary(flags.aetDictionaryInline, flags.aetDictionaryPath);
-    CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cStoreSenderFactory);
+    CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cMoveSenderFactory);
     serviceRegistry.addDicomService(cMoveService);
 
     // Handle Storage Commitment N-ACTION
@@ -143,11 +175,6 @@ public class ImportAdapter {
 
   private static BackupUploadService configureBackupUploadService(Flags flags) throws IOException {
     String uploadPath = flags.persistentFileStorageLocation;
-    BackupFlags backupFlags = new BackupFlags(
-        flags.persistentFileUploadRetryAmount,
-        flags.minUploadDelay,
-        flags.maxWaitingTimeBetweenUploads,
-        flags.httpErrorCodesToRetry);
 
     if (!uploadPath.isBlank()) {
       final IBackupUploader backupUploader;
@@ -156,7 +183,13 @@ public class ImportAdapter {
       } else {
         backupUploader = new LocalBackupUploader(uploadPath);
       }
-      return new BackupUploadService(backupUploader, backupFlags, new DelayCalculator());
+      return new BackupUploadService(
+          backupUploader,
+          flags.persistentFileUploadRetryAmount,
+          ImmutableList.copyOf(flags.httpErrorCodesToRetry),
+          new DelayCalculator(
+              flags.minUploadDelay,
+              flags.maxWaitingTimeBetweenUploads));
       }
     return null;
   }
@@ -208,5 +241,66 @@ public class ImportAdapter {
       );
     }
     return result.size() > 0 ? result : null;
+  }
+
+  public static Pair<Map<DestinationFilter, AetDictionary.Aet>, Map<DestinationFilter, IDicomWebClient>> configureMultipleDestinationTypesMap(
+      String destinationJsonInline,
+      String jsonPath,
+      String jsonEnvKey,
+      GoogleCredentials credentials) throws IOException {
+
+    HashMap<DestinationFilter, AetDictionary.Aet> dicomMap = new LinkedHashMap<>();
+    HashMap<DestinationFilter, IDicomWebClient> healthcareMap = new LinkedHashMap<>();
+    JSONArray jsonArray = JsonUtil.parseConfig(destinationJsonInline, jsonPath, jsonEnvKey);
+
+    if (jsonArray != null) {
+      for (Object elem : jsonArray) {
+        JSONObject elemJson = (JSONObject) elem;
+        String filter = elemJson.getString("filter");
+        DestinationFilter destinationFilter = new DestinationFilter(StringUtil.trim(filter));
+
+        // validate key in dicomMap
+        validateKey(healthcareMap, filter);
+        // try to create Aet instance
+        if (elemJson.has("host")) {
+          dicomMap.put(destinationFilter,
+              new AetDictionary.Aet(elemJson.getString("name"),
+                  elemJson.getString("host"), elemJson.getInt("port")));
+        } else {
+          // in this case to try create IDicomWebClient instance
+          // validate key in healthcareMap
+          validateKey(healthcareMap, filter);
+          String filterPath = elemJson.getString("dicomweb_destination");
+          healthcareMap.put(destinationFilter,
+              new DicomWebClientJetty(credentials,
+                  filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES)));
+        }
+      }
+    }
+    return new Pair<>(dicomMap, healthcareMap);
+  }
+
+  private static <T> void validateKey(Map<DestinationFilter, T> map, String key) throws IllegalArgumentException{
+    if(map != null && map.containsKey(key)){
+      throw new IllegalArgumentException("Duplicate filter in Destinations config");
+    }
+  }
+
+  public static class Pair<A, D>{
+    private final A left;
+    private final D right;
+
+    public Pair(A left, D right) {
+      this.left = left;
+      this.right = right;
+    }
+
+    public A getLeft() {
+      return left;
+    }
+
+    public D getRight() {
+      return right;
+    }
   }
 }

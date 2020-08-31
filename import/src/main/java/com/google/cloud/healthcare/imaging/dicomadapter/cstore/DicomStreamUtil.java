@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.google.cloud.healthcare.imaging.dicomadapter;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

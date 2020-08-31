@@ -1,4 +1,4 @@
-package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -120,7 +120,7 @@ public class GcpBackupUploader extends AbstractBackupUploader {
             .setProjectId(projectId).build().getService();
   }
 
-  class GcpUriParseException extends IOException {
+  public static class GcpUriParseException extends IOException {
     public GcpUriParseException(String message, Throwable cause) {
       super(message, cause);
     }

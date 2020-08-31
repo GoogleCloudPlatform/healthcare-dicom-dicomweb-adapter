@@ -17,6 +17,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.api.client.util.IOUtils;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.DicomStreamUtil;
 import com.google.cloud.healthcare.util.TestUtils;
 import java.io.IOException;
 import java.io.InputStream;

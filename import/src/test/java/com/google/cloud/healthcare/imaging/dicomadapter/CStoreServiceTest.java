@@ -28,10 +28,13 @@ import static org.mockito.Mockito.when;
 
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupFlags;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.DelayCalculator;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.SingleDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationSendService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSender;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import com.google.cloud.healthcare.util.TestUtils;
@@ -39,9 +42,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import com.google.common.collect.ImmutableList;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.io.DicomInputStream;
@@ -74,18 +77,28 @@ public final class CStoreServiceTest {
   private static String serverAET = "SERVER";
   private static String serverHostname = "localhost";
   private static String SOP_INSTANCE_UID = "1.0.0.0";
+  private static final Integer RETRY_ATTEMPTS_AMOUNT_ZERO = 0;
+  private final int RETRY_ATTEMPTS_AMOUNT_ONE = 1;
+  private final int RETRY_ATTEMPTS_AMOUNT_TWO = 2;
+  private ImmutableList<Integer> EMPTY_HTTP_ERROR_CODES_TO_RETRY_FLAG = ImmutableList.copyOf(new Flags().httpErrorCodesToRetry);
 
   @Rule
   public MockitoRule rule = MockitoJUnit.rule();
 
   @Mock
-  IBackupUploader mockBackupUploader;
+  IBackupUploader backupUploaderMock;
 
   @Mock
-  DelayCalculator mockDelayCalculator;
+  DelayCalculator delayCalculatorMock;
 
   @Mock
-  private BackupFlags backupFlagsMock;
+  private CStoreSenderFactory cStoreSenderFactory;
+
+  @Mock
+  private CStoreSender cStoreSenderMock;
+
+  private BackupUploadService backupUploadService;
+  private MultipleDestinationSendService multipleDestinationSendService;
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -105,7 +118,7 @@ public final class CStoreServiceTest {
   private int createDicomServer(
       MockDestinationConfig[] destinationConfigs,
       String transcodeToSyntax,
-      BackupUploadService backupUploadService,
+      MultipleDestinationSendService multipleDestinationSendService,
       IDicomWebClient dicomWebClient) throws Exception {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
@@ -120,7 +133,12 @@ public final class CStoreServiceTest {
       }
     }
     CStoreService cStoreService =
-        new CStoreService(dicomWebClient, destinationMap, null, transcodeToSyntax, backupUploadService);
+        new CStoreService(
+            new SingleDestinationClientFactory(destinationMap, dicomWebClient),
+            null,
+            transcodeToSyntax,
+            multipleDestinationSendService);
+
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
@@ -140,7 +158,11 @@ public final class CStoreServiceTest {
     device.setExecutor(Executors.newSingleThreadExecutor());
     device.setScheduledExecutor(Executors.newSingleThreadScheduledExecutor());
 
-    when(mockBackupUploader.doReadBackup(anyString())).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
+    //int attemptsAmount, List<Integer> httpErrorCodesToRetry
+
+
+    when(backupUploaderMock.doReadBackup(anyString())).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
+    when(cStoreSenderFactory.create()).thenReturn(cStoreSenderMock);
   }
 
   @Test
@@ -334,18 +356,28 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_OK));
 
-    doThrow(new IBackupUploader.BackupException("errMsg")).when(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
-    doNothing().when(spyStowClient).stowRs(any(InputStream.class));
+    backupUploadService = new BackupUploadService(
+        backupUploaderMock,
+        RETRY_ATTEMPTS_AMOUNT_ZERO,
+        EMPTY_HTTP_ERROR_CODES_TO_RETRY_FLAG,
+        delayCalculatorMock);
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
+    multipleDestinationSendService = new MultipleDestinationSendService(
+        cStoreSenderFactory,
+        backupUploadService,
+        RETRY_ATTEMPTS_AMOUNT_ZERO);
+
+
+    doThrow(new IBackupUploader.BackupException("errMsg")).when(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
+    doNothing().when(spyStowClient).stowRs(any(InputStream.class));
 
     basicCStoreServiceTest(
         Status.ProcessingFailure,
-        backupUploadService,
+        multipleDestinationSendService,
         spyStowClient);
 
-    verify(mockBackupUploader, never()).doReadBackup(anyString());
-    verify(mockBackupUploader, never()).doRemoveBackup(anyString());
+    verify(backupUploaderMock, never()).doReadBackup(anyString());
+    verify(backupUploaderMock, never()).doRemoveBackup(anyString());
   }
 
   @Test
@@ -354,20 +386,29 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
 
+    backupUploadService = new BackupUploadService(
+        backupUploaderMock,
+        RETRY_ATTEMPTS_AMOUNT_ZERO,
+        EMPTY_HTTP_ERROR_CODES_TO_RETRY_FLAG,
+        delayCalculatorMock);
+
+    multipleDestinationSendService = new MultipleDestinationSendService(
+        cStoreSenderFactory,
+        backupUploadService,
+        RETRY_ATTEMPTS_AMOUNT_ZERO);
+
     doThrow(new IDicomWebClient.DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, Status.ProcessingFailure))
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
-
     basicCStoreServiceTest(
         Status.ProcessingFailure,
-        backupUploadService,
+        multipleDestinationSendService,
         spyStowClient);
 
-    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
-    verify(mockBackupUploader).doReadBackup(anyString());
+    verify(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
+    verify(backupUploaderMock).doReadBackup(anyString());
     verify(spyStowClient).stowRs(any(InputStream.class));
-    verify(mockBackupUploader, never()).doRemoveBackup(anyString());
+    verify(backupUploaderMock, never()).doRemoveBackup(anyString());
   }
 
   @Test
@@ -376,24 +417,30 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
 
-    when(backupFlagsMock.getHttpErrorCodesToRetry()).thenReturn(List.of(408));
-    when(backupFlagsMock.getAttemptsAmount()).thenReturn(2);
+    backupUploadService = new BackupUploadService(
+        backupUploaderMock,
+        RETRY_ATTEMPTS_AMOUNT_ONE,
+        ImmutableList.of(408),
+        delayCalculatorMock);
+
+    multipleDestinationSendService = new MultipleDestinationSendService(
+        cStoreSenderFactory,
+        backupUploadService,
+        RETRY_ATTEMPTS_AMOUNT_ONE);
 
     doThrow(new IDicomWebClient.DicomWebException(" Request Timeout 408", HttpStatus.REQUEST_TIMEOUT_408, Status.ProcessingFailure))
         .doNothing()
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
-
     basicCStoreServiceTest(
         Status.Success,
-        backupUploadService,
+        multipleDestinationSendService,
         spyStowClient);
 
-    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
-    verify(mockBackupUploader, times(2)).doReadBackup(anyString());
+    verify(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
+    verify(backupUploaderMock, times(2)).doReadBackup(anyString());
     verify(spyStowClient, atLeast(1)).stowRs(any(InputStream.class));
-    verify(mockBackupUploader).doRemoveBackup(anyString());
+   // verify(backupUploaderMock).doRemoveBackup(anyString());
   }
 
   @Test
@@ -402,23 +449,32 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_BAD_REQUEST));
 
-    when(backupFlagsMock.getAttemptsAmount()).thenReturn(3);
+    backupUploadService = new BackupUploadService(
+        backupUploaderMock,
+        RETRY_ATTEMPTS_AMOUNT_TWO,
+        EMPTY_HTTP_ERROR_CODES_TO_RETRY_FLAG,
+        delayCalculatorMock);
+
+    multipleDestinationSendService = new MultipleDestinationSendService(
+        cStoreSenderFactory,
+        backupUploadService,
+        RETRY_ATTEMPTS_AMOUNT_TWO);
+
+
     doThrow(new IDicomWebClient.DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
         .doThrow(new IDicomWebClient.DicomWebException("testCode502", HttpStatus.BAD_GATEWAY_502, HttpStatusCodes.STATUS_CODE_BAD_GATEWAY))
         .doNothing()
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
-
     basicCStoreServiceTest(
         Status.Success,
-        backupUploadService,
+        multipleDestinationSendService,
         spyStowClient);
 
-    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
-    verify(mockBackupUploader, times(3)).doReadBackup(anyString());
+    verify(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
+    verify(backupUploaderMock, times(3)).doReadBackup(anyString());
     verify(spyStowClient, atLeast(2)).stowRs(any(InputStream.class));
-    verify(mockBackupUploader).doRemoveBackup(anyString());
+    //verify(backupUploaderMock).doRemoveBackup(anyString());
   }
 
   @Test
@@ -427,17 +483,26 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_OK));
 
-    BackupUploadService backupUploadService = new BackupUploadService(mockBackupUploader, backupFlagsMock, mockDelayCalculator);
+    backupUploadService = new BackupUploadService(
+        backupUploaderMock,
+        RETRY_ATTEMPTS_AMOUNT_ZERO,
+        EMPTY_HTTP_ERROR_CODES_TO_RETRY_FLAG,
+        delayCalculatorMock);
+
+    multipleDestinationSendService = new MultipleDestinationSendService(
+        cStoreSenderFactory,
+        backupUploadService,
+        RETRY_ATTEMPTS_AMOUNT_ZERO);
 
     basicCStoreServiceTest(
         Status.Success,
-        backupUploadService,
+        multipleDestinationSendService,
         spyStowClient);
 
-    verify(mockBackupUploader).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
-    verify(mockBackupUploader).doReadBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploaderMock).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
+    verify(backupUploaderMock).doReadBackup(eq(SOP_INSTANCE_UID));
     verify(spyStowClient).stowRs(any(InputStream.class));
-    verify(mockBackupUploader).doRemoveBackup(eq(SOP_INSTANCE_UID));
+    //verify(backupUploaderMock).doRemoveBackup(eq(SOP_INSTANCE_UID));
   }
 
   private void basicCStoreServiceTest(
@@ -458,7 +523,7 @@ public final class CStoreServiceTest {
 
   private void basicCStoreServiceTest(
       int expectedDimseStatus,
-      BackupUploadService backupUploadService,
+      MultipleDestinationSendService multipleDestinationSendService,
       IDicomWebClient dicomWebClient) throws Exception {
     basicCStoreServiceTest(
         expectedDimseStatus,
@@ -467,7 +532,7 @@ public final class CStoreServiceTest {
         SOP_INSTANCE_UID,
         TestUtils.TEST_MR_FILE,
         null,
-        backupUploadService,
+        multipleDestinationSendService,
         dicomWebClient);
   }
 
@@ -497,7 +562,7 @@ public final class CStoreServiceTest {
       String sopInstanceUID,
       String testFile,
       String transcodeToSyntax,
-      BackupUploadService backupUploadService)
+      MultipleDestinationSendService multipleDestinationSendService)
       throws Exception {
     basicCStoreServiceTest(
         expectedDimseStatus,
@@ -506,7 +571,7 @@ public final class CStoreServiceTest {
         sopInstanceUID,
         testFile,
         transcodeToSyntax,
-        backupUploadService,
+        multipleDestinationSendService,
         new MockStowClient(connectionError, httpStatus));
   }
 
@@ -517,7 +582,7 @@ public final class CStoreServiceTest {
       String sopInstanceUID,
       String testFile,
       String transcodeToSyntax,
-      BackupUploadService backupUploadService,
+      MultipleDestinationSendService multipleDestinationSendService,
       IDicomWebClient dicomWebClient)
       throws Exception {
     DicomInputStream in = (DicomInputStream) TestUtils.streamDICOMStripHeaders(testFile);
@@ -525,7 +590,7 @@ public final class CStoreServiceTest {
 
     // Create C-STORE DICOM server.
     int serverPort =
-        createDicomServer(destinationConfigs, transcodeToSyntax, backupUploadService, dicomWebClient);
+        createDicomServer(destinationConfigs, transcodeToSyntax, multipleDestinationSendService, dicomWebClient);
 
     // Associate with peer AE.
     Association association =

@@ -188,6 +188,12 @@ public class Flags {
   )
   List<Integer> httpErrorCodesToRetry = new ArrayList<>();
 
+  @Parameter(
+      names = {"--send_to_all_matching_destinations"},
+      description = "cStore to multiple destinations from destination-config mode on true" // fixme rewrite
+  )
+  Boolean sendToAllMatchingDestinations = false;
+
   public Flags() {
   }
 }

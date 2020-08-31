@@ -14,12 +14,13 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
-import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupState;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.DicomStreamUtil;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.DestinationHolder;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.IMultipleDestinationSendService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationSendService.MultipleDestinationSendServiceException;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
@@ -30,18 +31,15 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
 import org.dcm4che3.imageio.codec.Transcoder;
-import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.Association;
 import org.dcm4che3.net.PDVInputStream;
 import org.dcm4che3.net.Status;
@@ -59,23 +57,19 @@ public class CStoreService extends BasicCStoreSCP {
 
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
-  private final IDicomWebClient defaultDicomWebClient;
-  private final Map<DestinationFilter, IDicomWebClient> destinationMap;
+  private final IDestinationClientFactory destinationClientFactory;
+  private final IMultipleDestinationSendService multipleSendService;
   private final DicomRedactor redactor;
   private final String transcodeToSyntax;
-  private final BackupUploadService backupUploadService;
 
-  CStoreService(IDicomWebClient defaultDicomWebClient,
-      Map<DestinationFilter, IDicomWebClient> destinationMap,
-      DicomRedactor redactor, String transcodeToSyntax, BackupUploadService backupUploadService) {
-    this.defaultDicomWebClient = defaultDicomWebClient;
-    this.destinationMap =
-        destinationMap != null && destinationMap.size() > 0 ? destinationMap : null;
+  CStoreService(IDestinationClientFactory destinationClientFactory,
+                DicomRedactor redactor,
+                String transcodeToSyntax,
+                IMultipleDestinationSendService multipleSendService) {
+    this.destinationClientFactory = destinationClientFactory;
     this.redactor = redactor;
-    this.transcodeToSyntax =
-        transcodeToSyntax != null && transcodeToSyntax.length() > 0 ? transcodeToSyntax : null;
-
-    this.backupUploadService = backupUploadService;
+    this.transcodeToSyntax = transcodeToSyntax != null && transcodeToSyntax.length() > 0 ? transcodeToSyntax : null;
+    this.multipleSendService = multipleSendService;
 
     if(this.transcodeToSyntax != null) {
       log.info("Transcoding to: " + transcodeToSyntax);
@@ -90,111 +84,73 @@ public class CStoreService extends BasicCStoreSCP {
       PDVInputStream inPdvStream,
       Attributes response)
       throws IOException {
-
-      AtomicReference<BackupState> backupState = new AtomicReference<>();
-      AtomicReference<IDicomWebClient> destinationClient = new AtomicReference<>();
-      long uploadedBytesCount = 0;
-
-      try {
-        MonitoringService.addEvent(Event.CSTORE_REQUEST);
-
-        String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
-        String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
-        String transferSyntax = presentationContext.getTransferSyntax();
-
-        validateParam(sopClassUID, "AffectedSOPClassUID");
-        validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
-
-        final CountingInputStream countingStream;
-
-        if(destinationMap != null){
-          DicomInputStream inDicomStream  = new DicomInputStream(inPdvStream);
-          inDicomStream.mark(Integer.MAX_VALUE);
-          Attributes attrs = inDicomStream.readDataset(-1, Tag.PixelData);
-          inDicomStream.reset();
-
-          countingStream = new CountingInputStream(inDicomStream);
-          destinationClient.set(selectDestinationClient(association.getAAssociateAC().getCallingAET(), attrs));
-        } else {
-          countingStream = new CountingInputStream(inPdvStream);
-          destinationClient.set(defaultDicomWebClient);
-        }
-
-        InputStream inWithHeader =
-            DicomStreamUtil.dicomStreamWithFileMetaHeader(
-                sopInstanceUID, sopClassUID, transferSyntax, countingStream);
-
-        List<StreamProcessor> processorList = new ArrayList<>();
-        if (redactor != null) {
-          processorList.add(redactor::redact);
-        }
-
-        if(transcodeToSyntax != null && !transcodeToSyntax.equals(transferSyntax)) {
-          processorList.add((inputStream, outputStream) -> {
-            try (Transcoder transcoder = new Transcoder(inputStream)) {
-              transcoder.setIncludeFileMetaInformation(true);
-              transcoder.setDestinationTransferSyntax(transcodeToSyntax);
-              transcoder.transcode((transcoder1, dataset) -> outputStream);
-            }
-          });
-        }
-
-        if (backupUploadService != null) {
-          processorList.add((inputStream, outputStream) -> {
-            backupState.set(backupUploadService.createBackup(inputStream, sopInstanceUID));
-            backupUploadService.getBackupStream(sopInstanceUID).transferTo(outputStream);
-          });
-        }
-
-        processorList.add((inputStream, outputStream) -> {
-          destinationClient.get().stowRs(inputStream);
-        });
-
-        processStream(association.getApplicationEntity().getDevice().getExecutor(), inWithHeader, processorList);
-        uploadedBytesCount = countingStream.getCount();
-
-        updateResponseToSuccess(response, uploadedBytesCount);
-
-        if (backupUploadService != null && backupState.get() != null) {
-          backupUploadService.removeBackup(backupState.get().getUniqueFileName());
-        }
-      } catch (DicomWebException dwe) {
-        if (backupUploadService != null
-            && backupUploadService.filterHttpCode(dwe.getHttpStatus())
-            && backupState.get().getAttemptsCountdown() > 0) {
-          log.error("C-STORE request failed. Trying to resend...", dwe);
-          resendWithDelayRecursivelyExceptionally(backupState, destinationClient);
-          updateResponseToSuccess(response, uploadedBytesCount);
-          return;
-        }
-        reportError(dwe);
-        throw new DicomServiceException(dwe.getStatus(), dwe);
-      } catch (IBackupUploader.BackupException e) {
-        MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-        log.error("Backup io processing during C-STORE request is failed: ", e);
-        reportError(e);
-        throw new DicomServiceException(Status.ProcessingFailure, e);
-      } catch (DicomServiceException e) {
-        reportError(e);
-        throw e;
-      } catch (Throwable e) {
-        reportError(e);
-        throw new DicomServiceException(Status.ProcessingFailure, e);
-      }
-  }
-
-  private void updateResponseToSuccess(Attributes response, long countingStreamCount) {
-    response.setInt(Tag.Status, VR.US, Status.Success);
-    MonitoringService.addEvent(Event.CSTORE_BYTES, countingStreamCount);
-  }
-
-  private void resendWithDelayRecursivelyExceptionally(AtomicReference<BackupState> backupState, AtomicReference<IDicomWebClient> destinationClient)
-      throws DicomServiceException {
     try {
-      backupUploadService.startUploading(destinationClient.get(), backupState.get());
-    } catch (IBackupUploader.BackupException bae) {
-      MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-      throw new DicomServiceException(bae.getDicomStatus() != null ? bae.getDicomStatus() : Status.ProcessingFailure, bae);
+      MonitoringService.addEvent(Event.CSTORE_REQUEST);
+
+      String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
+      String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
+      String transferSyntax = presentationContext.getTransferSyntax();
+
+      validateParam(sopClassUID, "AffectedSOPClassUID");
+      validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
+
+      DestinationHolder destinationHolder =
+          destinationClientFactory.create(association.getAAssociateAC().getCallingAET(), inPdvStream);
+
+      final CountingInputStream countingStream = destinationHolder.getCountingInputStream();
+
+      List<StreamProcessor> processorList = new ArrayList<>();
+      if (redactor != null) {
+        processorList.add(redactor::redact);
+      }
+
+      if(transcodeToSyntax != null && !transcodeToSyntax.equals(transferSyntax)) {
+        processorList.add((inputStream, outputStream) -> {
+          try (Transcoder transcoder = new Transcoder(inputStream)) {
+            transcoder.setIncludeFileMetaInformation(true);
+            transcoder.setDestinationTransferSyntax(transcodeToSyntax);
+            transcoder.transcode((transcoder1, dataset) -> outputStream);
+          }
+        });
+      }
+
+      if (multipleSendService != null) {
+        processorList.add((inputStream, outputStream) -> {
+          multipleSendService.start(
+              destinationHolder.getHealthcareDestinations(),
+              destinationHolder.getDicomDestinations(),
+              inputStream,
+              sopClassUID,
+              sopInstanceUID
+            );
+        });
+      } else {
+        processorList.add((inputStream, outputStream) -> {
+          destinationHolder.getSingleDestination().stowRs(inputStream);
+        });
+      }
+
+      InputStream inWithHeader =
+          DicomStreamUtil.dicomStreamWithFileMetaHeader(
+              sopInstanceUID, sopClassUID, transferSyntax, countingStream);
+
+      processStream(association.getApplicationEntity().getDevice().getExecutor(),
+          inWithHeader, processorList);
+
+      response.setInt(Tag.Status, VR.US, Status.Success);
+      MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
+    } catch (DicomWebException e) {
+      reportError(e);
+      throw new DicomServiceException(e.getStatus(), e);
+    } catch (DicomServiceException e) {
+      reportError(e);
+      throw e;
+    } catch (MultipleDestinationSendServiceException me) {
+      reportError(me); //todo: read Status. from cause
+      throw new DicomServiceException(Status.ProcessingFailure, me);
+    } catch (Throwable e) {
+      reportError(e);
+      throw new DicomServiceException(Status.ProcessingFailure, e);
     }
   }
 
@@ -207,15 +163,6 @@ public class CStoreService extends BasicCStoreSCP {
     if (value == null || value.trim().length() == 0) {
       throw new DicomServiceException(Status.CannotUnderstand, "Mandatory tag empty: " + name);
     }
-  }
-
-  private IDicomWebClient selectDestinationClient(String callingAet, Attributes attrs){
-    for(DestinationFilter filter: destinationMap.keySet()){
-      if(filter.matches(callingAet, attrs)){
-        return destinationMap.get(filter);
-      }
-    }
-    return defaultDicomWebClient;
   }
 
   private void processStream(Executor underlyingExecutor, InputStream inputStream,

@@ -1,6 +1,6 @@
-package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
-import static com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader.BackupException;
+import static com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,6 +16,9 @@ import static org.mockito.Mockito.when;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupState;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.common.collect.ImmutableList;
 import org.dcm4che3.net.Status;
 import org.eclipse.jetty.http.HttpStatus;
 import org.junit.After;
@@ -36,16 +39,19 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @RunWith(JUnit4.class)
 public class BackupUploadServiceTest {
 
   private final byte [] BACKUP_BYTES = {1, 2, 3, 4};
   private final String UNIQUE_FILE_NAME = "testUniqueFileName";
+
+  // Test emulation of the situation, when first send already done and flag persistent_file_upload_retry_amount=0
+  private final int ATTEMPTS_AMOUNT_MINUS_ONE = -1;
   private final int ATTEMPTS_AMOUNT_ZERO = 0;
   private final int ATTEMPTS_AMOUNT_ONE = 1;
-  private final int ATTEMPTS_AMOUNT_TWO = 2;
   private final String EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE = "sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.";
 
   private InputStream backupInputStream;
@@ -63,20 +69,18 @@ public class BackupUploadServiceTest {
   private DelayCalculator delayCalculatorMock;
 
   @Mock
-  private BackupFlags backupFlagsMock;
-
-  @Mock
   private IDicomWebClient webClientMock;
 
   @Spy
-  private BackupState spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_TWO);
+  private BackupState spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ONE);
 
   private BackupUploadService backupUploadService;
 
   @Before
   public void before() {
-    when(backupFlagsMock.getAttemptsAmount()).thenReturn(ATTEMPTS_AMOUNT_ONE);
-    backupUploadService = new BackupUploadService(backupUploaderMock, backupFlagsMock, delayCalculatorMock);
+    backupUploadService =
+        new BackupUploadService(
+            backupUploaderMock, ATTEMPTS_AMOUNT_ZERO, ImmutableList.of(), delayCalculatorMock);
     backupInputStream = new ByteArrayInputStream(BACKUP_BYTES);
   }
 
@@ -87,11 +91,9 @@ public class BackupUploadServiceTest {
 
   @Test
   public void createBackup_success() throws BackupException {
-    BackupState actualBackupState = backupUploadService.createBackup(backupInputStream, UNIQUE_FILE_NAME);
+    backupUploadService.createBackup(backupInputStream, UNIQUE_FILE_NAME);
 
     verify(backupUploaderMock).doWriteBackup(eq(backupInputStream), eq(UNIQUE_FILE_NAME));
-    assertThat(actualBackupState.getAttemptsCountdown()).isEqualTo(ATTEMPTS_AMOUNT_ONE);
-    assertThat(actualBackupState.getUniqueFileName()).isEqualTo(UNIQUE_FILE_NAME);
   }
 
   @Test
@@ -121,11 +123,11 @@ public class BackupUploadServiceTest {
   }
 
   @Test
-  public void startUploading_firstTry_success() throws IOException, DicomWebException {
+  public void startUploading_firstTry_success() throws Exception{
     doNothing().when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    backupUploadService.startUploading(webClientMock, spyBackupState);
+    startUploadingAndWaitCompletion();
 
     ArgumentCaptor<InputStream> argumentCaptor = ArgumentCaptor.forClass(InputStream.class);
 
@@ -134,17 +136,15 @@ public class BackupUploadServiceTest {
     inOrder.verify(webClientMock).stowRs(argumentCaptor.capture());
     byte [] actualBytes = argumentCaptor.getValue().readNBytes(5);
     assertThat(Arrays.equals(actualBytes, BACKUP_BYTES)).isTrue();
-
-    inOrder.verify(backupUploaderMock).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
   @Test
-  public void startUploading_DicomWebExceptionOnStowRs_secondTry_success() throws DicomWebException, IOException {
+  public void startUploading_DicomWebExceptionOnStowRs_secondTry_success() throws Exception {
     doThrow(new DicomWebException("Reason", HttpStatus.INTERNAL_SERVER_ERROR_500, Status.ProcessingFailure))
         .doNothing().when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    backupUploadService.startUploading(webClientMock, spyBackupState);
+    startUploadingAndWaitCompletion();
 
     ArgumentCaptor<InputStream> argumentCaptor = ArgumentCaptor.forClass(InputStream.class);
 
@@ -153,23 +153,20 @@ public class BackupUploadServiceTest {
     byte [] actualBytes = argumentCaptor.getValue().readNBytes(5);
     assertThat(Arrays.equals(actualBytes, BACKUP_BYTES)).isTrue();
 
-    verify(backupUploaderMock).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
   @Test
-  public void startUploading_BackupExceptionOnDoReadBackup_failed() throws BackupException {
+  public void startUploading_BackupExceptionOnDoReadBackup_failed() throws Exception {
     String exMsg = "reason";
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenThrow(new BackupException(exMsg));
 
-    exceptionRule.expect(BackupException.class);
-    exceptionRule.expectMessage(exMsg);
-
-    backupUploadService.startUploading(webClientMock, spyBackupState);
+    catchAndAssertBackupExceptionOnStartUploading(exMsg, null,1);
   }
 
   @Test
   public void startUploading_noMoreTry_BackupException() throws BackupException {
-    spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ZERO);
+    spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_MINUS_ONE);
 
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
@@ -177,17 +174,19 @@ public class BackupUploadServiceTest {
     exceptionRule.expectMessage(EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE);
 
     backupUploadService.startUploading(webClientMock, spyBackupState);
+
+    verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
   @Test
   public void startUploading_lastAttempt_noNewSchedule_BackupException() throws IOException, DicomWebException {
-    spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ONE);
+    spyBackupState = new BackupState(UNIQUE_FILE_NAME, ATTEMPTS_AMOUNT_ZERO);
 
     doThrow(new DicomWebException("Reason2", HttpStatus.INTERNAL_SERVER_ERROR_500, Status.ProcessingFailure))
         .doNothing().when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    catchAndAssertBackupExceptionOnStartUploading(EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE, Status.ProcessingFailure, 2);
+    catchAndAssertBackupExceptionOnStartUploading(EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE, Status.ProcessingFailure, 1);
 
     verify(backupUploaderMock).doReadBackup(eq(UNIQUE_FILE_NAME));
     verify(webClientMock).stowRs(any(InputStream.class));
@@ -201,7 +200,7 @@ public class BackupUploadServiceTest {
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
     catchAndAssertBackupExceptionOnStartUploading("Not retried due to HTTP code=" + HttpStatus.CONFLICT_409,
-        Status.ProcessingFailure, 2);
+        Status.ProcessingFailure, 1);
 
     verify(backupUploaderMock).doReadBackup(eq(UNIQUE_FILE_NAME));
     verify(webClientMock).stowRs(any(InputStream.class));
@@ -216,7 +215,7 @@ public class BackupUploadServiceTest {
             .when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    catchAndAssertBackupExceptionOnStartUploading(EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE, Status.ProcessingFailure, 3);
+    catchAndAssertBackupExceptionOnStartUploading(EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE, Status.ProcessingFailure, 2);
 
     verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
     verify(webClientMock, times(2)).stowRs(any(InputStream.class));
@@ -224,36 +223,43 @@ public class BackupUploadServiceTest {
   }
 
   @Test
-  public void startUploading_retryOn_DicomWebException408Code_Success() throws DicomWebException, IOException {
-    when(backupFlagsMock.getHttpErrorCodesToRetry()).thenReturn(List.of(408));
-    when(backupFlagsMock.getAttemptsAmount()).thenReturn(ATTEMPTS_AMOUNT_TWO);
+  public void startUploading_retryOn_DicomWebException408Code_Success() throws Exception {
+    backupUploadService =
+        new BackupUploadService(
+            backupUploaderMock, ATTEMPTS_AMOUNT_ONE, ImmutableList.of(408), delayCalculatorMock);
 
     doThrow(new DicomWebException(" Request Timeout 408", HttpStatus.REQUEST_TIMEOUT_408, HttpStatusCodes.STATUS_CODE_BAD_REQUEST))
         .doNothing()
         .when(webClientMock).stowRs(any(InputStream.class));
     when(backupUploaderMock.doReadBackup(eq(UNIQUE_FILE_NAME))).thenReturn(backupInputStream);
 
-    backupUploadService.startUploading(webClientMock, spyBackupState);
+    startUploadingAndWaitCompletion();
 
     verify(backupUploaderMock, times(2)).doReadBackup(eq(UNIQUE_FILE_NAME));
     verify(webClientMock, times(2)).stowRs(any(InputStream.class));
-    verify(backupUploaderMock).doRemoveBackup(eq(UNIQUE_FILE_NAME));
+    verify(backupUploaderMock, never()).doRemoveBackup(eq(UNIQUE_FILE_NAME));
   }
 
   private void catchAndAssertBackupExceptionOnStartUploading(String expectedMessage, Integer expectedDicomStatus, int recursiveCallTimes) {
-    Throwable expectedException = null;
+    Throwable actualException = null;
     try {
-      backupUploadService.startUploading(webClientMock, spyBackupState);
+      startUploadingAndWaitCompletion();
     } catch (Exception e) {
-      expectedException = e;
-    }
-    assertThat(expectedException).isInstanceOf(BackupException.class);
-    assertThat(expectedException).hasMessageThat().contains(expectedMessage);
-    if (expectedDicomStatus != null) {
-      for (int i = 0; i < recursiveCallTimes -1; i++){
-        expectedException = expectedException.getCause();
+      actualException = e;
+      for (int i = 0; i < recursiveCallTimes; i++){
+        actualException = actualException.getCause();
       }
-      assertThat(((BackupException) expectedException).getDicomStatus()).isEqualTo(expectedDicomStatus);
     }
+    assertThat(actualException).isInstanceOf(BackupException.class);
+    assertThat(actualException).hasMessageThat().contains(expectedMessage);
+    if (expectedDicomStatus != null) {
+
+      assertThat(((BackupException) actualException).getDicomStatus()).isEqualTo(expectedDicomStatus);
+    }
+  }
+
+  private void startUploadingAndWaitCompletion() throws BackupException, InterruptedException, ExecutionException {
+    CompletableFuture completableFuture = backupUploadService.startUploading(webClientMock, spyBackupState);
+    completableFuture.get();
   }
 }
