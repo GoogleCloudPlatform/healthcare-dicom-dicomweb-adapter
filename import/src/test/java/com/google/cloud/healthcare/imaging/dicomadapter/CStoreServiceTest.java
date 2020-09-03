@@ -17,7 +17,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -392,7 +391,7 @@ public final class CStoreServiceTest {
 
     verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
     verify(mockBackupUploader, times(2)).doReadBackup(anyString());
-    verify(spyStowClient, atLeast(1)).stowRs(any(InputStream.class));
+    verify(spyStowClient, times(2)).stowRs(any(InputStream.class));
     verify(mockBackupUploader).doRemoveBackup(anyString());
   }
 
@@ -417,7 +416,7 @@ public final class CStoreServiceTest {
 
     verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
     verify(mockBackupUploader, times(3)).doReadBackup(anyString());
-    verify(spyStowClient, atLeast(2)).stowRs(any(InputStream.class));
+    verify(spyStowClient, times(3)).stowRs(any(InputStream.class));
     verify(mockBackupUploader).doRemoveBackup(anyString());
   }
 
