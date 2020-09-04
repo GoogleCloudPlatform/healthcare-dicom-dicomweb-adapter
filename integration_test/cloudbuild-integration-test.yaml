@@ -227,7 +227,7 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP}:${_ADAPTER_PORT_WITH_LOCAL_BACKUP} ../../../integration_test/data/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP}:${_ADAPTER_PORT_WITH_LOCAL_BACKUP} ../../../integration_test/data/example2.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter-with-local-backup
@@ -242,7 +242,7 @@
   - '-ntp'
   - 'exec:java'
   - '-Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU'
-  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_WITH_GCS_BACKUP}:${_ADAPTER_PORT_WITH_GCS_BACKUP} ../../../integration_test/data/example.dcm'
+  - '-Dexec.args=-c IMPORTADAPTER@${_ADAPTER_RUN_STEP_WITH_GCS_BACKUP}:${_ADAPTER_PORT_WITH_GCS_BACKUP} ../../../integration_test/data/example3.dcm'
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-storescu"
   waitFor:
   - wait-for-adapter-with-gcs-backup
@@ -387,6 +387,26 @@
   waitFor:
   - run-store-scu
 
+- name: ${_CLOUD_SDK_IMAGE}
+  id: check-store-curl-with-local-backup
+  args:
+    - bash
+    - integration_test/scripts/curl-dcm.sh
+    - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID}/series/${_REPLACED_UID}/instances/${_REPLACED_UID}"
+    - integration_test/downloaded2.dcm
+  waitFor:
+    - run-store-scu-with-local-backup
+
+- name: ${_CLOUD_SDK_IMAGE}
+  id: check-store-curl-with-gcs-backup
+  args:
+    - bash
+    - integration_test/scripts/curl-dcm.sh
+    - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID}/series/${_REPLACED_UID}/instances/${_REPLACED_UID}"
+    - integration_test/downloaded3.dcm
+  waitFor:
+    - run-store-scu-with-gcs-backup
+
 # example-redacted has replaced UIDs and removed ContentTime,ContentDate tags
 - name: 'busybox:latest'
   id: check-store-diff
@@ -396,6 +416,7 @@
   - 'integration_test/data/example-redacted-jp2k.dcm'
   waitFor:
   - check-store-curl
+
 - name: ${_CLOUD_SDK_IMAGE}
   id: check-store-curl-destination-2
   args:
@@ -415,6 +436,24 @@
   - 'integration_test/data/example-redacted-mg-jp2k.dcm'
   waitFor:
   - check-store-curl-destination-2
+
+- name: 'busybox:latest'
+  id: check-store-diff-with-local-backup
+  args:
+    - diff
+    - 'integration_test/downloaded2.dcm'
+    - 'integration_test/data/example-redacted-jp2k.dcm'
+  waitFor:
+    - check-store-curl-with-local-backup
+
+- name: 'busybox:latest'
+  id: check-store-diff-with-gcs-backup
+  args:
+    - diff
+    - 'integration_test/downloaded3.dcm'
+    - 'integration_test/data/example-redacted-jp2k.dcm'
+  waitFor:
+    - check-store-curl-with-gcs-backup
 
 - name: 'busybox:latest'
   id: check-find-diff-instance
@@ -482,6 +521,8 @@
   waitFor:
   - check-store-curl
   - check-store-curl-destination-2
+  - check-store-curl-with-local-backup
+  - check-store-curl-with-gcs-backup
   - run-find-scu-instance
   - run-find-scu-series
   - run-find-scu-study
@@ -536,7 +577,7 @@ substitutions:
   _ADAPTER_RUN_STEP_WITH_LOCAL_BACKUP: 'step_7'
   _ADAPTER_RUN_STEP_WITH_GCS_BACKUP: 'step_8'
   _STORE_SCP_RUN_STEP: 'step_3'
-  _COMMITMENT_SCU_STEP: 'step_24'
+  _COMMITMENT_SCU_STEP: 'step_28'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
