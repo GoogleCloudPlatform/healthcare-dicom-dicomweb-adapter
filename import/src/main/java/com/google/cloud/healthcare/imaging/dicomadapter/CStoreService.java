@@ -19,8 +19,8 @@ import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.DicomStreamUtil;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.DestinationHolder;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.IMultipleDestinationSendService;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationSendService.MultipleDestinationSendServiceException;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.IMultipleDestinationUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.IMultipleDestinationUploadService.MultipleDestinationUploadServiceException;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
@@ -58,14 +58,14 @@ public class CStoreService extends BasicCStoreSCP {
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
   private final IDestinationClientFactory destinationClientFactory;
-  private final IMultipleDestinationSendService multipleSendService;
+  private final IMultipleDestinationUploadService multipleSendService;
   private final DicomRedactor redactor;
   private final String transcodeToSyntax;
 
   CStoreService(IDestinationClientFactory destinationClientFactory,
                 DicomRedactor redactor,
                 String transcodeToSyntax,
-                IMultipleDestinationSendService multipleSendService) {
+                IMultipleDestinationUploadService multipleSendService) {
     this.destinationClientFactory = destinationClientFactory;
     this.redactor = redactor;
     this.transcodeToSyntax = transcodeToSyntax != null && transcodeToSyntax.length() > 0 ? transcodeToSyntax : null;
@@ -145,7 +145,7 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (DicomServiceException e) {
       reportError(e);
       throw e;
-    } catch (MultipleDestinationSendServiceException me) {
+    } catch (MultipleDestinationUploadServiceException me) {
       reportError(me); //todo: read Status. from cause
       throw new DicomServiceException(Status.ProcessingFailure, me);
     } catch (Throwable e) {

@@ -16,8 +16,6 @@ import static org.mockito.Mockito.when;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupState;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
 import com.google.common.collect.ImmutableList;
 import org.dcm4che3.net.Status;
 import org.eclipse.jetty.http.HttpStatus;

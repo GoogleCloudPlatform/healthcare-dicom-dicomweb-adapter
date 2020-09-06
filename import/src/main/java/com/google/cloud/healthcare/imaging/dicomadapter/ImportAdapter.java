@@ -38,7 +38,7 @@ import com.google.cloud.healthcare.imaging.dicomadapter.cmove.CMoveSenderFactory
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.MultipleDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.SingleDestinationClientFactory;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationSendService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -142,9 +142,12 @@ public class ImportAdapter {
           defaultCstoreDicomWebClient);
     }
     String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
+    if (cstoreSubAet.isBlank()) {
+      throw new IllegalArgumentException("cstoreSubAet cannot be empty. Please set ");
+    }
 
     CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet);
-    MultipleDestinationSendService multipleDestinationSendService = new MultipleDestinationSendService(
+    MultipleDestinationUploadService multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactory,
         backupUploadService,
         flags.persistentFileUploadRetryAmount);
