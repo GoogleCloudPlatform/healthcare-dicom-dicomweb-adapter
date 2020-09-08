@@ -3,7 +3,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupState;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSender;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSenderFactory;
@@ -22,10 +22,10 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
   private Logger log = LoggerFactory.getLogger(MultipleDestinationUploadService.class);
 
   private CStoreSenderFactory cStoreSenderFactory;
-  private BackupUploadService backupUploadService;
+  private IBackupUploadService backupUploadService;
   private int attemptsAmount;
 
-  public MultipleDestinationUploadService(CStoreSenderFactory cStoreSenderFactory, BackupUploadService backupUploadService, int attemptsAmount) {
+  public MultipleDestinationUploadService(CStoreSenderFactory cStoreSenderFactory, IBackupUploadService backupUploadService, int attemptsAmount) {
     this.cStoreSenderFactory = cStoreSenderFactory;
     this.backupUploadService = backupUploadService;
     this.attemptsAmount = attemptsAmount;
@@ -36,7 +36,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
                     ImmutableList<AetDictionary.Aet> dicomDestinations,
                     InputStream inputStream,
                     String sopClassUID,
-                    String backupFileName) throws BackupException, MultipleDestinationUploadServiceException {
+                    String sopInstanceUID) throws MultipleDestinationUploadServiceException {
     CStoreSender cStoreSender = cStoreSenderFactory.create();
 
     if (backupUploadService == null) {
@@ -46,10 +46,10 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     List<Throwable> asyncUploadProcessingExceptions = new ArrayList<>();
 
     try {
-      backupUploadService.createBackup(inputStream, backupFileName);
+      backupUploadService.createBackup(inputStream, sopInstanceUID);
     } catch (BackupException be) {
       log.error("{} processing failed.", this.getClass().getSimpleName(), be);
-      throw be;
+      throw new MultipleDestinationUploadServiceException(be);
     }
 
     List<CompletableFuture> uploadFutures = new ArrayList<>();
@@ -60,7 +60,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
         healthcareUploadFuture = backupUploadService.startUploading(
             healthcareDest,
             new BackupState(
-                backupFileName,
+                sopInstanceUID,
                 attemptsAmount));
 
         uploadFutures.add(healthcareUploadFuture);
@@ -77,10 +77,10 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
         dicomUploadFuture = backupUploadService.startUploading(
             cStoreSender,
             dicomDest,
-            backupFileName,
+            sopInstanceUID,
             sopClassUID,
             new BackupState(
-                backupFileName,
+                sopInstanceUID,
                 attemptsAmount));
 
         uploadFutures.add(dicomUploadFuture);
@@ -104,7 +104,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     }
 
     if (asyncUploadProcessingExceptions.isEmpty()) {
-      backupUploadService.removeBackup(backupFileName);
+      backupUploadService.removeBackup(sopInstanceUID);
     } else {
       log.error("Exception messages of the upload async jobs:\n{}",
           asyncUploadProcessingExceptions.stream().map(t -> t.getMessage()).collect(Collectors.joining("\n")));;

@@ -21,11 +21,13 @@ import org.dcm4che3.net.Association;
 import org.dcm4che3.net.PDVInputStream;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCStoreSCP;
-import org.dcm4che3.net.service.DicomServiceException;
+
+import java.io.IOException;
 
 /** Stub implementation of a C-Store service that returns the injected status code. */
 public class StubCStoreService extends BasicCStoreSCP {
   private int statusCode;
+  private byte[] receivedBytes;
 
   public StubCStoreService(int statusCode) {
     this.statusCode = statusCode;
@@ -38,7 +40,12 @@ public class StubCStoreService extends BasicCStoreSCP {
       Attributes request,
       PDVInputStream dataStream,
       Attributes response)
-      throws DicomServiceException {
+      throws IOException {
+    receivedBytes =  dataStream.readAllBytes();
     response.setInt(Tag.Status, VR.US, statusCode);
+  }
+
+  public byte[] getReceivedBytes() {
+    return receivedBytes;
   }
 }

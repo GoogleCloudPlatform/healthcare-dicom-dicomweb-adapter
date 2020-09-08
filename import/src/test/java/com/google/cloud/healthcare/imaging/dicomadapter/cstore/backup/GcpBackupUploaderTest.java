@@ -3,8 +3,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 import com.google.auth.Credentials;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.RestorableState;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.GcpBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
