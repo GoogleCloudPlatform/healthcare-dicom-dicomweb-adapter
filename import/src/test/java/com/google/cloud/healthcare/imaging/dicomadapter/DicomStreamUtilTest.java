@@ -51,11 +51,11 @@ public final class DicomStreamUtilTest {
 
   // FakePDVInputStream is an implementation that reads from injected input stream, instead of
   // reading from network for DICOM.
-  private class FakePDVInputStream extends PDVInputStream {
+  public static class FakePDVInputStream extends PDVInputStream {
 
     private InputStream in;
 
-    FakePDVInputStream(InputStream in) {
+    public FakePDVInputStream(InputStream in) {
       this.in = in;
     }
 

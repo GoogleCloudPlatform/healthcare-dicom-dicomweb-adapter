@@ -1,41 +1,43 @@
 package com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination;
 
 import com.google.cloud.healthcare.IDicomWebClient;
-import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
+import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary.Aet;
 import com.google.cloud.healthcare.imaging.dicomadapter.DestinationFilter;
-import com.google.common.collect.ImmutableList.Builder;
+import com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter.Pair;
 import com.google.common.collect.ImmutableList;
 import org.dcm4che3.data.Attributes;
-import java.util.Map;
 
 public class MultipleDestinationClientFactory extends DestinationClientFactory {
 
-  private Map<DestinationFilter, AetDictionary.Aet> dicomDestinations;
+  private ImmutableList<Pair<DestinationFilter, Aet>> dicomDestinations;
 
-  public MultipleDestinationClientFactory(Map<DestinationFilter, IDicomWebClient> healthcareDestinations,
-                                          Map<DestinationFilter, AetDictionary.Aet> dicomDestinations,
+  public MultipleDestinationClientFactory(ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations,
+                                          ImmutableList<Pair<DestinationFilter, Aet>> dicomDestinations,
                                           IDicomWebClient defaultDicomWebClient) {
-    super(healthcareDestinations, defaultDicomWebClient);
+    super(healthcareDestinations, defaultDicomWebClient, dicomDestinations != null && !dicomDestinations.isEmpty());
     this.dicomDestinations = dicomDestinations;
   }
 
   @Override
   protected void selectAndPutDestinationClients(DestinationHolder destinationHolder, String callingAet, Attributes attrs) {
-    Builder<IDicomWebClient> filteredHealthcareWebClientsBuilder = ImmutableList.builder();
-    for (DestinationFilter filter: destinationMap.keySet()) {
-      if (filter.matches(callingAet, attrs)) {
-        filteredHealthcareWebClientsBuilder.add(destinationMap.get(filter));
+    ImmutableList.Builder<IDicomWebClient> filteredHealthcareWebClientsBuilder = ImmutableList.builder();
+    if (healthDestinations != null) {
+      for (Pair<DestinationFilter, IDicomWebClient> filterToDestination : healthDestinations) {
+        if (filterToDestination.getLeft().matches(callingAet, attrs)) {
+          filteredHealthcareWebClientsBuilder.add(filterToDestination.getRight());
+        }
       }
+      destinationHolder.setHealthcareDestinations(filteredHealthcareWebClientsBuilder.build());
     }
 
-    Builder<AetDictionary.Aet> filteredDicomDestinationsBuilder = ImmutableList.builder();
-    for (DestinationFilter filter: dicomDestinations.keySet()) {
-      if (filter.matches(callingAet, attrs)) {
-        filteredDicomDestinationsBuilder.add(dicomDestinations.get(filter));
+    if (dicomDestinations != null) {
+      ImmutableList.Builder<Aet> filteredDicomDestinationsBuilder = ImmutableList.builder();
+      for (Pair<DestinationFilter, Aet> filterToDestination : dicomDestinations) {
+        if (filterToDestination.getLeft().matches(callingAet, attrs)) {
+          filteredDicomDestinationsBuilder.add(filterToDestination.getRight());
+        }
       }
+      destinationHolder.setDicomDestinations(filteredDicomDestinationsBuilder.build());
     }
-
-    destinationHolder.setHealthcareDestinations(filteredHealthcareWebClientsBuilder.build());
-    destinationHolder.setDicomDestinations(filteredDicomDestinationsBuilder.build());
   }
 }

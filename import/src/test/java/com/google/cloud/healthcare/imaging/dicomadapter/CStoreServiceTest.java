@@ -31,6 +31,7 @@ import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.DelayCalculator;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter.Pair;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.MultipleDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.SingleDestinationClientFactory;
@@ -132,18 +133,19 @@ public final class CStoreServiceTest {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
-    Map<DestinationFilter, IDicomWebClient> destinationMap = new LinkedHashMap<>();
-    if(destinationConfigs != null) {
+    ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> destPairsBuilder = ImmutableList.builder();
+    if (destinationConfigs != null) {
       for (MockDestinationConfig conf : destinationConfigs) {
-        destinationMap.put(
-            new DestinationFilter(conf.filter),
-            new MockStowClient(conf.connectError, conf.httpResponseCode)
-        );
+        destPairsBuilder.add(
+            new Pair(
+                new DestinationFilter(conf.filter),
+                new MockStowClient(conf.connectError, conf.httpResponseCode)
+        ));
       }
     }
 
     if (destinationClientFactory == null) {
-      destinationClientFactory = new SingleDestinationClientFactory(destinationMap, dicomWebClient);
+      destinationClientFactory = new SingleDestinationClientFactory(destPairsBuilder.build(), dicomWebClient);
     }
 
     CStoreService cStoreService =
@@ -482,17 +484,15 @@ public final class CStoreServiceTest {
         doNothing()
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    Map<DestinationFilter, IDicomWebClient> healthcareDestinations = Map.of(
-        new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER),
-        spyStowClient);
+    ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDestinations = ImmutableList.of(
+        new ImportAdapter.Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), spyStowClient));
 
     AetDictionary.Aet target = new AetDictionary.Aet(VALID_NAME, VALID_HOST, VALID_PORT);
-    Map<DestinationFilter, AetDictionary.Aet> dicomDestinations = Map.of(
-        new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER),
-        target);
+    ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>> dicomDestinations = ImmutableList.of(
+        new Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), target));
 
     MultipleDestinationClientFactory multipleDestinationClientFactory = new MultipleDestinationClientFactory(
-      healthcareDestinations,
+      healthDestinations,
       dicomDestinations,
       spyStowClient);
 

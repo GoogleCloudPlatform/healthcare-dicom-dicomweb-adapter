@@ -110,6 +110,6 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
           asyncUploadProcessingExceptions.stream().map(t -> t.getMessage()).collect(Collectors.joining("\n")));;
 
       throw new MultipleDestinationUploadServiceException(asyncUploadProcessingExceptions.get(0));
-  }
+    }
   }
 }

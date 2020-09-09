@@ -122,7 +122,8 @@ public class ImportAdapter {
         new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
     }
 
-    Pair<Map<DestinationFilter, AetDictionary.Aet>, Map<DestinationFilter, IDicomWebClient>> destinationMapPair = configureMultipleDestinationTypesMap(
+    Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
+         ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
         flags.destinationConfigInline, flags.destinationConfigPath, null, credentials);
 
     BackupUploadService backupUploadService = configureBackupUploadService(flags);
@@ -132,8 +133,8 @@ public class ImportAdapter {
     final IDestinationClientFactory destinationClientFactory;
     if (flags.sendToAllMatchingDestinations) {
       destinationClientFactory = new MultipleDestinationClientFactory(
-          destinationMapPair.getRight(),
-          destinationMapPair.getLeft(),
+          multipleDestinations.getLeft(),
+          multipleDestinations.getRight(),
           defaultCstoreDicomWebClient);
     } else {
       destinationClientFactory = new SingleDestinationClientFactory(
@@ -229,31 +230,35 @@ public class ImportAdapter {
     return redactor;
   }
 
-  private static Map<DestinationFilter, IDicomWebClient> configureDestinationMap(
+  private static ImmutableList<Pair<DestinationFilter, IDicomWebClient>> configureDestinationMap(
       String destinationJsonInline,
       String destinationsJsonPath,
       GoogleCredentials credentials) throws IOException {
     DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
-    Map<DestinationFilter, IDicomWebClient> result = new LinkedHashMap<>();
+    ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> filterPairBuilder = ImmutableList.builder();
     for (String filterString : conf.getMap().keySet()) {
       String filterPath = StringUtil.trim(conf.getMap().get(filterString));
-      result.put(
+      filterPairBuilder.add(
+          new Pair(
               new DestinationFilter(filterString),
               new DicomWebClientJetty(credentials,
                       filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
-      );
+      ));
     }
-    return result.size() > 0 ? result : null;
+    ImmutableList resultList = filterPairBuilder.build();
+    return resultList.size() > 0 ? resultList : null;
   }
 
-  public static Pair<Map<DestinationFilter, AetDictionary.Aet>, Map<DestinationFilter, IDicomWebClient>> configureMultipleDestinationTypesMap(
+  public static Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
+                     ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> configureMultipleDestinationTypesMap(
       String destinationJsonInline,
       String jsonPath,
       String jsonEnvKey,
       GoogleCredentials credentials) throws IOException {
 
-    HashMap<DestinationFilter, AetDictionary.Aet> dicomMap = new LinkedHashMap<>();
-    HashMap<DestinationFilter, IDicomWebClient> healthcareMap = new LinkedHashMap<>();
+    ImmutableList.Builder<Pair<DestinationFilter, AetDictionary.Aet>> dicomDestinationFiltersBuilder = ImmutableList.builder();
+    ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> healthDestinationFiltersBuilder = ImmutableList.builder();
+
     JSONArray jsonArray = JsonUtil.parseConfig(destinationJsonInline, jsonPath, jsonEnvKey);
 
     if (jsonArray != null) {
@@ -262,31 +267,23 @@ public class ImportAdapter {
         String filter = elemJson.getString("filter");
         DestinationFilter destinationFilter = new DestinationFilter(StringUtil.trim(filter));
 
-        // validate key in dicomMap
-        validateKey(healthcareMap, filter);
         // try to create Aet instance
         if (elemJson.has("host")) {
-          dicomMap.put(destinationFilter,
-              new AetDictionary.Aet(elemJson.getString("name"),
-                  elemJson.getString("host"), elemJson.getInt("port")));
+          dicomDestinationFiltersBuilder.add(
+              new Pair(destinationFilter,
+                  new AetDictionary.Aet(elemJson.getString("name"),
+                  elemJson.getString("host"), elemJson.getInt("port"))));
         } else {
           // in this case to try create IDicomWebClient instance
-          // validate key in healthcareMap
-          validateKey(healthcareMap, filter);
           String filterPath = elemJson.getString("dicomweb_destination");
-          healthcareMap.put(destinationFilter,
-              new DicomWebClientJetty(credentials,
-                  filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES)));
+          healthDestinationFiltersBuilder.add(
+              new Pair(
+                  destinationFilter,
+                  new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))));
         }
       }
     }
-    return new Pair<>(dicomMap, healthcareMap);
-  }
-
-  private static <T> void validateKey(Map<DestinationFilter, T> map, String key) throws IllegalArgumentException{
-    if(map != null && map.containsKey(key)){
-      throw new IllegalArgumentException("Duplicate filter in Destinations config");
-    }
+    return new Pair(healthDestinationFiltersBuilder.build(), dicomDestinationFiltersBuilder.build());
   }
 
   public static class Pair<A, D>{
