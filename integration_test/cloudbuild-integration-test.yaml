@@ -392,7 +392,7 @@
   args:
     - bash
     - integration_test/scripts/curl-dcm.sh
-    - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID}/series/${_REPLACED_UID}/instances/${_REPLACED_UID}"
+    - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID_2}/series/${_REPLACED_UID_2}/instances/${_REPLACED_UID_2}"
     - integration_test/downloaded2.dcm
   waitFor:
     - run-store-scu-with-local-backup
@@ -402,7 +402,7 @@
   args:
     - bash
     - integration_test/scripts/curl-dcm.sh
-    - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID}/series/${_REPLACED_UID}/instances/${_REPLACED_UID}"
+    - "https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb/studies/${_REPLACED_UID_3}/series/${_REPLACED_UID_3}/instances/${_REPLACED_UID_3}"
     - integration_test/downloaded3.dcm
   waitFor:
     - run-store-scu-with-gcs-backup
@@ -433,7 +433,7 @@
   args:
   - diff
   - 'integration_test/downloaded-destination-2.dcm'
-  - 'integration_test/data/example-redacted-mg-jp2k.dcm'
+  - 'integration_test/data/example-redacted-mg-jp2k-2.dcm'
   waitFor:
   - check-store-curl-destination-2
 
@@ -442,7 +442,7 @@
   args:
     - diff
     - 'integration_test/downloaded2.dcm'
-    - 'integration_test/data/example-redacted-jp2k.dcm'
+    - 'integration_test/data/example-redacted-jp2k-3.dcm'
   waitFor:
     - check-store-curl-with-local-backup
 
@@ -563,7 +563,7 @@ substitutions:
   _STORE_SCP_PORT: '2576'
   _ADAPTER_PORT_HTTP2: '2577'
   _CLOSE_STORE_SCP_PORT: '3001'
-  _COMMITMENT_SCU_PORT: '4000'
+  _COMMITMENT_SCU_PORT: '4000'dicomweb-import-adapter-integration-test
   _ADAPTER_PORT_WITH_LOCAL_BACKUP: '2585'
   _ADAPTER_PORT_WITH_GCS_BACKUP: '2586'
   _KMS_LOCATION: global
@@ -581,6 +581,8 @@ substitutions:
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
   _REPLACED_UID: '2.25.140302709094137852884202099990798014056'
+  _REPLACED_UID_2: '2.25.140302709094137852884202099990798014222'
+  _REPLACED_UID_3: '2.25.140302709094137852884202099990798014333'
   _GRADLE_IMAGE: 'gradle:5.6-jdk11'
   _MAVEN_IMAGE: 'maven:3.6-jdk-11'
   _CLOUD_SDK_IMAGE: 'google/cloud-sdk:290.0.0'
