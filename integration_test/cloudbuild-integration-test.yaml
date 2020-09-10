@@ -442,7 +442,7 @@
   args:
     - diff
     - 'integration_test/downloaded2.dcm'
-    - 'integration_test/data/example-redacted-jp2k-3.dcm'
+    - 'integration_test/data/example-redacted-jp2k-2.dcm'
   waitFor:
     - check-store-curl-with-local-backup
 
@@ -451,7 +451,7 @@
   args:
     - diff
     - 'integration_test/downloaded3.dcm'
-    - 'integration_test/data/example-redacted-jp2k.dcm'
+    - 'integration_test/data/example-redacted-jp2k-3.dcm'
   waitFor:
     - check-store-curl-with-gcs-backup
 
