@@ -74,7 +74,7 @@ public class DicomWebClientJetty implements IDicomWebClient {
       FuturePromise<Session> sessionPromise = new FuturePromise<>();
       client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), CONNECT_PORT),
           new ServerSessionListener.Adapter(), sessionPromise);
-      Session session = sessionPromise.get(5, TimeUnit.SECONDS);
+      Session session = sessionPromise.get(600, TimeUnit.SECONDS);
 
       // Prepare the request
       HttpFields requestFields = new HttpFields();
