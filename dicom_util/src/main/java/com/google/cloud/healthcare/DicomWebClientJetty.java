@@ -74,7 +74,11 @@ public class DicomWebClientJetty implements IDicomWebClient {
       FuturePromise<Session> sessionPromise = new FuturePromise<>();
       client.connect(sslContextFactory, new InetSocketAddress(uri.getHost(), CONNECT_PORT),
           new ServerSessionListener.Adapter(), sessionPromise);
-      Session session = sessionPromise.get(600, TimeUnit.SECONDS);
+      // Having a low timeout here causes flakyness when used with in transit compression.
+      // This is likely due to the Stow thread sleeping and then waking up again between
+      // the connect call and the session promise.get() call.
+      // Reference: https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/issues/108
+      Session session = sessionPromise.get(300, TimeUnit.SECONDS);
 
       // Prepare the request
       HttpFields requestFields = new HttpFields();
