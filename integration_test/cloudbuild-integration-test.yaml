@@ -276,6 +276,10 @@
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
   waitFor:
   - run-store-scu
+  - run-store-scu-http2
+  - run-store-scu-with-local-backup
+  - run-store-scu-with-gcs-backup
+  - run-store-scu-destination-2
 
 - name: ${_MAVEN_IMAGE}
   id: run-find-scu-series
@@ -291,6 +295,10 @@
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
   waitFor:
   - run-store-scu
+  - run-store-scu-http2
+  - run-store-scu-with-local-backup
+  - run-store-scu-with-gcs-backup
+  - run-store-scu-destination-2
 
 - name: ${_MAVEN_IMAGE}
   id: run-find-scu-study
@@ -306,6 +314,10 @@
   dir: "dcm4che/dcm4che-tool/dcm4che-tool-findscu"
   waitFor:
   - run-store-scu
+  - run-store-scu-http2
+  - run-store-scu-with-local-backup
+  - run-store-scu-with-gcs-backup
+  - run-store-scu-destination-2
 
 - name: ${_MAVEN_IMAGE}
   id: run-move-scu
