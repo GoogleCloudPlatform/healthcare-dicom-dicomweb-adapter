@@ -9,16 +9,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 public class BackupUploadService implements IBackupUploadService {
 
   private final DelayCalculator delayCalculator;
   private final IBackupUploader backupUploader;
   private final int attemptsAmount;
+  private final BackupFlags backupFlags;
 
   private Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -27,10 +26,11 @@ public class BackupUploadService implements IBackupUploadService {
    * @param backupUploader DAO with simple write/read/remove operations.
    * @param delayCalculator util class for reSend tasks schedule delay calculation.
    */
-  public BackupUploadService(IBackupUploader backupUploader, DelayCalculator delayCalculator) {
+  public BackupUploadService(IBackupUploader backupUploader, BackupFlags backupFlags, DelayCalculator delayCalculator) {
     this.backupUploader = backupUploader;
     this.delayCalculator = delayCalculator;
-    this.attemptsAmount = delayCalculator.getAttemptsAmount();
+    this.attemptsAmount = backupFlags.getAttemptsAmount();
+    this.backupFlags = backupFlags;
   }
 
   @Override
@@ -45,7 +45,7 @@ public class BackupUploadService implements IBackupUploadService {
     return backupUploader.doReadBackup(uniqueFileName);
   }
 
-  @Override // todo: guard code from second method call
+  @Override
   public void startUploading(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
     scheduleUploadWithDelay(webClient, backupState);
   }
@@ -59,6 +59,10 @@ public class BackupUploadService implements IBackupUploadService {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
       log.error("sopInstanceUID={}, removeBackup failed.", fileName, ex);
     }
+  }
+
+  public boolean filterHttpCode(Integer actualHttpStatus) {
+    return actualHttpStatus >= 500 || backupFlags.getHttpErrorCodesToRetry().contains(actualHttpStatus);
   }
 
   private void scheduleUploadWithDelay(IDicomWebClient webClient, BackupState backupState) throws IBackupUploader.BackupException {
@@ -75,19 +79,24 @@ public class BackupUploadService implements IBackupUploadService {
                   webClient.stowRs(inputStream);
                   removeBackup(uniqueFileName);
                   log.debug("sopInstanceUID={}, resend attempt № {}, - successful.", uniqueFileName, attemptNumber);
-                } catch (IDicomWebClient.DicomWebException ex) {
-                  log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, ex);
+                } catch (IDicomWebClient.DicomWebException dwe) {
+                  log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, dwe);
+                  int dicomStatus = dwe.getStatus();
 
-                  if (backupState.getAttemptsCountdown() > 0 /* + todo: http_code_filter*/) {
-                    scheduleUploadWithDelayExceptionally(webClient, backupState);
-                    MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
+                  if (filterHttpCode(dwe.getHttpStatus())) {
+                    if (backupState.getAttemptsCountdown() > 0) {
+                      scheduleUploadWithDelayExceptionally(webClient, backupState);
+                      MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
+                    } else {
+                      throwOnNoResendAttemptsLeft(dwe, uniqueFileName);
+                    }
                   } else {
-                    throwOnNoResendAttemptsLeft(uniqueFileName);
+                    throwOnHttpFilterFail(dwe, dwe.getHttpStatus());
                   }
                 }
               },
               CompletableFuture.delayedExecutor(
-                  delayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown()),
+                  delayCalculator.getExponentialDelayMillis(backupState.getAttemptsCountdown(), backupFlags),
                   TimeUnit.MILLISECONDS));
 
       try {
@@ -100,25 +109,36 @@ public class BackupUploadService implements IBackupUploadService {
         throw new IBackupUploader.BackupException(eex.getCause());
       }
     } else {
-      throw getNoResendAttemptLeftException(uniqueFileName);
+      throw getNoResendAttemptLeftException(null, uniqueFileName);
     }
   }
 
   private void scheduleUploadWithDelayExceptionally(IDicomWebClient webClient, BackupState backupState) {
     try {
       scheduleUploadWithDelay(webClient, backupState);
-      } catch (IBackupUploader.BackupException ex) {
+    } catch (IBackupUploader.BackupException ex) {
       throw new CompletionException(ex);
     }
   }
 
-  private void throwOnNoResendAttemptsLeft(String uniqueFileName) throws CompletionException {
-    throw new CompletionException(getNoResendAttemptLeftException(uniqueFileName));
+  private void throwOnNoResendAttemptsLeft(IDicomWebClient.DicomWebException dwe, String uniqueFileName) throws CompletionException {
+    throw new CompletionException(getNoResendAttemptLeftException(dwe, uniqueFileName));
   }
 
-  private IBackupUploader.BackupException getNoResendAttemptLeftException(String uniqueFileName) {
-    log.debug("sopInstanceUID={}, No resend attempt left.", uniqueFileName);
-    return  new IBackupUploader.BackupException("sopInstanceUID=" + uniqueFileName + ". No resend attempt left.");
+  private void throwOnHttpFilterFail(IDicomWebClient.DicomWebException dwe, int httpCode) throws CompletionException {
+    String errorMessage = "Not retried due to HTTP code=" + httpCode;
+    log.debug(errorMessage);
+    throw new CompletionException(new IBackupUploader.BackupException(dwe.getStatus(), dwe, errorMessage));
+  }
+
+  private IBackupUploader.BackupException getNoResendAttemptLeftException(IDicomWebClient.DicomWebException dwe, String uniqueFileName) {
+    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". No resend attempt left.";
+    log.debug(errorMessage);
+    if (dwe != null) {
+      return new IBackupUploader.BackupException(dwe.getStatus(), dwe, errorMessage);
+    } else {
+      return new IBackupUploader.BackupException(errorMessage);
+    }
   }
 
   private InputStream readBackupExceptionally(String fileName) throws CompletionException {

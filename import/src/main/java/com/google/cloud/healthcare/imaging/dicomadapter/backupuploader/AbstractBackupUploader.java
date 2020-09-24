@@ -1,7 +1,5 @@
 package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
 
-import org.apache.commons.lang3.StringUtils;
-
 public abstract class AbstractBackupUploader implements IBackupUploader {
 
   private String uploadFilePath;
@@ -15,7 +13,7 @@ public abstract class AbstractBackupUploader implements IBackupUploader {
   }
 
   public void validatePathParameter(String parameterValue, String parameterName) throws BackupException {
-    if (StringUtils.isBlank(parameterValue)) {
+    if (parameterValue == null || parameterValue.isBlank()) {
       throw new BackupException("Invalid upload path, parameter - " + parameterName + " is blank.");
     }
   }

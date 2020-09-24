@@ -33,6 +33,7 @@ public interface IDicomWebClient {
   class DicomWebException extends Exception {
 
     private int status = Status.ProcessingFailure;
+    private int httpStatus;
 
     public DicomWebException(String message, int status) {
       super(message);
@@ -55,6 +56,7 @@ public interface IDicomWebClient {
         int defaultDicomStatus) {
       super(message);
       this.status = httpStatusToDicomStatus(httpStatus, defaultDicomStatus);
+      this.httpStatus = httpStatus;
     }
 
     public DicomWebException(
@@ -64,6 +66,7 @@ public interface IDicomWebClient {
         int defaultDicomStatus) {
       super(message, cause);
       this.status = httpStatusToDicomStatus(httpStatus, defaultDicomStatus);
+      this.httpStatus = httpStatus;
     }
 
     public DicomWebException(String message) {
@@ -76,6 +79,10 @@ public interface IDicomWebClient {
 
     public int getStatus() {
       return status;
+    }
+
+    public int getHttpStatus() {
+      return httpStatus;
     }
 
     private int httpStatusToDicomStatus(int httpStatus, int defaultStatus) {
