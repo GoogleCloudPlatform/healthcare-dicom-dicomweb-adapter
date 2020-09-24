@@ -2,6 +2,7 @@ import:
   image:
     repo: null
     tag: null
+  deployment_type: null
   dimse_aet: null
   monitoring_project_id: null
   dicomweb_address: null
@@ -11,9 +12,9 @@ import:
   aet_dictionary_inline: null
   destination_config_inline: null
   store_compress_to_transfer_syntax: null
+  custom_flags: null
 export:
   monitoring_project_id: null
-  hasexporter: null
   peer_dimse_aet: null
   peer_dimse_ip: null
   peer_dimse_port: null
@@ -23,6 +24,7 @@ export:
   dicomweb_addr: null
   oauth_scopes: null
   use_gcp_application_default_credentials: null
+  custom_flags: null
   image:
     repo: null
     tag: null
