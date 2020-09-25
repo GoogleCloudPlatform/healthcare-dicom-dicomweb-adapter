@@ -17,6 +17,9 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Parameters(separators = "= ")
 public class Flags {
 
@@ -148,6 +151,42 @@ public class Flags {
       description = "negotiate fuzzy semantic person name attribute matching. False by default."
   )
   Boolean fuzzyMatching = false;
+
+  @Parameter(
+          names = {"--persistent_file_storage_location"},
+          description = "temporary location for storing files before send"
+  )
+  String persistentFileStorageLocation = "";
+
+  @Parameter(
+          names = {"--gcs_backup_project_id"},
+          description = "Google Cloud project ID"
+  )
+  String gcsBackupProjectId = "";
+
+  @Parameter(
+          names = {"--persistent_file_upload_retry_amount"},
+          description = "upload retry amount"
+  )
+  Integer persistentFileUploadRetryAmount = 0;
+
+  @Parameter(
+          names = {"--min_upload_delay"},
+          description = "minimum delay before upload backup file (ms)"
+  )
+  Integer minUploadDelay = 100;
+
+  @Parameter(
+          names = {"--max_waiting_time_between_uploads"},
+          description = "maximum waiting time between uploads (ms)"
+  )
+  Integer maxWaitingTimeBetweenUploads = 5000;
+
+  @Parameter(
+      names = {"--http_error_codes_to_retry"},
+      description = "http codes list to retry that less than 500."
+  )
+  List<Integer> httpErrorCodesToRetry = new ArrayList<>();
 
   public Flags() {
   }
