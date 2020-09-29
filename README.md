@@ -20,6 +20,7 @@ Table of Contents
          * [Building and publishing Docker Images](#building-and-publishing-docker-images)
       * [Backup and retry upload](#backup-and-retry-upload)
       * [Wiki](#wiki)
+      * [Troubleshooting](#troubleshooting)
 
 ## Import Adapter
 
@@ -320,3 +321,7 @@ gradle run -Dexec.args="--dimse_aet=IMPORTADAPTER --dimse_port=4008 --dicomweb_a
 ## Wiki
 
 For addition documentation please check out the [Wiki](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki).
+
+## Troubleshooting
+
+Both the Import and Export adapter output server logs that can be used to diagnose issues. When running on GKE, these server logs show up in Cloud Logging. You can view these logs by navigating to https://console.cloud.google.com/kubernetes/workload, clicking on dicom-adapter deployment and following the link titled "Container logs". Alternatively you can view the logs via `kubectl logs <pod-name>` where `<pod-name>` can be found by running `kubectl get pods`.
