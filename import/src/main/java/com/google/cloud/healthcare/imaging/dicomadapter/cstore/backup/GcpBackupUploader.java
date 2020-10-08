@@ -8,6 +8,8 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
+
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
@@ -111,13 +113,21 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     return credentials;
   }
 
+  public Credentials getCredentialOldStyle(String env) throws IOException {
+    return GoogleCredentials
+        .fromStream(new FileInputStream(env));
+  }
+
   private String getFullUploadObject(String uniqueFileName) {
     return uploadFolder.concat("/").concat(uniqueFileName);
   }
 
   private Storage getStorage(String oauthScopes) throws IOException {
-    return StorageOptions.newBuilder().setCredentials(getCredential(oauthScopes))
-            .setProjectId(projectId).build().getService();
+    return StorageOptions.newBuilder()
+        .setCredentials(getCredentialOldStyle("C:/workspace/dev-idg-uvs-e9bb27a2d329.json") /*getCredential(oauthScopes)*/)
+        .setProjectId(projectId)
+        .build()
+        .getService();
   }
 
   public static class GcpUriParseException extends IOException {

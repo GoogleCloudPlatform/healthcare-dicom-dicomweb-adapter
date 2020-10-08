@@ -96,11 +96,11 @@ public class BackupUploadService implements IBackupUploadService {
     }
 
     protected void logUploadFailed(Exception e) {
-      log.error("sopInstanceUID={}, resend attempt № {} - failed.", uniqueFileName, attemptNumber, e);
+      log.error("sopInstanceUID={}, resend attempt {} - failed.", uniqueFileName, attemptNumber + 1, e);
     }
 
     protected void logSuccessUpload() {
-      log.debug("sopInstanceUID={}, resend attempt № {}, - successful.", uniqueFileName, attemptNumber);
+      log.debug("sopInstanceUID={}, resend attempt {}, - successful.", uniqueFileName, attemptNumber + 1);
     }
 
     protected InputStream readBackupExceptionally() throws CompletionException {

@@ -63,8 +63,10 @@ import java.util.Map;
 public class ImportAdapter {
 
   private static final Logger log = LoggerFactory.getLogger(ImportAdapter.class);
+  private static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
   private static final String STUDIES = "studies";
   private static final String GCP_PATH_PREFIX = "gs://";
+  private static final String FILTER = "filter";
 
   public static void main(String[] args) throws IOException, GeneralSecurityException {
     Flags flags = new Flags();
@@ -122,36 +124,37 @@ public class ImportAdapter {
         new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
     }
 
-    Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
-         ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
-        flags.destinationConfigInline, flags.destinationConfigPath, null, credentials);
-
     BackupUploadService backupUploadService = configureBackupUploadService(flags);
-
     DicomRedactor redactor = configureRedactor(flags);
 
+    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
+    if (cstoreSubAet.isBlank()) {
+      throw new IllegalArgumentException("cstoreSubAet cannot be empty. Please set ");
+    }
+
     final IDestinationClientFactory destinationClientFactory;
+    MultipleDestinationUploadService multipleDestinationSendService = null;
     if (flags.sendToAllMatchingDestinations) {
+      Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
+          ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
+          flags.destinationConfigInline, flags.destinationConfigPath, ENV_DESTINATION_CONFIG_JSON, credentials);
+
       destinationClientFactory = new MultipleDestinationClientFactory(
           multipleDestinations.getLeft(),
           multipleDestinations.getRight(),
           defaultCstoreDicomWebClient);
+
+      CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet);
+      multipleDestinationSendService = new MultipleDestinationUploadService(
+          cStoreSenderFactory,
+          backupUploadService,
+          flags.persistentFileUploadRetryAmount);
     } else {
       destinationClientFactory = new SingleDestinationClientFactory(
           configureDestinationMap(
               flags.destinationConfigInline, flags.destinationConfigPath, credentials),
           defaultCstoreDicomWebClient);
     }
-    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
-    if (cstoreSubAet.isBlank()) {
-      throw new IllegalArgumentException("cstoreSubAet cannot be empty. Please set ");
-    }
-
-    CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet);
-    MultipleDestinationUploadService multipleDestinationSendService = new MultipleDestinationUploadService(
-        cStoreSenderFactory,
-        backupUploadService,
-        flags.persistentFileUploadRetryAmount);
 
     CStoreService cStoreService =
         new CStoreService(destinationClientFactory, redactor, flags.transcodeToSyntax, multipleDestinationSendService);
@@ -264,7 +267,10 @@ public class ImportAdapter {
     if (jsonArray != null) {
       for (Object elem : jsonArray) {
         JSONObject elemJson = (JSONObject) elem;
-        String filter = elemJson.getString("filter");
+        if (elemJson.has(FILTER) == false) {
+          throw new IOException("Mandatory key absent: " + FILTER);
+        }
+        String filter = elemJson.getString(FILTER);
         DestinationFilter destinationFilter = new DestinationFilter(StringUtil.trim(filter));
 
         // try to create Aet instance
