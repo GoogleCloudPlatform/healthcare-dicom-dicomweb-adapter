@@ -35,6 +35,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.dcm4che3.data.Attributes;
@@ -55,7 +56,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Class to handle server-side C-STORE DICOM requests.
  */
-public class CStoreService extends BasicCStoreSCP {
+public class CStoreService extends BasicCStoreSCP implements IProcessingRequestsNowDeltaHolder {
 
   private static Logger log = LoggerFactory.getLogger(CStoreService.class);
 
@@ -64,6 +65,8 @@ public class CStoreService extends BasicCStoreSCP {
   private final DicomRedactor redactor;
   private final String transcodeToSyntax;
   private final BackupUploadService backupUploadService;
+
+  private AtomicLong processingRequestsNowDelta = new AtomicLong();
 
   CStoreService(IDicomWebClient defaultDicomWebClient,
       Map<DestinationFilter, IDicomWebClient> destinationMap,
@@ -94,12 +97,19 @@ public class CStoreService extends BasicCStoreSCP {
       AtomicReference<BackupState> backupState = new AtomicReference<>();
       AtomicReference<IDicomWebClient> destinationClient = new AtomicReference<>();
       long uploadedBytesCount = 0;
+      String sopInstanceUIDForOuterLog = null;
 
       try {
         MonitoringService.addEvent(Event.CSTORE_REQUEST);
+        if (processingRequestsNowDelta.get() == Long.MAX_VALUE - 1) {
+          log.warn("To many msg processing failed. processingRequestsNowDelta={}", processingRequestsNowDelta.get());
+        } else {
+          processingRequestsNowDelta.getAndIncrement();
+        }
 
         String sopClassUID = request.getString(Tag.AffectedSOPClassUID);
         String sopInstanceUID = request.getString(Tag.AffectedSOPInstanceUID);
+        sopInstanceUIDForOuterLog = sopInstanceUID;
         String transferSyntax = presentationContext.getTransferSyntax();
 
         validateParam(sopClassUID, "AffectedSOPClassUID");
@@ -167,25 +177,29 @@ public class CStoreService extends BasicCStoreSCP {
           updateResponseToSuccess(response, uploadedBytesCount);
           return;
         }
-        reportError(dwe);
-        throw new DicomServiceException(dwe.getStatus(), dwe);
+        throwDicomServiceExceptionToReqAndReport(dwe.getStatus(), dwe, Event.CSTORE_ERROR);
       } catch (IBackupUploader.BackupException e) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
         log.error("Backup io processing during C-STORE request is failed: ", e);
-        reportError(e);
-        throw new DicomServiceException(Status.ProcessingFailure, e);
+        throwDicomServiceExceptionToReqAndReport(Status.ProcessingFailure, e, Event.CSTORE_ERROR);
       } catch (DicomServiceException e) {
-        reportError(e);
-        throw e;
+        throwDicomServiceExceptionToReqAndReport(-1, e, Event.CSTORE_ERROR);
       } catch (Throwable e) {
-        reportError(e);
-        throw new DicomServiceException(Status.ProcessingFailure, e);
+        throwDicomServiceExceptionToReqAndReport(Status.ProcessingFailure, e, Event.CSTORE_ERROR);
+      } finally {
+        MonitoringService.addEvent(Event.CSTORE_REQUEST_PROCESSING_DELTA, processingRequestsNowDelta.get());
       }
+  }
+
+  @Override
+  public AtomicLong getProcessingRequestsNowDelta() {
+    return processingRequestsNowDelta;
   }
 
   private void updateResponseToSuccess(Attributes response, long countingStreamCount) {
     response.setInt(Tag.Status, VR.US, Status.Success);
     MonitoringService.addEvent(Event.CSTORE_BYTES, countingStreamCount);
+    processingRequestsNowDelta.decrementAndGet();
   }
 
   private void resendWithDelayRecursivelyExceptionally(AtomicReference<BackupState> backupState, AtomicReference<IDicomWebClient> destinationClient)
@@ -193,13 +207,22 @@ public class CStoreService extends BasicCStoreSCP {
     try {
       backupUploadService.startUploading(destinationClient.get(), backupState.get());
     } catch (IBackupUploader.BackupException bae) {
-      MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-      throw new DicomServiceException(bae.getDicomStatus() != null ? bae.getDicomStatus() : Status.ProcessingFailure, bae);
+      throwDicomServiceExceptionToReqAndReport(bae.getDicomStatus() != null ? bae.getDicomStatus() : Status.ProcessingFailure, bae, Event.CSTORE_BACKUP_ERROR);
     }
   }
 
-  private void reportError(Throwable e) {
-    MonitoringService.addEvent(Event.CSTORE_ERROR);
+  private void throwDicomServiceExceptionToReqAndReport(int status, Throwable e, Event event) throws DicomServiceException {
+    reportError(e, event);
+    processingRequestsNowDelta.decrementAndGet();
+    if (e instanceof DicomServiceException) {
+      throw (DicomServiceException)e;
+    } else {
+      throw new DicomServiceException(status, e.getMessage());
+    }
+  }
+
+  private void reportError(Throwable e, Event event) {
+    MonitoringService.addEvent(event);
     log.error("C-STORE request failed: ", e);
   }
 

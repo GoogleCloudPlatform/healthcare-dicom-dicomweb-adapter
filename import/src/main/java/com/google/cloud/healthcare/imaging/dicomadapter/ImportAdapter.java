@@ -27,7 +27,6 @@ import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomC
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupFlags;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.GcpBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.LocalBackupUploader;
@@ -54,7 +53,31 @@ public class ImportAdapter {
   private static final String STUDIES = "studies";
   private static final String GCP_PATH_PREFIX = "gs://";
 
-  public static void main(String[] args) throws IOException, GeneralSecurityException {
+  /* This hook will work only in case of controlled process of JVM shutdown:
+   *  Sending an interrupt signal from the OS. For instance, by pressing Ctrl + C or logging off the OS
+   *  or Calling System.exit() from Java code.
+   */
+  public static class ImportAdapterShutdownHook extends Thread {
+
+    private Logger log = LoggerFactory.getLogger(ImportAdapterShutdownHook.class);
+    private IProcessingRequestsNowDeltaHolder deltaHolder;
+
+    public ImportAdapterShutdownHook(IProcessingRequestsNowDeltaHolder deltaHolder) {
+      this.deltaHolder = deltaHolder;
+    }
+
+    @Override
+    public void run() {
+      log.info("ImportAdapter is shutting down.");
+      final long processingRequestsNowDelta = deltaHolder.getProcessingRequestsNowDelta().get();
+      if (processingRequestsNowDelta != 0) {
+        log.warn("processingRequestsNowDelta={} on application shutdown. Must be zero.", processingRequestsNowDelta);
+      }
+      MonitoringService.addEvent(Event.STOPPED);
+    }
+  }
+
+  public static void main(String[] args) throws IOException, GeneralSecurityException, InterruptedException {
     Flags flags = new Flags();
     JCommander jCommander = new JCommander(flags);
     jCommander.parse(args);
@@ -118,6 +141,7 @@ public class ImportAdapter {
     DicomRedactor redactor = configureRedactor(flags);
     CStoreService cStoreService =
         new CStoreService(defaultCstoreDicomWebClient, destinationMap, redactor, flags.transcodeToSyntax, backupUploadService);
+    Runtime.getRuntime().addShutdownHook(new ImportAdapterShutdownHook(cStoreService));
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND

@@ -14,6 +14,7 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -57,6 +58,7 @@ import org.dcm4che3.net.service.DicomServiceRegistry;
 import org.dcm4che3.util.TagUtils;
 import org.eclipse.jetty.http.HttpStatus;
 import org.json.JSONArray;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -87,7 +89,12 @@ public final class CStoreServiceTest {
   private BackupFlags backupFlagsMock;
 
   // Client properties.
-  ApplicationEntity clientAE;
+  private ApplicationEntity clientAE;
+  private CStoreService cStoreService;
+
+  public void assertProcessingRequestsDeltaIsZero() {
+    assertThat(cStoreService.getProcessingRequestsNowDelta().get()).isEqualTo(0);
+  }
 
   private Association associate(
       String serverHostname, int serverPort, String sopClass, String syntax) throws Exception {
@@ -118,8 +125,7 @@ public final class CStoreServiceTest {
         );
       }
     }
-    CStoreService cStoreService =
-        new CStoreService(dicomWebClient, destinationMap, null, transcodeToSyntax, backupUploadService);
+    cStoreService = new CStoreService(dicomWebClient, destinationMap, null, transcodeToSyntax, backupUploadService);
     serviceRegistry.addDicomService(cStoreService);
     Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
@@ -148,6 +154,7 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_OK,
         Status.Success);
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -156,6 +163,7 @@ public final class CStoreServiceTest {
         true,
         HttpStatusCodes.STATUS_CODE_OK, // won't be returned due to connectionError
         Status.ProcessingFailure);
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -164,6 +172,7 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_UNAUTHORIZED,
         Status.NotAuthorized);
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -172,6 +181,7 @@ public final class CStoreServiceTest {
         false,
         HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE,
         Status.OutOfResources);
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -186,6 +196,7 @@ public final class CStoreServiceTest {
         TestUtils.TEST_MR_FILE,
         null,
         null);
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -198,6 +209,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig("StudyDate=19921012&SOPInstanceUID=1.0.0.0",
                 false, HttpStatusCodes.STATUS_CODE_OK)
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -210,6 +222,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig("StudyDate=19921012&AETitle=CSTORECLIENT",
                 false, HttpStatusCodes.STATUS_CODE_OK)
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -222,6 +235,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig("StudyDate=19921012&SOPInstanceUID=1.0.0.0",
                 true, HttpStatusCodes.STATUS_CODE_OK)
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -236,6 +250,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig("StudyDate=19921012",
                 true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -250,6 +265,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig("StudyDate=19921012",
                 false, HttpStatusCodes.STATUS_CODE_OK),
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -261,6 +277,7 @@ public final class CStoreServiceTest {
         new MockDestinationConfig[] {
             new MockDestinationConfig("", false, HttpStatusCodes.STATUS_CODE_OK)
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -275,6 +292,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig("SOPInstanceUID=NoSuchValue",
                 true, HttpStatusCodes.STATUS_CODE_SERVER_ERROR),
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -311,6 +329,7 @@ public final class CStoreServiceTest {
             new MockDestinationConfig(TagUtils.toHexString(Tag.StudyDate) + "=19921012",
                 false, HttpStatusCodes.STATUS_CODE_OK)
         });
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -325,6 +344,7 @@ public final class CStoreServiceTest {
         TestUtils.TEST_IMG_FILE,
         UID.JPEG2000,
         null);
+    assertProcessingRequestsDeltaIsZero();
   }
 
   @Test
@@ -342,6 +362,7 @@ public final class CStoreServiceTest {
         Status.ProcessingFailure,
         backupUploadService,
         spyStowClient);
+    assertProcessingRequestsDeltaIsZero();
 
     verify(mockBackupUploader, never()).doReadBackup(anyString());
     verify(mockBackupUploader, never()).doRemoveBackup(anyString());
@@ -362,6 +383,7 @@ public final class CStoreServiceTest {
         Status.ProcessingFailure,
         backupUploadService,
         spyStowClient);
+    assertProcessingRequestsDeltaIsZero();
 
     verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
     verify(mockBackupUploader).doReadBackup(anyString());
@@ -388,6 +410,7 @@ public final class CStoreServiceTest {
         Status.Success,
         backupUploadService,
         spyStowClient);
+    assertProcessingRequestsDeltaIsZero();
 
     verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
     verify(mockBackupUploader, times(2)).doReadBackup(anyString());
@@ -413,6 +436,7 @@ public final class CStoreServiceTest {
         Status.Success,
         backupUploadService,
         spyStowClient);
+    assertProcessingRequestsDeltaIsZero();
 
     verify(mockBackupUploader).doWriteBackup(any(InputStream.class), anyString());
     verify(mockBackupUploader, times(3)).doReadBackup(anyString());
@@ -432,6 +456,7 @@ public final class CStoreServiceTest {
         Status.Success,
         backupUploadService,
         spyStowClient);
+    assertProcessingRequestsDeltaIsZero();
 
     verify(mockBackupUploader).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
     verify(mockBackupUploader).doReadBackup(eq(SOP_INSTANCE_UID));
