@@ -18,8 +18,8 @@ spec:
       kind: StatefulSet
   addOwnerRef: true
   descriptor:
-    type: "dicom adapter"
-    version: "0.2.1"
+    type: dicom adapter
+    version: "0.2.14"
     keywords:
       - "dicom"
       - "adapter"

@@ -21,3 +21,6 @@ All submissions, including submissions by project members, require review. We
 use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
+
+Please see [The CL author's guide to getting through code review](https://google.github.io/eng-practices/review/developer/)
+for best practices around submitting pull requests that are easy to review.
