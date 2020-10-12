@@ -2,7 +2,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupState;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSender;
 

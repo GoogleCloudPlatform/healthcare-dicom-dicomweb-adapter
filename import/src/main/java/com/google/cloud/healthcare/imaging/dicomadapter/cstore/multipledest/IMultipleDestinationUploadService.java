@@ -3,6 +3,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.common.collect.ImmutableList;
 import java.io.InputStream;
 

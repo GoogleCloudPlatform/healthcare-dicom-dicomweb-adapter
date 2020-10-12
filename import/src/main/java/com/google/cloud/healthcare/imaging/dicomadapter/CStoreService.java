@@ -140,22 +140,24 @@ public class CStoreService extends BasicCStoreSCP {
       response.setInt(Tag.Status, VR.US, Status.Success);
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
     } catch (DicomWebException e) {
-      reportError(e);
+      reportError(e, Event.CSTORE_ERROR);
       throw new DicomServiceException(e.getStatus(), e);
     } catch (DicomServiceException e) {
-      reportError(e);
+      reportError(e, Event.CSTORE_ERROR);
       throw e;
     } catch (MultipleDestinationUploadServiceException me) {
-      reportError(me);
+      reportError(me, null);
       throw new DicomServiceException(me.getDicomStatus() != null ? me.getDicomStatus() : Status.ProcessingFailure, me);
     } catch (Throwable e) {
-      reportError(e);
+      reportError(e, Event.CSTORE_ERROR);
       throw new DicomServiceException(Status.ProcessingFailure, e);
     }
   }
 
-  private void reportError(Throwable e) {
-    MonitoringService.addEvent(Event.CSTORE_ERROR);
+  private void reportError(Throwable e, Event event) {
+    if (event != null) {
+      MonitoringService.addEvent(event);
+    }
     log.error("C-STORE request failed: ", e);
   }
 

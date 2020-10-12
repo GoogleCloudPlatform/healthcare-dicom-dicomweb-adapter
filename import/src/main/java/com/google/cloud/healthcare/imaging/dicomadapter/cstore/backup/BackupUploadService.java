@@ -3,8 +3,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupState;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSender;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -107,6 +105,7 @@ public class BackupUploadService implements IBackupUploadService {
       try {
         return backupUploader.doReadBackup(uniqueFileName);
       } catch (BackupException ex) {
+        MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
         log.error("sopInstanceUID={}, read backup failed.", uniqueFileName, ex.getCause());
         throw new CompletionException(ex);
       }
@@ -143,31 +142,30 @@ public class BackupUploadService implements IBackupUploadService {
         logUploadFailed(io);
 
         if (backupState.getAttemptsCountdown() > 0) {
-            try {
-              scheduleUploadWithDelay(
-                  backupState,
-                  new DicomDestinationUploadAsyncJob(
-                      cStoreSender,
-                      backupState,
-                      target,
-                      sopInstanceUid,
-                      sopClassUid),
-                  delayCalculator.getExponentialDelayMillis(
-                      backupState.getAttemptsCountdown(),
-                      attemptsAmount))
-                  .get();
-
-            } catch (BackupException | ExecutionException | InterruptedException ex) {
-              throw new CompletionException(ex);
-            }
-            MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-          } else {
-            throwOnNoResendAttemptsLeft(null, uniqueFileName);
+          try {
+            scheduleUploadWithDelay(
+                backupState,
+                new DicomDestinationUploadAsyncJob(
+                    cStoreSender,
+                    backupState,
+                    target,
+                    sopInstanceUid,
+                    sopClassUid),
+                delayCalculator.getExponentialDelayMillis(
+                    backupState.getAttemptsCountdown(),
+                    attemptsAmount))
+                .get();
+          } catch (BackupException | ExecutionException | InterruptedException ex) {
+            throw new CompletionException(ex);
           }
+        } else {
+          MonitoringService.addEvent(Event.CSTORE_ERROR);
+          throwOnNoResendAttemptsLeft(null, uniqueFileName);
+        }
       } catch (InterruptedException ie) {
         log.error("cStoreSender.cstore interrupted. Runnable task canceled.", ie);
         Thread.currentThread().interrupt();
-        throw new CompletionException(new BackupException(ie));
+        throw new CompletionException(ie);
       }
     }
   }
@@ -202,23 +200,15 @@ public class BackupUploadService implements IBackupUploadService {
             } catch (BackupException | ExecutionException | InterruptedException ex) {
               throw new CompletionException(ex);
             }
-            MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
           } else {
+            MonitoringService.addEvent(Event.CSTORE_ERROR);
             throwOnNoResendAttemptsLeft(dwe, uniqueFileName);
           }
         } else {
+          MonitoringService.addEvent(Event.CSTORE_ERROR);
           throwOnHttpFilterFail(dwe, dwe.getHttpStatus());
         }
       }
-    }
-    private boolean filterHttpCode(Integer actualHttpStatus) {
-      return actualHttpStatus >= 500 || httpErrorCodesToRetry.contains(actualHttpStatus);
-    }
-
-    private void throwOnHttpFilterFail(DicomWebException dwe, int httpCode) throws CompletionException {
-      String errorMessage = "Not retried due to HTTP code=" + httpCode;
-      log.debug(errorMessage);
-      throw new CompletionException(new BackupException(dwe.getStatus(), dwe, errorMessage));
     }
   }
 
@@ -235,8 +225,19 @@ public class BackupUploadService implements IBackupUploadService {
               delayMillis,
               TimeUnit.MILLISECONDS));
     } else {
+      MonitoringService.addEvent(Event.CSTORE_ERROR);
       throw getNoResendAttemptLeftException(null, uniqueFileName);
     }
+  }
+
+  private boolean filterHttpCode(Integer actualHttpStatus) {
+    return actualHttpStatus >= 500 || httpErrorCodesToRetry.contains(actualHttpStatus);
+  }
+
+  private void throwOnHttpFilterFail(DicomWebException dwe, int httpCode) throws CompletionException {
+    String errorMessage = "Not retried due to HTTP code=" + httpCode;
+    log.debug(errorMessage);
+    throw new CompletionException(new BackupException(dwe.getStatus(), dwe, errorMessage));
   }
 
   private void throwOnNoResendAttemptsLeft(DicomWebException dwe, String uniqueFileName) throws CompletionException {

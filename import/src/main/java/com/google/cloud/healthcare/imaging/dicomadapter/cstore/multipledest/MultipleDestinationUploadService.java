@@ -4,9 +4,13 @@ import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupState;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSender;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
+import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +50,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     try {
       backupUploadService.createBackup(inputStream, sopInstanceUID);
     } catch (BackupException be) {
+      MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
       log.error("{} processing failed.", this.getClass().getSimpleName(), be);
       throw new MultipleDestinationUploadServiceException(be);
     }
@@ -66,7 +71,6 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
         log.error("Async upload to healthcareDest task not started.", be);
         asyncUploadProcessingExceptions.add(be);
       }
-
     }
 
     if (dicomDestinations.isEmpty() == false) {
