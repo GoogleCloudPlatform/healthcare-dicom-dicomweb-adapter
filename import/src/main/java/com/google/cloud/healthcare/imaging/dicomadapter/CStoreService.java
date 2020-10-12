@@ -146,8 +146,8 @@ public class CStoreService extends BasicCStoreSCP {
       reportError(e);
       throw e;
     } catch (MultipleDestinationUploadServiceException me) {
-      reportError(me); //todo: read Status. from cause
-      throw new DicomServiceException(Status.ProcessingFailure, me);
+      reportError(me);
+      throw new DicomServiceException(me.getDicomStatus() != null ? me.getDicomStatus() : Status.ProcessingFailure, me);
     } catch (Throwable e) {
       reportError(e);
       throw new DicomServiceException(Status.ProcessingFailure, e);
