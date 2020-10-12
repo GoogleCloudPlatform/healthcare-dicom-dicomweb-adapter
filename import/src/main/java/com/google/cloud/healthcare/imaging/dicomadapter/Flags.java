@@ -190,7 +190,8 @@ public class Flags {
 
   @Parameter(
       names = {"--send_to_all_matching_destinations"},
-      description = "cStore to multiple destinations from destination-config mode on true" // fixme rewrite
+      description = "If true, when processing C-STORE requests with a destination config specified, the adapter will " +
+          "send to all matching destinations rather than the first matching destination."
   )
   Boolean sendToAllMatchingDestinations = false;
 
