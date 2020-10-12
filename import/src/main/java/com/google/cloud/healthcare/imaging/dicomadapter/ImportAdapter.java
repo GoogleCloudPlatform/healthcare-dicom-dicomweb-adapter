@@ -63,7 +63,6 @@ import java.util.Map;
 public class ImportAdapter {
 
   private static final Logger log = LoggerFactory.getLogger(ImportAdapter.class);
-  private static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
   private static final String STUDIES = "studies";
   private static final String GCP_PATH_PREFIX = "gs://";
   private static final String FILTER = "filter";
@@ -137,7 +136,10 @@ public class ImportAdapter {
     if (flags.sendToAllMatchingDestinations) {
       Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
           ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
-          flags.destinationConfigInline, flags.destinationConfigPath, ENV_DESTINATION_CONFIG_JSON, credentials);
+          flags.destinationConfigInline,
+          flags.destinationConfigPath,
+          DestinationsConfig.ENV_DESTINATION_CONFIG_JSON,
+          credentials);
 
       destinationClientFactory = new MultipleDestinationClientFactory(
           multipleDestinations.getLeft(),

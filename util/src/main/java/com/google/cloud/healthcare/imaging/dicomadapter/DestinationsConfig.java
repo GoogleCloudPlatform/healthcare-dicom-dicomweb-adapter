@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class DestinationsConfig {
 
-  private static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
+  public static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
   private static Logger log = LoggerFactory.getLogger(DestinationsConfig.class);
 
   private HashMap<String, String> map = new LinkedHashMap<>();
