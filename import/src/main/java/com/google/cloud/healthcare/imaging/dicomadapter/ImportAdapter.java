@@ -112,51 +112,24 @@ public class ImportAdapter {
       cstoreDicomwebAddr = flags.dicomwebAddr;
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
-    IDicomWebClient defaultCstoreDicomWebClient = null;
-    if (flags.useHttp2ForStow) {
-      defaultCstoreDicomWebClient =
-        new DicomWebClientJetty(
-            credentials,
-            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
-    } else {
-      defaultCstoreDicomWebClient =
-        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
-    }
-
-    BackupUploadService backupUploadService = configureBackupUploadService(flags);
-    DicomRedactor redactor = configureRedactor(flags);
 
     String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
     if (cstoreSubAet.isBlank()) {
       throw new IllegalArgumentException("cstoreSubAet cannot be empty. Please set ");
     }
 
-    final IDestinationClientFactory destinationClientFactory;
-    MultipleDestinationUploadService multipleDestinationSendService = null;
-    if (flags.sendToAllMatchingDestinations) {
-      Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
-          ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
-          flags.destinationConfigInline,
-          flags.destinationConfigPath,
-          DestinationsConfig.ENV_DESTINATION_CONFIG_JSON,
-          credentials);
+    IDicomWebClient defaultCstoreDicomWebClient = configureDefaultDicomWebClient(
+        requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath, credentials, flags);
 
-      destinationClientFactory = new MultipleDestinationClientFactory(
-          multipleDestinations.getLeft(),
-          multipleDestinations.getRight(),
-          defaultCstoreDicomWebClient);
+    DicomRedactor redactor = configureRedactor(flags);
 
-      CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet);
-      multipleDestinationSendService = new MultipleDestinationUploadService(
-          cStoreSenderFactory,
-          backupUploadService,
-          flags.persistentFileUploadRetryAmount);
-    } else {
-      destinationClientFactory = new SingleDestinationClientFactory(
-          configureDestinationMap(
-              flags.destinationConfigInline, flags.destinationConfigPath, credentials),
-          defaultCstoreDicomWebClient);
-    }
+    BackupUploadService backupUploadService = configureBackupUploadService(flags);
+
+    IDestinationClientFactory destinationClientFactory = configureDestinationClientFactory(
+        defaultCstoreDicomWebClient, credentials, flags);
+
+    MultipleDestinationUploadService multipleDestinationSendService = configureMultipleDestinationUploadService(
+        flags, cstoreSubAet, backupUploadService);
 
     CStoreService cStoreService =
         new CStoreService(destinationClientFactory, redactor, flags.transcodeToSyntax, multipleDestinationSendService);
@@ -180,6 +153,69 @@ public class ImportAdapter {
     // Start DICOM server
     Device device = DeviceUtil.createServerDevice(flags.dimseAET, flags.dimsePort, serviceRegistry);
     device.bindConnections();
+  }
+
+  private static IDicomWebClient configureDefaultDicomWebClient(
+      HttpRequestFactory requestFactory,
+      String cstoreDicomwebAddr,
+      String cstoreDicomwebStowPath,
+      GoogleCredentials credentials,
+      Flags flags) {
+    IDicomWebClient defaultCstoreDicomWebClient;
+    if (flags.useHttp2ForStow) {
+      defaultCstoreDicomWebClient =
+        new DicomWebClientJetty(
+            credentials,
+            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+    } else {
+      defaultCstoreDicomWebClient =
+        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
+    }
+    return defaultCstoreDicomWebClient;
+  }
+
+  private static IDestinationClientFactory configureDestinationClientFactory(
+      IDicomWebClient defaultCstoreDicomWebClient,
+      GoogleCredentials credentials,
+      Flags flags) throws IOException {
+    IDestinationClientFactory destinationClientFactory;
+    if (flags.sendToAllMatchingDestinations && flags.persistentFileStorageLocation.isBlank() == false) {
+      Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
+          ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
+          flags.destinationConfigInline,
+          flags.destinationConfigPath,
+          DestinationsConfig.ENV_DESTINATION_CONFIG_JSON,
+          credentials);
+
+      destinationClientFactory = new MultipleDestinationClientFactory(
+          multipleDestinations.getLeft(),
+          multipleDestinations.getRight(),
+          defaultCstoreDicomWebClient);
+    } else {
+      destinationClientFactory = new SingleDestinationClientFactory(
+          configureDestinationMap(
+              flags.destinationConfigInline, flags.destinationConfigPath, credentials),
+          defaultCstoreDicomWebClient);
+    }
+    return destinationClientFactory;
+  }
+
+  private static MultipleDestinationUploadService configureMultipleDestinationUploadService(
+      Flags flags,
+      String cstoreSubAet,
+      BackupUploadService backupUploadService) {
+    if (flags.sendToAllMatchingDestinations) {
+      if (flags.persistentFileStorageLocation.isBlank()) {
+        throw new IllegalArgumentException("mandatory flag '--persistent_file_storage_location is not present' " +
+            "(works in pair with '--send_to_all_matching_destinations' flag for multiple upload mode.");
+      }
+
+      return new MultipleDestinationUploadService(
+          new CStoreSenderFactory(cstoreSubAet),
+          backupUploadService,
+          flags.persistentFileUploadRetryAmount);
+    }
+    return null;
   }
 
   private static BackupUploadService configureBackupUploadService(Flags flags) throws IOException {
@@ -240,14 +276,14 @@ public class ImportAdapter {
       String destinationsJsonPath,
       GoogleCredentials credentials) throws IOException {
     DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
+
     ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> filterPairBuilder = ImmutableList.builder();
     for (String filterString : conf.getMap().keySet()) {
       String filterPath = StringUtil.trim(conf.getMap().get(filterString));
       filterPairBuilder.add(
           new Pair(
               new DestinationFilter(filterString),
-              new DicomWebClientJetty(credentials,
-                      filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
+              new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
       ));
     }
     ImmutableList resultList = filterPairBuilder.build();

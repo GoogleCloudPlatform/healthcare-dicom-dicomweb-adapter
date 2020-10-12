@@ -37,9 +37,9 @@ public class BackupUploadService implements IBackupUploadService {
   public BackupUploadService(IBackupUploader backupUploader, Integer attemptsAmount, ImmutableList<Integer> httpErrorCodesToRetry,
       DelayCalculator delayCalculator) {
     this.backupUploader = backupUploader;
-    this.delayCalculator = delayCalculator;
-    this.httpErrorCodesToRetry = httpErrorCodesToRetry;
     this.attemptsAmount = attemptsAmount;
+    this.httpErrorCodesToRetry = httpErrorCodesToRetry;
+    this.delayCalculator = delayCalculator;
   }
 
   @Override
