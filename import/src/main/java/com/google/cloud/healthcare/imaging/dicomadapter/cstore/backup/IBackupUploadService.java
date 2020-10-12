@@ -14,7 +14,7 @@ public interface IBackupUploadService {
   void createBackup(InputStream inputStream, String uniqueFileName) throws BackupException;
 
   CompletableFuture startUploading(IDicomWebClient webClient, BackupState backupState) throws BackupException;
-  CompletableFuture startUploading(CStoreSender cStoreSender, AetDictionary.Aet target, String sopInstanceUid, String sopClassUidBackupState,
+  CompletableFuture startUploading(CStoreSender cStoreSender, AetDictionary.Aet target, String sopInstanceUid, String sopClassUid,
                                    BackupState backupState) throws BackupException;
 
   void removeBackup(String uniqueFileName);

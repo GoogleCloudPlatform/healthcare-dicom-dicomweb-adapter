@@ -59,7 +59,7 @@ public class BackupUploadService implements IBackupUploadService {
   }
 
   @Override
-  public CompletableFuture startUploading(CStoreSender cStoreSender, AetDictionary.Aet target, String sopInstanceUid, String sopClassUidBackupState,
+  public CompletableFuture startUploading(CStoreSender cStoreSender, AetDictionary.Aet target, String sopInstanceUid, String sopClassUid,
                                           BackupState backupState) throws BackupException {
     return scheduleUploadWithDelay(
         backupState,
@@ -68,7 +68,7 @@ public class BackupUploadService implements IBackupUploadService {
             backupState,
             target,
             sopInstanceUid,
-            sopClassUidBackupState),
+            sopClassUid),
         0);
   }
 
@@ -118,26 +118,26 @@ public class BackupUploadService implements IBackupUploadService {
     private CStoreSender cStoreSender;
     private AetDictionary.Aet target;
     private String sopInstanceUid;
-    private String sopClassUidBackupState;
+    private String sopClassUid;
 
     public DicomDestinationUploadAsyncJob(
         CStoreSender cStoreSender,
         BackupState backupState,
         AetDictionary.Aet target,
         String sopInstanceUid,
-        String sopClassUidBackupState) {
+        String sopClassUid) {
       super(backupState);
       this.cStoreSender = cStoreSender;
       this.target = target;
       this.sopInstanceUid = sopInstanceUid;
-      this.sopClassUidBackupState = sopClassUidBackupState;
+      this.sopClassUid = sopClassUid;
     }
 
     @Override
     public void run() {
       try {
         InputStream inputStream = readBackupExceptionally();
-        cStoreSender.cstore(target, sopInstanceUid, sopClassUidBackupState, inputStream);
+        cStoreSender.cstore(target, sopInstanceUid, sopClassUid, inputStream);
         logSuccessUpload();
       } catch (IOException io) {
         logUploadFailed(io);
@@ -151,7 +151,7 @@ public class BackupUploadService implements IBackupUploadService {
                       backupState,
                       target,
                       sopInstanceUid,
-                      sopClassUidBackupState),
+                      sopClassUid),
                   delayCalculator.getExponentialDelayMillis(
                       backupState.getAttemptsCountdown(),
                       attemptsAmount))

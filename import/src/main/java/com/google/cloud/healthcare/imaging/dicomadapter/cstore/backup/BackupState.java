@@ -2,7 +2,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 public class BackupState {
   private String uniqueFileName;
-  private volatile int attemptsCountdown = 1; //first send.
+  private int attemptsCountdown = 1;
 
   public BackupState(String uniqueFileName, int attemptsCountdown) {
     this.uniqueFileName = uniqueFileName;
