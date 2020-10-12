@@ -37,8 +37,6 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
                     InputStream inputStream,
                     String sopClassUID,
                     String sopInstanceUID) throws MultipleDestinationUploadServiceException {
-    CStoreSender cStoreSender = cStoreSenderFactory.create();
-
     if (backupUploadService == null) {
       throw new IllegalArgumentException("backupUploadService is null. Some flags not set.");
     }
@@ -71,22 +69,25 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
 
     }
 
-    CompletableFuture dicomUploadFuture;
-    for (AetDictionary.Aet dicomDest: dicomDestinations) {
-      try {
-        dicomUploadFuture = backupUploadService.startUploading(
-            cStoreSender,
-            dicomDest,
-            sopInstanceUID,
-            sopClassUID,
-            new BackupState(
-                sopInstanceUID,
-                attemptsAmount));
+    if (dicomDestinations.isEmpty() == false) {
+      CStoreSender cStoreSender = cStoreSenderFactory.create();
 
-        uploadFutures.add(dicomUploadFuture);
-      } catch (BackupException be) {
-        log.error("Async upload to dicomDest task not started.", be);
-        asyncUploadProcessingExceptions.add(be);
+      CompletableFuture dicomUploadFuture;
+      for (AetDictionary.Aet dicomDest : dicomDestinations) {
+        try {
+          dicomUploadFuture =
+              backupUploadService.startUploading(
+                  cStoreSender,
+                  dicomDest,
+                  sopInstanceUID,
+                  sopClassUID,
+                  new BackupState(sopInstanceUID, attemptsAmount));
+
+          uploadFutures.add(dicomUploadFuture);
+        } catch (BackupException be) {
+          log.error("Async upload to dicomDest task not started.", be);
+          asyncUploadProcessingExceptions.add(be);
+        }
       }
     }
 
