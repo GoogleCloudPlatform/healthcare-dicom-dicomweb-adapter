@@ -28,8 +28,8 @@ The configuration provides the ability to control the cluster uptime and send th
 The main connection settings and parameters are located in the *terraform.tfvars* file. Here the user can specify and change the settings for the following blocks:
 * Google Cloud Project settings
 * Google Cloud Storage settings
-* Healthcare settigs
-* Dicom import adapter setting
+* Healthcare settings
+* Dicom import adapter settings
 * Google Kubernetes Engine settings
 
 # Validate Terraform configuration
