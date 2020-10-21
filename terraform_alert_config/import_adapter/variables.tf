@@ -47,6 +47,10 @@ variable "alert_alignment_period" {
   description = "alert_alignment_period"
 }
 
+variable "threshold_value" {
+  description = "threshold_value"
+}
+
 variable "persistent_file_storage_location" {
   description = "persistent_file_storage_location"
 }
@@ -74,48 +78,3 @@ variable "image" {
 variable "replicas" {
   description = "replicas"
 }
-
-variable "gke_username" {
-  default     = ""
-  description = "gke username"
-}
-
-variable "gke_password" {
-  default     = ""
-  description = "gke password"
-}
-
-variable "gke_num_nodes" {
-  default     = 1
-  description = "number of gke nodes"
-}
-
-variable "cluster_name_suffix" {
-  description = "A suffix to append to the default cluster name"
-  default     = ""
-}
-
-variable "network" {
-  default = "default"
-
-  description = "The VPC network to host the cluster in"
-}
-
-variable "subnetwork" {
-  default = "default"
-  description = "The subnetwork to host the cluster in"
-}
-
-variable "ip_range_pods" {
-  default = "default"
-  description = "The secondary ip range to use for pods"
-}
-
-variable "ip_range_services" {
-  default = "us-central1-01-gke-01-services"  
-  description = "The secondary ip range to use for services"
-}
-
-#variable "compute_engine_service_account" {
-#  description = "Service account to associate to the nodes in the cluster"
-#}

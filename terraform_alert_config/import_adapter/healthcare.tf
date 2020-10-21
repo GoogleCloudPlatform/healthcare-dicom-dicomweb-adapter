@@ -6,11 +6,11 @@ resource "google_healthcare_dataset" "dataset" {
 }
 
 # create healthcare store for storing dicom files
-#resource "google_healthcare_dicom_store" "default" {
-#  name    = var.store
-#  dataset = google_healthcare_dataset.dataset.id
+resource "google_healthcare_dicom_store" "default" {
+  name    = var.store
+  dataset = google_healthcare_dataset.dataset.id
 
-#  labels = {
-#    label1 = "healthcare-label"
-#  }
-#}
+  labels = {
+    label1 = "healthcare-label"
+  }
+}

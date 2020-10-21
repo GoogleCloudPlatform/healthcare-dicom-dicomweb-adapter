@@ -16,6 +16,7 @@ resource "google_monitoring_alert_policy" "alert_policy" {
   conditions {
     display_name = "Import adapter error condition"
     condition_threshold {
+      threshold_value = var.threshold_value
       filter     = var.alert_filter
       duration   = var.alert_duration
       comparison = "COMPARISON_GT"

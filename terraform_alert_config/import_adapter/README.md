@@ -1,14 +1,15 @@
-# Prepare workspace
-## gcloud
-Information about installation [gcloud installation](https://cloud.google.com/sdk/docs/install)
-## Terraform
-Information about installation [Terraform installation](https://www.terraform.io/downloads.html)
-## Kubernetes
-Information about installation [Kubernetes installation](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-# Description
-Terraform configuration for deploying alerting on DICOM Adapter health. Only the import adapter is in scope initially.
+# Terraform Alerting Config
+This document describes the example DICOM Import adapter terraform configuration. The terraform configuration deploys a DICOM Import adapter to Google Kubernetes Engine, creates a Cloud Healthcare dataset and dicom store, and configures monitoring to alert on the health of the adapter.
 
-Import adapter alert on the following error events:
+## Prepare workspace
+The following software must be installed to use this configuration:
+1. [gcloud](https://cloud.google.com/sdk/docs/install)
+2. [Terraform](https://www.terraform.io/downloads.html)
+3. [Kubernetes](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+# Description
+Terraform configuration for deploying alerting on DICOM Import Adapter health.
+
+The import adapter alerts on the following error events:
 * CSTORE_ERROR
 * CFIND_ERROR
 * CFIND_QIDORS_ERROR
@@ -29,11 +30,11 @@ The main connection settings and parameters are located in the *terraform.tfvars
 * Google Cloud Project settings
 * Google Cloud Storage settings
 * Healthcare settings
-* Dicom import adapter settings
+* Dicom IImport Adapter settings
 * Google Kubernetes Engine settings
 
 # Validate Terraform configuration
-You can check the configuration. To do this, run:
+After you have made changes to the sample configuration, you can validate the configuration for any errors. To do this, run:
 ```bash
 # load dependencies
 terraform init -backend=false
@@ -43,17 +44,17 @@ terraform validate
 ```
 
 # Initialize Terraform workspace
-After user have saved your customized variables file, initialize your Terraform workspace, which will download the provider and initialize it with the values provided in your `terraform.tfvars` file:
+After you have saved your customized variables file, you can initialize your Terraform workspace. This will download the provider and initialize it with the values provided in your `terraform.tfvars` file:
 ```bash
 terraform init
 ```
-In user`s initialized directory, run *terraform apply* and review the planned actions. Your terminal output should indicate the plan is running and what resources will be created:
+In your initialized directory, run *terraform apply* and review the planned actions. Your terminal output should indicate the plan is running and what resources will be created:
 ```bash
 terraform apply
 ```
-User can see this terraform apply will provision a GKE Cluster and a GKE node pool. If you're comfortable with this, confirm the run with a `yes`.
+This comand will provision a GKE Cluster and a GKE node pool. If you're comfortable with this, confirm the run with a `yes`.
 
-Once the apply is complete, verify the Import Adapter service is running:
+Once the command has completed, verify the Import Adapter service is running:
 ```bash
 kubectl get services
 ```

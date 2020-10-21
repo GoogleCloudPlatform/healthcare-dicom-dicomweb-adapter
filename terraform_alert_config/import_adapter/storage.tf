@@ -7,11 +7,13 @@ module "gcs_buckets" {
   names = [var.bucket_id]
   prefix = ""
   set_admin_roles = false
-  #admins = [var.alert_notification_email]
   versioning = {
     first = false
   }
-  #bucket_admins = {
-  #  second = var.alert_notification_email
-  #}
+}
+
+# create object
+resource "google_storage_bucket_object" "backup" {
+  name   = var.upload_object
+  bucket = var.bucket_id
 }

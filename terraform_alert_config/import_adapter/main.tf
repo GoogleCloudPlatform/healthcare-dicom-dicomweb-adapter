@@ -8,6 +8,7 @@ provider "google" {
 # Customize kubernetes provider
 
 data "google_compute_zones" "available" {
+  project = var.project_id
 }
 
 resource "random_id" "cluster_name" {
@@ -18,17 +19,14 @@ resource "random_id" "username" {
   byte_length = 14
 }
 
-resource "random_id" "password" {
-  byte_length = 16
-}
-
-variable "kubernetes_version" {
-  default = ""
+resource "random_password" "password" {
+  length = 16
+  special = true
+  override_special = "_%@"
 }
 
 data "google_container_engine_versions" "supported" {
   location           = data.google_compute_zones.available.names[0]
-  version_prefix     = var.kubernetes_version
 }
 
 # If the result is empty '[]', the GKE default_cluster_version will be used.
@@ -37,7 +35,7 @@ output "available_master_versions_matching_user_input" {
 }
 
 resource "google_container_cluster" "primary" {
-  name               = "tf-acc-test-${random_id.cluster_name.hex}"
+  name               = "tf-cluster-${random_id.cluster_name.hex}"
   location           = data.google_compute_zones.available.names[0]
   network            = "default"
   initial_node_count = var.replicas
@@ -47,12 +45,12 @@ resource "google_container_cluster" "primary" {
   node_version       = data.google_container_engine_versions.supported.latest_master_version
 
   node_locations = [
-    data.google_compute_zones.available.names[1],
+    data.google_compute_zones.available.names[0],
   ]
 
   master_auth {
     username = random_id.username.hex
-    password = random_id.password.hex
+    password = random_password.password.result
   }
 
   node_config {
@@ -68,7 +66,6 @@ resource "google_container_cluster" "primary" {
 }
 
 provider "kubernetes" {
-  #version = "1.11.2"
   load_config_file = "false"
   host = google_container_cluster.primary.endpoint
 

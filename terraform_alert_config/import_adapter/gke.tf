@@ -1,5 +1,5 @@
 # Google Kubernetes Engine prosessing
-# Kubernetes deployment Dicom Impor Adapter
+# Kubernetes deployment Dicom Import Adapter
 resource "kubernetes_deployment" "dicom-adapter" {
   metadata {
     name = "dicom-adapter"
@@ -88,7 +88,7 @@ resource "kubernetes_deployment" "dicom-adapter" {
 
 }
 
-# expose LoadBalanser
+# expose LoadBalancer
 resource "kubernetes_service" "dicom-adapter" {
   metadata {
     name = "service-dicom-adapter"
