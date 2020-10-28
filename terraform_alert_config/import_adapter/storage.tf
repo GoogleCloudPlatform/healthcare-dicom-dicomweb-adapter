@@ -12,8 +12,3 @@ module "gcs_buckets" {
   }
 }
 
-# create object
-resource "google_storage_bucket_object" "backup" {
-  name   = var.upload_object
-  bucket = var.bucket_id
-}

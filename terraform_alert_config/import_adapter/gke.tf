@@ -11,11 +11,20 @@ resource "kubernetes_deployment" "dicom-adapter" {
 
   # customize nodes params 
   spec {
+    progress_deadline_seconds = 2147483647
     replicas = var.replicas
+    revision_history_limit = 2147483647
     selector {
       match_labels = {
         App = "dicom-adapter"
       }
+    }
+    strategy {
+      rolling_update {
+        max_surge = 2
+        max_unavailable = 1
+      }
+      type = "RollingUpdate"
     }
     template {
       metadata {
@@ -28,9 +37,10 @@ resource "kubernetes_deployment" "dicom-adapter" {
         container {
           image = var.image
           name  = "dicom-import-adapter"
-
+          image_pull_policy = "Always"
           port {
             container_port = var.dimse_port
+            name = "port"
             protocol = "TCP"
           }
 
@@ -55,37 +65,32 @@ resource "kubernetes_deployment" "dicom-adapter" {
            "--min_upload_delay=${var.min_upload_delay}",
            "--max_waiting_time_btw_uploads=${var.max_waiting_time_btw_uploads}",
            "--persistent_file_storage_location=${var.persistent_file_storage_location}",
-           "--oauth_scopes=https://www.googleapis.com/auth/cloud-healthcare",
+           "--oauth_scopes=https://www.googleapis.com/auth/cloud-platform",
            "--verbose"
           ]
 
           env {
             name = "ENV_POD_NAME"
-            value_from {
-              field_ref {
-                field_path = kubernetes_deployment.dicom-adapter.metadata[0].name
-              }
-            }
+            value = "dicom-adapter"
           }
 
           env {
             name = "ENV_POD_NAMESPACE"
-            value_from {
-              field_ref {
-                field_path = kubernetes_deployment.dicom-adapter.metadata[0].namespace
-              }
-            }
+            value = "namespace-dicom-import-adapter"
           }
 
           env {
             name = "ENV_CONTAINER_NAME"
-            value = kubernetes_deployment.dicom-adapter.spec[0].template[0].spec[0].container[0].name
+            value = "dicom-import-adapter" 
           }
         }
+        dns_policy = "ClusterFirst"
+        restart_policy = "Always"
+
+        termination_grace_period_seconds = 300
       }
     }
   }
-
 }
 
 # expose LoadBalancer

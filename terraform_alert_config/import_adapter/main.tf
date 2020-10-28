@@ -26,12 +26,7 @@ resource "random_password" "password" {
 }
 
 data "google_container_engine_versions" "supported" {
-  location           = data.google_compute_zones.available.names[0]
-}
-
-# If the result is empty '[]', the GKE default_cluster_version will be used.
-output "available_master_versions_matching_user_input" {
-  value = data.google_container_engine_versions.supported.valid_master_versions
+  location  = data.google_compute_zones.available.names[0]
 }
 
 resource "google_container_cluster" "primary" {
@@ -45,7 +40,7 @@ resource "google_container_cluster" "primary" {
   node_version       = data.google_container_engine_versions.supported.latest_master_version
 
   node_locations = [
-    data.google_compute_zones.available.names[0],
+    data.google_compute_zones.available.names[1]
   ]
 
   master_auth {
@@ -68,7 +63,7 @@ resource "google_container_cluster" "primary" {
 provider "kubernetes" {
   load_config_file = "false"
   host = google_container_cluster.primary.endpoint
-
+  
   username               = google_container_cluster.primary.master_auth[0].username
   password               = google_container_cluster.primary.master_auth[0].password
   client_certificate     = base64decode(google_container_cluster.primary.master_auth[0].client_certificate)

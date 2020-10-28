@@ -20,17 +20,17 @@ The import adapter alerts on the following error events:
 * COMMITMENT_QIDORS_ERROR
 
 ### Notification alerting
-The configuration provides the ability to send notifications to the user in the event of an event, which is defined in the *terraform.tfvar* file.
+The configuration provides the ability to send notifications to the user when an event occurs, which is defined in the *terraform.tfvar* file.
 
 ### Health check
-The configuration provides the ability to control the cluster uptime and send the corresponding event to the monitoring system.
+The configuration provides the ability to monitor the cluster uptime and send the corresponding event to the monitoring system.
 
 # Configuration
 The main connection settings and parameters are located in the *terraform.tfvars* file. Here the user can specify and change the settings for the following blocks:
 * Google Cloud Project settings
 * Google Cloud Storage settings
 * Healthcare settings
-* Dicom IImport Adapter settings
+* Dicom Import Adapter settings
 * Google Kubernetes Engine settings
 
 # Validate Terraform configuration

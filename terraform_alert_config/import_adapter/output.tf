@@ -5,6 +5,3 @@ output "lb_ip" {
 data "google_monitoring_uptime_check_ips" "ips" {
 }
 
-output "ip_list" {
-  value = data.google_monitoring_uptime_check_ips.ips.uptime_check_ips
-}
