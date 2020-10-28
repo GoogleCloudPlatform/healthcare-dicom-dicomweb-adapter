@@ -6,7 +6,6 @@ zone       = "your_zone"
 
 # Google Cloud Storage settings
 bucket_id     = "your_bucket_id"
-upload_object = "backup"
 
 # Healthcare settigs
 dataset = "your_healthcare_dataset_name"
@@ -18,7 +17,7 @@ dimse_port = 4070
 
 # set the backup storage location
 # you can specify a local storage path like "/tmp"
-# or an address in GCS, for example gs://bucket_id/upload_folder
+# or an address in GCS, for example gs://bucket_id
 persistent_file_storage_location = "/tmp"
 persistent_file_upload_retry_amount = 3
 min_upload_delay = 100

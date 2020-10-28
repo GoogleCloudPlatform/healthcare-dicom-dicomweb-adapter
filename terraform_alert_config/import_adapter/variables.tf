@@ -19,10 +19,6 @@ variable "bucket_id" {
   description = "bucket ID"
 }
 
-variable "upload_object" {
-  description = "object for backup"
-}
-
 variable "dimse_port" {
   description = "dimse_port"
 }
