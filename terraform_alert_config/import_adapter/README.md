@@ -1,4 +1,4 @@
-# Terraform Alerting Config
+## Terraform Alerting Config
 This document describes the example DICOM Import adapter terraform configuration. The terraform configuration deploys a DICOM Import adapter to Google Kubernetes Engine, creates a Cloud Healthcare dataset and dicom store, and configures monitoring to alert on the health of the adapter.
 
 ## Prepare workspace
@@ -6,7 +6,7 @@ The following software must be installed to use this configuration:
 1. [gcloud](https://cloud.google.com/sdk/docs/install)
 2. [Terraform](https://www.terraform.io/downloads.html)
 3. [Kubernetes](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-# Description
+## Description
 Terraform configuration for deploying alerting on DICOM Import Adapter health.
 
 The import adapter alerts on the following error events:
@@ -25,7 +25,7 @@ The configuration provides the ability to send notifications to the user when an
 ### Health check
 The configuration provides the ability to monitor the cluster uptime and send the corresponding event to the monitoring system.
 
-# Configuration
+## Configuration
 The main connection settings and parameters are located in the *terraform.tfvars* file. Here the user can specify and change the settings for the following blocks:
 * Google Cloud Project settings
 * Google Cloud Storage settings
@@ -33,7 +33,7 @@ The main connection settings and parameters are located in the *terraform.tfvars
 * Dicom Import Adapter settings
 * Google Kubernetes Engine settings
 
-# Validate Terraform configuration
+## Validate Terraform configuration
 After you have made changes to the sample configuration, you can validate the configuration for any errors. To do this, run:
 ```bash
 # load dependencies
@@ -43,7 +43,7 @@ terraform init -backend=false
 terraform validate
 ```
 
-# Initialize Terraform workspace
+## Initialize Terraform workspace
 After you have saved your customized variables file, you can initialize your Terraform workspace. This will download the provider and initialize it with the values provided in your `terraform.tfvars` file:
 ```bash
 terraform init
@@ -63,7 +63,7 @@ And verify the Import Adapter deployment has replicas.
 kubectl get deployments
 ```
 
-Run the destroy command and confirm with `yes` in your terminal.
+If you want to remove the deployment, run the destroy command and confirm with `yes` in your terminal.
 ```bash
 terraform destroy
 ```
