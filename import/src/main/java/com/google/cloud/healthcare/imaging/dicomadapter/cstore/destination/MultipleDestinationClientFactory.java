@@ -21,8 +21,8 @@ public class MultipleDestinationClientFactory extends DestinationClientFactory {
   @Override
   protected void selectAndPutDestinationClients(DestinationHolder destinationHolder, String callingAet, Attributes attrs) {
     ImmutableList.Builder<IDicomWebClient> filteredHealthcareWebClientsBuilder = ImmutableList.builder();
-    if (healthDestinations != null) {
-      for (Pair<DestinationFilter, IDicomWebClient> filterToDestination : healthDestinations) {
+    if (healthcareDestinations != null) {
+      for (Pair<DestinationFilter, IDicomWebClient> filterToDestination : healthcareDestinations) {
         if (filterToDestination.getLeft().matches(callingAet, attrs)) {
           filteredHealthcareWebClientsBuilder.add(filterToDestination.getRight());
         }

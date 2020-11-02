@@ -294,14 +294,17 @@ After a successful upload, the temporary file will be deleted. Also, the user ca
 
 The following arguments are used to configure the mode:
 * --persistent_file_storage_location: temporary location for storing files before send.
-* --persistent_file_upload_retry_amount: upload retry amount.
+* --persistent_file_upload_retry_amount: upload retry amount (default 0).
 * --min_upload_delay: minimum delay before upload backup file (ms) (default 100ms).
 * --max_waiting_time_between_uploads: maximum waiting time between uploads (ms) (default 5000ms).
+* --http_error_codes_to_retry: will retry on http error code from this list (default http code >= 500 present).
 
 If the flag --persistent_file_storage_location is not used then loading occurs without writing a temporary file.
 
 if the value for the flag --persistent_file_storage_location is specified in the format gs://bucket-id/some-directory,
- the file will be written to the specified project bucket. It is also necessary to set the flag --gcs_backup_project_id=GCS_PROJECT_ID, where GCS_PROJECT_ID is the GSC project id in which the bucket was created.
+ the file will be written to the specified project bucket. It is also necessary to set the flags:
+* --gcs_backup_project_id: the GSC project id in which the bucket was created.
+* --oauth_scopes: used for GCS project credentials.
 
 If you are using Kubernetes, then in the file `dicom_adapter.yaml` change the arguments in the file as follows:
 

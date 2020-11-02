@@ -174,9 +174,6 @@ public final class CStoreServiceTest {
     device.setExecutor(Executors.newSingleThreadExecutor());
     device.setScheduledExecutor(Executors.newSingleThreadScheduledExecutor());
 
-    //int attemptsAmount, List<Integer> httpErrorCodesToRetry
-
-
     when(backupUploaderMock.doReadBackup(anyString())).thenReturn(new ByteArrayInputStream(new byte []{1,2,3,4}));
     when(cStoreSenderFactoryMock.create()).thenReturn(cStoreSenderMock);
   }
@@ -461,7 +458,7 @@ public final class CStoreServiceTest {
     verify(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
     verify(backupUploaderMock, times(2)).doReadBackup(anyString());
     verify(spyStowClient, atLeast(1)).stowRs(any(InputStream.class));
-   // verify(backupUploaderMock).doRemoveBackup(anyString());
+    verify(backupUploaderMock).doRemoveBackup(anyString());
   }
 
   @Test
@@ -484,7 +481,7 @@ public final class CStoreServiceTest {
         doNothing()
         .when(spyStowClient).stowRs(any(InputStream.class));
 
-    ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDestinations = ImmutableList.of(
+    ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations = ImmutableList.of(
         new ImportAdapter.Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), spyStowClient));
 
     AetDictionary.Aet target = new AetDictionary.Aet(VALID_NAME, VALID_HOST, VALID_PORT);
@@ -492,7 +489,7 @@ public final class CStoreServiceTest {
         new Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), target));
 
     MultipleDestinationClientFactory multipleDestinationClientFactory = new MultipleDestinationClientFactory(
-      healthDestinations,
+      healthcareDestinations,
       dicomDestinations,
       spyStowClient);
 
@@ -540,8 +537,8 @@ public final class CStoreServiceTest {
 
     verify(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
     verify(backupUploaderMock, times(3)).doReadBackup(anyString());
-    verify(spyStowClient, atLeast(2)).stowRs(any(InputStream.class));
-    //verify(backupUploaderMock).doRemoveBackup(anyString());
+    verify(spyStowClient, times(3)).stowRs(any(InputStream.class));
+    verify(backupUploaderMock).doRemoveBackup(anyString());
   }
 
   @Test
@@ -570,7 +567,7 @@ public final class CStoreServiceTest {
     verify(backupUploaderMock).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
     verify(backupUploaderMock).doReadBackup(eq(SOP_INSTANCE_UID));
     verify(spyStowClient).stowRs(any(InputStream.class));
-    //verify(backupUploaderMock).doRemoveBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploaderMock).doRemoveBackup(eq(SOP_INSTANCE_UID));
   }
 
   private void basicCStoreServiceTest(

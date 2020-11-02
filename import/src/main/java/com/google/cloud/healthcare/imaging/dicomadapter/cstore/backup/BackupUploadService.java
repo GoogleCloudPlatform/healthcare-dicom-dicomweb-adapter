@@ -90,15 +90,15 @@ public class BackupUploadService implements IBackupUploadService {
     public UploadAsyncJob(BackupState backupState) {
       this.backupState = backupState;
       this.uniqueFileName = backupState.getUniqueFileName();
-      this.attemptNumber = attemptsAmount - backupState.getAttemptsCountdown();
+      this.attemptNumber = attemptsAmount + 1 - backupState.getAttemptsCountdown();
     }
 
     protected void logUploadFailed(Exception e) {
-      log.error("sopInstanceUID={}, resend attempt {} - failed.", uniqueFileName, attemptNumber + 1, e);
+      log.error("sopInstanceUID={}, resend attempt {} - failed.", uniqueFileName, attemptNumber, e);
     }
 
     protected void logSuccessUpload() {
-      log.debug("sopInstanceUID={}, resend attempt {}, - successful.", uniqueFileName, attemptNumber + 1);
+      log.debug("sopInstanceUID={}, resend attempt {}, - successful.", uniqueFileName, attemptNumber);
     }
 
     protected InputStream readBackupExceptionally() throws CompletionException {

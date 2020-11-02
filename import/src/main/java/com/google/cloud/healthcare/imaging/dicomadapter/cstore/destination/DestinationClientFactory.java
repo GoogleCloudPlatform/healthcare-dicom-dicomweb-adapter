@@ -13,19 +13,19 @@ import java.io.InputStream;
 
 public abstract class DestinationClientFactory implements IDestinationClientFactory {
 
-  protected final ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDestinations;
+  protected final ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations;
   private final IDicomWebClient defaultDicomWebClient;
   private boolean dicomDestinationsNotEmpty;
 
-  public DestinationClientFactory(ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDestinations,
+  public DestinationClientFactory(ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations,
                                   IDicomWebClient defaultDicomWebClient) {
-    this.healthDestinations = healthDestinations;
+    this.healthcareDestinations = healthcareDestinations;
     this.defaultDicomWebClient = defaultDicomWebClient;
   }
 
-  public DestinationClientFactory(ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDestinations,
+  public DestinationClientFactory(ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations,
                                   IDicomWebClient defaultDicomWebClient, boolean dicomDestinationsNotEmpty) {
-    this(healthDestinations, defaultDicomWebClient);
+    this(healthcareDestinations, defaultDicomWebClient);
     this.dicomDestinationsNotEmpty = dicomDestinationsNotEmpty;
   }
 
@@ -33,7 +33,7 @@ public abstract class DestinationClientFactory implements IDestinationClientFact
   public DestinationHolder create(String callingAet, InputStream inputStream) throws IOException {
     DestinationHolder destinationHolder;
 
-    if ((healthDestinations != null && !healthDestinations.isEmpty()) || dicomDestinationsNotEmpty) {
+    if ((healthcareDestinations != null && !healthcareDestinations.isEmpty()) || dicomDestinationsNotEmpty) {
       DicomInputStream inDicomStream = createDicomInputStream(inputStream);
       Attributes attrs = getFilteringAttributes(inDicomStream);
 

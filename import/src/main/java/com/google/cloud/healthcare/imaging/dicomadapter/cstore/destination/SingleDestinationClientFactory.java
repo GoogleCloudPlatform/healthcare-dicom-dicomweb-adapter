@@ -13,7 +13,7 @@ public class SingleDestinationClientFactory extends DestinationClientFactory {
 
   @Override
   protected void selectAndPutDestinationClients(DestinationHolder destinationHolder, String callingAet, Attributes attrs) {
-    for (Pair<DestinationFilter, IDicomWebClient> filterToDestination: healthDestinations) {
+    for (Pair<DestinationFilter, IDicomWebClient> filterToDestination: healthcareDestinations) {
       if (filterToDestination.getLeft().matches(callingAet, attrs)) {
         destinationHolder.setSingleDestination(filterToDestination.getRight());
         return;

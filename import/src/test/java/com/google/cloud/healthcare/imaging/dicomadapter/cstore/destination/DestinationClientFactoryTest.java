@@ -77,14 +77,14 @@ public class DestinationClientFactoryTest {
   }
 
   @Test
-  public void singleDestinationClientFactory_healthDestinationsPresent_success() throws IOException {
-    ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDestinations = ImmutableList.of(
+  public void singleDestinationClientFactory_healthcareDestinationsPresent_success() throws IOException {
+    ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations = ImmutableList.of(
         new Pair(
             new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER),
             dicomWebClientMockFirst));
 
     SingleDestinationClientFactory destinationFactory = new SingleDestinationClientFactory(
-        healthDestinations,
+        healthcareDestinations,
         defaultDicomWebClientMock);
 
     SingleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
@@ -120,11 +120,11 @@ public class DestinationClientFactoryTest {
     ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations = ImmutableList.of(
         new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_FIRST), dicomWebClientMockFirst),  // match aet + attrs
         new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_FIRST), dicomWebClientMockSecond), // match aet + attrs
-        new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_SECOND), dicomWebClientMockThird), // not math
+        new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_SECOND), dicomWebClientMockThird), // not match
         new Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), dicomWebClientMockSecond)); // aet null / match attrs
 
     ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>> dicomDestinations = ImmutableList.of(
-        new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_SECOND), aetMockThird),  // not math
+        new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_SECOND), aetMockThird),  // not match
         new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_FIRST), aetMockFirst),   // match aet + attrs
         new Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), aetMockFirst),               // aet null / match attrs
         new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_FIRST), aetMockSecond)); // match aet + attrs
@@ -172,7 +172,7 @@ public class DestinationClientFactoryTest {
   }
 
   @Test
-  public void multipleDestinationClientFactory_healthDestinationsPresent_success() throws IOException {
+  public void multipleDestinationClientFactory_healthcareDestinationsPresent_success() throws IOException {
     ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthcareDestinations = ImmutableList.of(
         new Pair(new DestinationFilter(DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_FIRST), dicomWebClientMockFirst), //match aet + attrs fails
         new Pair(new DestinationFilter(DEFAULT_DESTINATION_CONFIG_FILTER), dicomWebClientMockSecond));           // aet null + match attrs

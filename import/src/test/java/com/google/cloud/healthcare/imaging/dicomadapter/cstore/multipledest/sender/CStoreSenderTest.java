@@ -46,11 +46,12 @@ import static org.mockito.Mockito.doReturn;
 @RunWith(JUnit4.class)
 public class CStoreSenderTest {
   // Server properties.
-  final static String serverAET = "SERVER";
-  final static String serverHostname = "localhost";
-  final static String clientAET = "CLIENT";
-  final static String moveDestinationHostname = "localhost";
-  final static String pathToDcmFile = "..\\integration_test\\data\\1.2.840.113543.6.6.1.1.2.2415947926921624359.201235357587280";
+  private final static String SERVER_AET = "SERVER";
+  private final static String SERVER_HOST_NAME = "localhost";
+  private final static String CLIENT_AET = "CLIENT";
+  private final static String MOVE_DESTINATION_HOSTNAME = "localhost";
+  private final static String SOP_INSTANCE_ID = "1.2.840.113543.6.6.1.1.2.2415947926921624359.201235357587280";
+  private final static String PATH_TO_DCM_FILE = "..\\integration_test\\data\\" + SOP_INSTANCE_ID;
 
   // Client properties.
   private ApplicationEntity clientAE;
@@ -74,10 +75,10 @@ public class CStoreSenderTest {
     LogUtil.Log4jToStdout("DEBUG");
 
     // create client
-    Device device = new Device(clientAET);
+    Device device = new Device(CLIENT_AET);
     Connection conn = new Connection();
     device.addConnection(conn);
-    clientAE = new ApplicationEntity(clientAET);
+    clientAE = new ApplicationEntity(CLIENT_AET);
     device.addApplicationEntity(clientAE);
     clientAE.addConnection(conn);
     device.setExecutor(Executors.newSingleThreadExecutor());
@@ -100,20 +101,20 @@ public class CStoreSenderTest {
         () -> cMoveSenderMock);
 
     association =
-        associate(serverHostname, port,
-            UID.StudyRootQueryRetrieveInformationModelMOVE, UID.ExplicitVRLittleEndian);
+        associate(SERVER_HOST_NAME, port,
+            "*", UID.ExplicitVRLittleEndian);
 
     Attributes moveDataset = new Attributes();
     moveDataset.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY");
     moveDataset.setString(Tag.StudyInstanceUID, VR.UI, "");
 
-    DimseRSPAssert rspAssert = new DimseRSPAssert(association, Status.SOPclassNotSupported); //FIXME
+    DimseRSPAssert rspAssert = new DimseRSPAssert(association, Status.Success);
     association.cmove(
-        UID.StudyRootQueryRetrieveInformationModelMOVE,
+        "*",
         1,
         moveDataset,
         UID.ExplicitVRLittleEndian,
-        serverAET,
+        SERVER_AET,
         rspAssert);
     association.waitForOutstandingRSP();
 
@@ -123,24 +124,24 @@ public class CStoreSenderTest {
 
     rspAssert.assertResult();
 
-    inputStream = Files.newInputStream(Paths.get(pathToDcmFile));
+    inputStream = Files.newInputStream(Paths.get(PATH_TO_DCM_FILE));
 
     CountingInputStream countingStream = new CountingInputStream(inputStream);
     dicomInputStream = new DicomInputStream(countingStream);
-    validAet = new AetDictionary.Aet(serverAET, serverHostname, port);
+    validAet = new AetDictionary.Aet(SERVER_AET, SERVER_HOST_NAME, port);
     cStoreSender = new CStoreSender(clientAE);
   }
 
   @Test
   public void sendFile() throws IOException, InterruptedException {
     cStoreSender.cstore(validAet,
-        UID.StudyRootQueryRetrieveInformationModelMOVE,
+        SOP_INSTANCE_ID,
         UID.ExplicitVRLittleEndian,
         dicomInputStream);
 
     List<Byte> actualReceivedBytesByServer = getByteObjectArray(
         ((StubCStoreService) dicomServiceStub).getReceivedBytes());
-    List<Byte> expectedBytes = getByteObjectArray(Files.readAllBytes(Paths.get(pathToDcmFile)));
+    List<Byte> expectedBytes = getByteObjectArray(Files.readAllBytes(Paths.get(PATH_TO_DCM_FILE)));
 
     assertThat(expectedBytes).containsAtLeastElementsIn(actualReceivedBytesByServer);
   }
@@ -162,7 +163,7 @@ public class CStoreSenderTest {
       String serverHostname, int serverPort, String sopClass, String syntax) throws Exception {
     AAssociateRQ rq = new AAssociateRQ();
     rq.addPresentationContext(new PresentationContext(1, sopClass, syntax));
-    rq.setCalledAET(serverAET);
+    rq.setCalledAET(SERVER_AET);
     Connection remoteConn = new Connection();
     remoteConn.setHostname(serverHostname);
     remoteConn.setPort(serverPort);
@@ -178,11 +179,13 @@ public class CStoreSenderTest {
     serviceRegistry.addDicomService(new BasicCEchoSCP());
 
     AetDictionary aetDict = new AetDictionary(new AetDictionary.Aet[]{
-        new AetDictionary.Aet(serverAET, moveDestinationHostname, 0)});
+        new AetDictionary.Aet(SERVER_AET, MOVE_DESTINATION_HOSTNAME, 0)});
 
     dicomServiceStub = new StubCStoreService(Status.Success);
     serviceRegistry.addDicomService(dicomServiceStub);
-    Device serverDevice = DeviceUtil.createServerDevice(serverAET, serverPort, serviceRegistry);
+    TransferCapability transferCapability =
+        new TransferCapability(null /* commonName */, "*", TransferCapability.Role.SCP, "*");
+    Device serverDevice = DeviceUtil.createServerDevice(SERVER_AET, serverPort, serviceRegistry, transferCapability);
     serverDevice.bindConnections();
     return serverPort;
   }

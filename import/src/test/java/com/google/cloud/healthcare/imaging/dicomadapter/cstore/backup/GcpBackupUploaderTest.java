@@ -175,16 +175,6 @@ public class GcpBackupUploaderTest {
     }
 
     @Test
-    public void getCredential() throws IOException {
-        gcpBackupUploader = new GcpBackupUploader(UPLOAD_PATH, GCP_PROJECT_ID, OAUTHSCOPES);
-        Credentials creds = gcpBackupUploader.getCredential(OAUTHSCOPES);
-
-        assertThat(creds).isInstanceOf(Credentials.class);
-        assertThat(creds).isNotNull();
-        assertThat(creds.getAuthenticationType()).isEqualTo(AUTH_TYPE);
-    }
-
-    @Test
     public void getCredential_Failed_OnEmptyEnv() throws IOException {
         exceptionRule.expect(IBackupUploader.BackupException.class);
         exceptionRule.expectMessage("oauthScopes is blank");

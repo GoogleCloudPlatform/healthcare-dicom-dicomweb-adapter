@@ -30,11 +30,11 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     this.storage = storage;
   }
 
-  public GcpBackupUploader(String uploadFilePath, String gcpProjectId, String oauthScopes) throws IOException {
+  public GcpBackupUploader(String uploadFilePath, String gcpProjectId, GoogleCredentials googleCredentials) throws IOException {
     super(uploadFilePath);
     this.projectId = gcpProjectId;
     parseUploadFilePath(getUploadFilePath());
-    storage = getStorage(oauthScopes);
+    storage = getStorage(googleCredentials);
   }
 
   @Override
@@ -122,9 +122,9 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     return uploadFolder.concat("/").concat(uniqueFileName);
   }
 
-  private Storage getStorage(String oauthScopes) throws IOException {
+  private Storage getStorage(GoogleCredentials googleCredentials) throws IOException {
     return StorageOptions.newBuilder()
-        .setCredentials(getCredentialOldStyle("C:/workspace/dev-idg-uvs-e9bb27a2d329.json") /*getCredential(oauthScopes)*/)
+        .setCredentials(googleCredentials)
         .setProjectId(projectId)
         .build()
         .getService();

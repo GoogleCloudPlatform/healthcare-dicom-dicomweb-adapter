@@ -115,7 +115,7 @@ public class ImportAdapter {
 
     String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
     if (cstoreSubAet.isBlank()) {
-      throw new IllegalArgumentException("cstoreSubAet cannot be empty. Please set ");
+      throw new IllegalArgumentException("--dimse_aet flag must be set.");
     }
 
     IDicomWebClient defaultCstoreDicomWebClient = configureDefaultDicomWebClient(
@@ -123,10 +123,10 @@ public class ImportAdapter {
 
     DicomRedactor redactor = configureRedactor(flags);
 
-    BackupUploadService backupUploadService = configureBackupUploadService(flags);
+    BackupUploadService backupUploadService = configureBackupUploadService(flags, credentials);
 
     IDestinationClientFactory destinationClientFactory = configureDestinationClientFactory(
-        defaultCstoreDicomWebClient, credentials, flags);
+        defaultCstoreDicomWebClient, credentials, flags, backupUploadService != null);
 
     MultipleDestinationUploadService multipleDestinationSendService = configureMultipleDestinationUploadService(
         flags, cstoreSubAet, backupUploadService);
@@ -177,9 +177,13 @@ public class ImportAdapter {
   private static IDestinationClientFactory configureDestinationClientFactory(
       IDicomWebClient defaultCstoreDicomWebClient,
       GoogleCredentials credentials,
-      Flags flags) throws IOException {
+      Flags flags, boolean backupServicePresent) throws IOException {
     IDestinationClientFactory destinationClientFactory;
-    if (flags.sendToAllMatchingDestinations && flags.persistentFileStorageLocation.isBlank() == false) {
+    if (flags.sendToAllMatchingDestinations) {
+      if (backupServicePresent == false) {
+        throw new IllegalArgumentException("backup is not configured properly. '--send_to_all_matching_destinations' " +
+            "flag must be used only in pair with backup, local or GCP. Please see readme to configure backup.");
+      }
       Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
           ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
           flags.destinationConfigInline,
@@ -191,7 +195,7 @@ public class ImportAdapter {
           multipleDestinations.getLeft(),
           multipleDestinations.getRight(),
           defaultCstoreDicomWebClient);
-    } else {
+    } else { // with or without backup usage.
       destinationClientFactory = new SingleDestinationClientFactory(
           configureDestinationMap(
               flags.destinationConfigInline, flags.destinationConfigPath, credentials),
@@ -204,12 +208,7 @@ public class ImportAdapter {
       Flags flags,
       String cstoreSubAet,
       BackupUploadService backupUploadService) {
-    if (flags.sendToAllMatchingDestinations) {
-      if (flags.persistentFileStorageLocation.isBlank()) {
-        throw new IllegalArgumentException("mandatory flag '--persistent_file_storage_location is not present' " +
-            "(works in pair with '--send_to_all_matching_destinations' flag for multiple upload mode.");
-      }
-
+    if (backupUploadService != null) {
       return new MultipleDestinationUploadService(
           new CStoreSenderFactory(cstoreSubAet),
           backupUploadService,
@@ -218,13 +217,13 @@ public class ImportAdapter {
     return null;
   }
 
-  private static BackupUploadService configureBackupUploadService(Flags flags) throws IOException {
+  private static BackupUploadService configureBackupUploadService(Flags flags, GoogleCredentials credentials) throws IOException {
     String uploadPath = flags.persistentFileStorageLocation;
 
     if (!uploadPath.isBlank()) {
       final IBackupUploader backupUploader;
       if (uploadPath.startsWith(GCP_PATH_PREFIX)) {
-        backupUploader = new GcpBackupUploader(uploadPath, flags.gcsBackupProjectId, flags.oauthScopes);
+        backupUploader = new GcpBackupUploader(uploadPath, flags.gcsBackupProjectId, credentials);
       } else {
         backupUploader = new LocalBackupUploader(uploadPath);
       }
