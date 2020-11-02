@@ -90,15 +90,15 @@ public class BackupUploadService implements IBackupUploadService {
     public UploadAsyncJob(BackupState backupState) {
       this.backupState = backupState;
       this.uniqueFileName = backupState.getUniqueFileName();
-      this.attemptNumber = attemptsAmount + 1 - backupState.getAttemptsCountdown();
+      this.attemptNumber = attemptsAmount + 2 - backupState.getAttemptsCountdown();
     }
 
     protected void logUploadFailed(Exception e) {
-      log.error("sopInstanceUID={}, resend attempt {} - failed.", uniqueFileName, attemptNumber, e);
+      log.error("sopInstanceUID={}, upload attempt № {} - failed.", uniqueFileName, attemptNumber, e);
     }
 
     protected void logSuccessUpload() {
-      log.debug("sopInstanceUID={}, resend attempt {}, - successful.", uniqueFileName, attemptNumber);
+      log.debug("sopInstanceUID={}, upload attempt № {}, - successful.", uniqueFileName, attemptNumber);
     }
 
     protected InputStream readBackupExceptionally() throws CompletionException {
@@ -214,11 +214,10 @@ public class BackupUploadService implements IBackupUploadService {
 
   private CompletableFuture scheduleUploadWithDelay(BackupState backupState, Runnable uploadJob, long delayMillis) throws BackupException {
     String uniqueFileName = backupState.getUniqueFileName();
+    log.info("Trying to send data, sopInstanceUID={}, attempt № {}. ",
+        uniqueFileName,
+        2 + attemptsAmount - backupState.getAttemptsCountdown());
     if (backupState.decrement()) {
-      log.info("Trying to send data, sopInstanceUID={}, attempt № {}. ",
-          uniqueFileName,
-          1 + attemptsAmount - backupState.getAttemptsCountdown());
-
       return CompletableFuture.runAsync(
           uploadJob,
           CompletableFuture.delayedExecutor(
@@ -245,7 +244,7 @@ public class BackupUploadService implements IBackupUploadService {
   }
 
   private BackupException getNoResendAttemptLeftException(DicomWebException dwe, String uniqueFileName) {
-    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". No resend attempt left.";
+    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". No upload attempt left.";
     log.debug(errorMessage);
     if (dwe != null) {
       return new BackupException(dwe.getStatus(), dwe, errorMessage);

@@ -50,7 +50,7 @@ public class BackupUploadServiceTest {
   private final int ATTEMPTS_AMOUNT_MINUS_ONE = -1;
   private final int ATTEMPTS_AMOUNT_ZERO = 0;
   private final int ATTEMPTS_AMOUNT_ONE = 1;
-  private final String EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE = "sopInstanceUID=" + UNIQUE_FILE_NAME + ". No resend attempt left.";
+  private final String EXPECTED_NO_RESEND_ATTEMPT_LEFT_LOG_MESSAGE = "sopInstanceUID=" + UNIQUE_FILE_NAME + ". No upload attempt left.";
 
   private InputStream backupInputStream;
 
