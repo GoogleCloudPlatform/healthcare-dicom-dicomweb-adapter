@@ -113,11 +113,6 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     return credentials;
   }
 
-  public Credentials getCredentialOldStyle(String env) throws IOException {
-    return GoogleCredentials
-        .fromStream(new FileInputStream(env));
-  }
-
   private String getFullUploadObject(String uniqueFileName) {
     return uploadFolder.concat("/").concat(uniqueFileName);
   }
