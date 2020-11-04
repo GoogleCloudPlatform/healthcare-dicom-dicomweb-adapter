@@ -33,6 +33,7 @@ import org.mockito.junit.MockitoRule;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,7 @@ public class CStoreSenderTest {
   private final static String CLIENT_AET = "CLIENT";
   private final static String MOVE_DESTINATION_HOSTNAME = "localhost";
   private final static String SOP_INSTANCE_ID = "1.2.840.113543.6.6.1.1.2.2415947926921624359.201235357587280";
-  private final static String PATH_TO_DCM_FILE = "..\\integration_test\\data\\" + SOP_INSTANCE_ID;
+  private final static Path PATH_TO_DCM_FILE = Paths.get("src", "test", "resources", SOP_INSTANCE_ID);
 
   // Client properties.
   private ApplicationEntity clientAE;
@@ -124,7 +125,7 @@ public class CStoreSenderTest {
 
     rspAssert.assertResult();
 
-    inputStream = Files.newInputStream(Paths.get(PATH_TO_DCM_FILE));
+    inputStream = Files.newInputStream(PATH_TO_DCM_FILE);
 
     CountingInputStream countingStream = new CountingInputStream(inputStream);
     dicomInputStream = new DicomInputStream(countingStream);
@@ -141,7 +142,7 @@ public class CStoreSenderTest {
 
     List<Byte> actualReceivedBytesByServer = getByteObjectArray(
         ((StubCStoreService) dicomServiceStub).getReceivedBytes());
-    List<Byte> expectedBytes = getByteObjectArray(Files.readAllBytes(Paths.get(PATH_TO_DCM_FILE)));
+    List<Byte> expectedBytes = getByteObjectArray(Files.readAllBytes(PATH_TO_DCM_FILE));
 
     assertThat(expectedBytes).containsAtLeastElementsIn(actualReceivedBytesByServer);
   }
