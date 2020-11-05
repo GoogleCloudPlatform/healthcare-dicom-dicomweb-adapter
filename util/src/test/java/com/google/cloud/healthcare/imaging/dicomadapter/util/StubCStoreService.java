@@ -18,10 +18,7 @@ import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
 import org.dcm4che3.net.Association;
-import org.dcm4che3.net.Commands;
-import org.dcm4che3.net.Dimse;
 import org.dcm4che3.net.PDVInputStream;
-import org.dcm4che3.net.Status;
 import org.dcm4che3.net.pdu.PresentationContext;
 import org.dcm4che3.net.service.BasicCStoreSCP;
 
@@ -50,17 +47,5 @@ public class StubCStoreService extends BasicCStoreSCP {
 
   public byte[] getReceivedBytes() {
     return receivedBytes;
-  }
-
-  @Override
-  public void onDimseRQ(Association as, PresentationContext pc, Dimse dimse,
-                        Attributes rq, PDVInputStream data) throws IOException {
-    if (dimse == Dimse.C_MOVE_RQ) {
-      Attributes rsp = Commands.mkCStoreRSP(rq, Status.Success);
-      store(as, pc, rq, data, rsp);
-      as.tryWriteDimseRSP(pc, rsp);
-    } else {
-      super.onDimseRQ(as, pc, dimse, rq, data);
-    }
   }
 }
