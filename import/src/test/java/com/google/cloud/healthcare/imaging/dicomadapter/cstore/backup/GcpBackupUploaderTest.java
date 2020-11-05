@@ -84,14 +84,9 @@ public class GcpBackupUploaderTest {
 
         // GCP Storage work imitation.
         doAnswer(invocation -> {
-            String name = tmpBlobId.get().getName();
+            String name = invocation.getArgument(0, BlobId.class).getName();
             return new FakeChannel(fakeStorageObjects.get(name));
-        }).when(blobMock).reader();
-
-        doAnswer(invocation -> {
-            tmpBlobId.set(invocation.getArgument(0, BlobId.class));
-            return blobMock;
-        }).when(storageMock).get(any(BlobId.class));
+        }).when(storageMock).reader(any(BlobId.class));
 
         doAnswer(invocation -> {
             fakeStorageObjects.put(invocation.getArgument(0, BlobInfo.class).getName(),

@@ -56,8 +56,7 @@ public class GcpBackupUploader extends AbstractBackupUploader {
   public InputStream doReadBackup(String uniqueFileName) throws BackupException {
     try {
       validatePathParameter(uniqueFileName, "unique file name");
-      Blob blob = storage.get(BlobId.of(bucketName, getFullUploadObject(uniqueFileName)));
-      ReadChannel channel = blob.reader();
+      ReadChannel channel = storage.reader(BlobId.of(bucketName, getFullUploadObject(uniqueFileName)));
       return Channels.newInputStream(channel);
     } catch (Exception e) {
       throw new BackupException("Error with reading backup file: " + e.getMessage(), e);
