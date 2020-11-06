@@ -45,7 +45,7 @@ public class DestinationsConfig {
         JSONObject elemJson = (JSONObject) elem;
         String filter = elemJson.getString("filter");
         if(map.containsKey(filter)){
-          throw new IllegalArgumentException("Duplicate filter in Destinations config");
+          throw new IllegalArgumentException("Duplicate filter in Destinations config. Use --send_to_all_matching_destinations for multiple destination filtering mode.");
         }
 
         map.put(filter, elemJson.getString("dicomweb_destination"));
