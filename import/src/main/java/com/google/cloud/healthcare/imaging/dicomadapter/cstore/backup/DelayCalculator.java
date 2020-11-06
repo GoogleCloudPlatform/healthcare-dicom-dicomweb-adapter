@@ -20,10 +20,10 @@ public class DelayCalculator {
    */
   public long getExponentialDelayMillis(int attemptsLeft, int attemptsAmount) {
     if (attemptsLeft < 1) {
-      return minUploadDelay;
+      return maxWaitingTimeBtwUpload;
     }
     if (attemptsLeft > attemptsAmount) {
-      return maxWaitingTimeBtwUpload;
+      return minUploadDelay;
     }
     long delay = (long) (minUploadDelay + (Math.round(Math.pow(DELAY_CALCULATION_BASE, attemptsAmount - attemptsLeft + 1)) - DELAY_CALCULATION_BASE) * MILS_MUL);
     return (delay >= maxWaitingTimeBtwUpload) ? maxWaitingTimeBtwUpload : delay;

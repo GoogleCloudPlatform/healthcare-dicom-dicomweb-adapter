@@ -1,6 +1,5 @@
 package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
-import com.google.auth.Credentials;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.RestorableState;
 import com.google.cloud.storage.Blob;
@@ -25,7 +24,6 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,9 +41,7 @@ public class GcpBackupUploaderTest {
     private static final String NOT_EXISTS_UPLOAD_PATH = "gs://testing-healthcare-adapter/some-backup";
     private static final String UNIQ_NAME = "uniq";
     private static final String UNIQ_NAME_REMOVE = "uniq_remove";
-    private static final String AUTH_TYPE = "OAuth2";
     private static final String GCP_PROJECT_ID = "test-project-id";
-    private static final String OAUTHSCOPES = "https://www.googleapis.com/auth/cloud-healthcare";
     private static final String UPLOAD_PATH_EMPTY_BUCKET_NAME = "gs:/// ";
     private static final String UPLOAD_PATH_SPACE_BUCKET_NAME = "gs:// / ";
     private static final String UPLOAD_PATH_EMPTY_UPLOAD_OBJECT = "gs:///some//";
@@ -62,9 +58,6 @@ public class GcpBackupUploaderTest {
     @Mock
     private static Storage storageMock;
 
-    @Mock
-    private Blob blobMock;
-
     private HashMap<String, byte[]> fakeStorageObjects;
 
     @BeforeClass
@@ -80,7 +73,6 @@ public class GcpBackupUploaderTest {
     @Before
     public void before() {
         fakeStorageObjects = new HashMap<>();
-        AtomicReference<BlobId> tmpBlobId = new AtomicReference<>();
 
         // GCP Storage work imitation.
         doAnswer(invocation -> {

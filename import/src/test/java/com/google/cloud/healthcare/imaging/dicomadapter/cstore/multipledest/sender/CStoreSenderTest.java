@@ -99,14 +99,10 @@ public class CStoreSenderTest {
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
 
-    AetDictionary aetDict = new AetDictionary(new AetDictionary.Aet[]{
-        new AetDictionary.Aet(SERVER_AET, DESTINATION_HOSTNAME, 0)});
-
     dicomServiceStub = new StubCStoreService(Status.Success);
     serviceRegistry.addDicomService(dicomServiceStub);
-    TransferCapability transferCapability =
-        new TransferCapability(null /* commonName */, "*", TransferCapability.Role.SCP, "*");
-    Device serverDevice = DeviceUtil.createServerDevice(SERVER_AET, serverPort, serviceRegistry, transferCapability);
+
+    Device serverDevice = DeviceUtil.createServerDevice(SERVER_AET, serverPort, serviceRegistry);
     serverDevice.bindConnections();
     return serverPort;
   }

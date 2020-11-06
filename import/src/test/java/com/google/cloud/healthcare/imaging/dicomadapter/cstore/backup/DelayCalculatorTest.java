@@ -2,7 +2,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.DelayCalculator;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,11 +32,11 @@ public class DelayCalculatorTest {
 
   @Test
   public void delayWithNegativeValue() {
-    assertThat(calc.getExponentialDelayMillis(-3, 5)).isEqualTo(100L);
+    assertThat(calc.getExponentialDelayMillis(-3, 5)).isEqualTo(5000L);
   }
 
   @Test
   public void delayWithInvavidAttemptValue() {
-    assertThat(calc.getExponentialDelayMillis(20, 5)).isEqualTo(5000L);
+    assertThat(calc.getExponentialDelayMillis(20, 5)).isEqualTo(100L);
   }
 }
