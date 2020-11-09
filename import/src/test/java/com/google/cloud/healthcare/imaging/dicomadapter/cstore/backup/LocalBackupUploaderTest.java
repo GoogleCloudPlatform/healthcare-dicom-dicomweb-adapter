@@ -1,4 +1,4 @@
-package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -8,6 +8,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.LocalBackupUploader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;

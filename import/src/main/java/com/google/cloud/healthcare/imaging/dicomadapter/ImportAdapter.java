@@ -19,30 +19,42 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.healthcare.*;
+import com.google.cloud.healthcare.DicomWebClientJetty;
+import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.StringUtil;
+import com.google.cloud.healthcare.DicomWebValidation;
+import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupFlags;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.DelayCalculator;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.GcpBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.BackupUploadService;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.IBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.backupuploader.LocalBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.CStoreSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.DelayCalculator;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.GcpBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.LocalBackupUploader;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.CMoveSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.MultipleDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.SingleDestinationClientFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.MultipleDestinationUploadService;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
+import com.google.common.collect.ImmutableList;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +65,7 @@ public class ImportAdapter {
   private static final Logger log = LoggerFactory.getLogger(ImportAdapter.class);
   private static final String STUDIES = "studies";
   private static final String GCP_PATH_PREFIX = "gs://";
+  private static final String FILTER = "filter";
 
   public static void main(String[] args) throws IOException, GeneralSecurityException {
     Flags flags = new Flags();
@@ -99,25 +112,27 @@ public class ImportAdapter {
       cstoreDicomwebAddr = flags.dicomwebAddr;
       cstoreDicomwebStowPath = flags.dicomwebStowPath;
     }
-    IDicomWebClient defaultCstoreDicomWebClient = null;
-    if (flags.useHttp2ForStow) {
-      defaultCstoreDicomWebClient =
-        new DicomWebClientJetty(
-            credentials,
-            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
-    } else {
-      defaultCstoreDicomWebClient =
-        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
+
+    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
+    if (cstoreSubAet.isBlank()) {
+      throw new IllegalArgumentException("--dimse_aet flag must be set.");
     }
 
-    Map<DestinationFilter, IDicomWebClient> destinationMap = configureDestinationMap(
-        flags.destinationConfigInline, flags.destinationConfigPath, credentials);
-
-    BackupUploadService backupUploadService = configureBackupUploadService(flags);
+    IDicomWebClient defaultCstoreDicomWebClient = configureDefaultDicomWebClient(
+        requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath, credentials, flags);
 
     DicomRedactor redactor = configureRedactor(flags);
+
+    BackupUploadService backupUploadService = configureBackupUploadService(flags, credentials);
+
+    IDestinationClientFactory destinationClientFactory = configureDestinationClientFactory(
+        defaultCstoreDicomWebClient, credentials, flags, backupUploadService != null);
+
+    MultipleDestinationUploadService multipleDestinationSendService = configureMultipleDestinationUploadService(
+        flags, cstoreSubAet, backupUploadService);
+
     CStoreService cStoreService =
-        new CStoreService(defaultCstoreDicomWebClient, destinationMap, redactor, flags.transcodeToSyntax, backupUploadService);
+        new CStoreService(destinationClientFactory, redactor, flags.transcodeToSyntax, multipleDestinationSendService);
     serviceRegistry.addDicomService(cStoreService);
 
     // Handle C-FIND
@@ -127,10 +142,9 @@ public class ImportAdapter {
     serviceRegistry.addDicomService(cFindService);
 
     // Handle C-MOVE
-    String cstoreSubAet = flags.dimseCmoveAET.equals("") ? flags.dimseAET : flags.dimseCmoveAET;
-    CStoreSenderFactory cStoreSenderFactory = new CStoreSenderFactory(cstoreSubAet, dicomWebClient);
+    CMoveSenderFactory cMoveSenderFactory = new CMoveSenderFactory(cstoreSubAet, dicomWebClient);
     AetDictionary aetDict = new AetDictionary(flags.aetDictionaryInline, flags.aetDictionaryPath);
-    CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cStoreSenderFactory);
+    CMoveService cMoveService = new CMoveService(dicomWebClient, aetDict, cMoveSenderFactory);
     serviceRegistry.addDicomService(cMoveService);
 
     // Handle Storage Commitment N-ACTION
@@ -141,22 +155,85 @@ public class ImportAdapter {
     device.bindConnections();
   }
 
-  private static BackupUploadService configureBackupUploadService(Flags flags) throws IOException {
+  private static IDicomWebClient configureDefaultDicomWebClient(
+      HttpRequestFactory requestFactory,
+      String cstoreDicomwebAddr,
+      String cstoreDicomwebStowPath,
+      GoogleCredentials credentials,
+      Flags flags) {
+    IDicomWebClient defaultCstoreDicomWebClient;
+    if (flags.useHttp2ForStow) {
+      defaultCstoreDicomWebClient =
+        new DicomWebClientJetty(
+            credentials,
+            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+    } else {
+      defaultCstoreDicomWebClient =
+        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
+    }
+    return defaultCstoreDicomWebClient;
+  }
+
+  private static IDestinationClientFactory configureDestinationClientFactory(
+      IDicomWebClient defaultCstoreDicomWebClient,
+      GoogleCredentials credentials,
+      Flags flags, boolean backupServicePresent) throws IOException {
+    IDestinationClientFactory destinationClientFactory;
+    if (flags.sendToAllMatchingDestinations) {
+      if (backupServicePresent == false) {
+        throw new IllegalArgumentException("backup is not configured properly. '--send_to_all_matching_destinations' " +
+            "flag must be used only in pair with backup, local or GCP. Please see readme to configure backup.");
+      }
+      Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
+          ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
+          flags.destinationConfigInline,
+          flags.destinationConfigPath,
+          DestinationsConfig.ENV_DESTINATION_CONFIG_JSON,
+          credentials);
+
+      destinationClientFactory = new MultipleDestinationClientFactory(
+          multipleDestinations.getLeft(),
+          multipleDestinations.getRight(),
+          defaultCstoreDicomWebClient);
+    } else { // with or without backup usage.
+      destinationClientFactory = new SingleDestinationClientFactory(
+          configureDestinationMap(
+              flags.destinationConfigInline, flags.destinationConfigPath, credentials),
+          defaultCstoreDicomWebClient);
+    }
+    return destinationClientFactory;
+  }
+
+  private static MultipleDestinationUploadService configureMultipleDestinationUploadService(
+      Flags flags,
+      String cstoreSubAet,
+      BackupUploadService backupUploadService) {
+    if (backupUploadService != null) {
+      return new MultipleDestinationUploadService(
+          new CStoreSenderFactory(cstoreSubAet),
+          backupUploadService,
+          flags.persistentFileUploadRetryAmount);
+    }
+    return null;
+  }
+
+  private static BackupUploadService configureBackupUploadService(Flags flags, GoogleCredentials credentials) throws IOException {
     String uploadPath = flags.persistentFileStorageLocation;
-    BackupFlags backupFlags = new BackupFlags(
-        flags.persistentFileUploadRetryAmount,
-        flags.minUploadDelay,
-        flags.maxWaitingTimeBetweenUploads,
-        flags.httpErrorCodesToRetry);
 
     if (!uploadPath.isBlank()) {
       final IBackupUploader backupUploader;
       if (uploadPath.startsWith(GCP_PATH_PREFIX)) {
-        backupUploader = new GcpBackupUploader(uploadPath, flags.gcsBackupProjectId, flags.oauthScopes);
+        backupUploader = new GcpBackupUploader(uploadPath, flags.gcsBackupProjectId, credentials);
       } else {
         backupUploader = new LocalBackupUploader(uploadPath);
       }
-      return new BackupUploadService(backupUploader, backupFlags, new DelayCalculator());
+      return new BackupUploadService(
+          backupUploader,
+          flags.persistentFileUploadRetryAmount,
+          ImmutableList.copyOf(flags.httpErrorCodesToRetry),
+          new DelayCalculator(
+              flags.minUploadDelay,
+              flags.maxWaitingTimeBetweenUploads));
       }
     return null;
   }
@@ -193,20 +270,80 @@ public class ImportAdapter {
     return redactor;
   }
 
-  private static Map<DestinationFilter, IDicomWebClient> configureDestinationMap(
+  private static ImmutableList<Pair<DestinationFilter, IDicomWebClient>> configureDestinationMap(
       String destinationJsonInline,
       String destinationsJsonPath,
       GoogleCredentials credentials) throws IOException {
     DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
-    Map<DestinationFilter, IDicomWebClient> result = new LinkedHashMap<>();
+
+    ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> filterPairBuilder = ImmutableList.builder();
     for (String filterString : conf.getMap().keySet()) {
       String filterPath = StringUtil.trim(conf.getMap().get(filterString));
-      result.put(
+      filterPairBuilder.add(
+          new Pair(
               new DestinationFilter(filterString),
-              new DicomWebClientJetty(credentials,
-                      filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
-      );
+              new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
+      ));
     }
-    return result.size() > 0 ? result : null;
+    ImmutableList resultList = filterPairBuilder.build();
+    return resultList.size() > 0 ? resultList : null;
+  }
+
+  public static Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
+                     ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> configureMultipleDestinationTypesMap(
+      String destinationJsonInline,
+      String jsonPath,
+      String jsonEnvKey,
+      GoogleCredentials credentials) throws IOException {
+
+    ImmutableList.Builder<Pair<DestinationFilter, AetDictionary.Aet>> dicomDestinationFiltersBuilder = ImmutableList.builder();
+    ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> healthDestinationFiltersBuilder = ImmutableList.builder();
+
+    JSONArray jsonArray = JsonUtil.parseConfig(destinationJsonInline, jsonPath, jsonEnvKey);
+
+    if (jsonArray != null) {
+      for (Object elem : jsonArray) {
+        JSONObject elemJson = (JSONObject) elem;
+        if (elemJson.has(FILTER) == false) {
+          throw new IOException("Mandatory key absent: " + FILTER);
+        }
+        String filter = elemJson.getString(FILTER);
+        DestinationFilter destinationFilter = new DestinationFilter(StringUtil.trim(filter));
+
+        // try to create Aet instance
+        if (elemJson.has("host")) {
+          dicomDestinationFiltersBuilder.add(
+              new Pair(destinationFilter,
+                  new AetDictionary.Aet(elemJson.getString("name"),
+                  elemJson.getString("host"), elemJson.getInt("port"))));
+        } else {
+          // in this case to try create IDicomWebClient instance
+          String filterPath = elemJson.getString("dicomweb_destination");
+          healthDestinationFiltersBuilder.add(
+              new Pair(
+                  destinationFilter,
+                  new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))));
+        }
+      }
+    }
+    return new Pair(healthDestinationFiltersBuilder.build(), dicomDestinationFiltersBuilder.build());
+  }
+
+  public static class Pair<A, D>{
+    private final A left;
+    private final D right;
+
+    public Pair(A left, D right) {
+      this.left = left;
+      this.right = right;
+    }
+
+    public A getLeft() {
+      return left;
+    }
+
+    public D getRight() {
+      return right;
+    }
   }
 }

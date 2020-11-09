@@ -17,6 +17,7 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.api.client.util.IOUtils;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.DicomStreamUtil;
 import com.google.cloud.healthcare.util.TestUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,11 +51,11 @@ public final class DicomStreamUtilTest {
 
   // FakePDVInputStream is an implementation that reads from injected input stream, instead of
   // reading from network for DICOM.
-  private class FakePDVInputStream extends PDVInputStream {
+  public static class FakePDVInputStream extends PDVInputStream {
 
     private InputStream in;
 
-    FakePDVInputStream(InputStream in) {
+    public FakePDVInputStream(InputStream in) {
       this.in = in;
     }
 

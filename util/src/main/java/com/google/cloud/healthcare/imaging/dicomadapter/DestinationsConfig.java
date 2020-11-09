@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class DestinationsConfig {
 
-  private static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
+  public static final String ENV_DESTINATION_CONFIG_JSON = "ENV_DESTINATION_CONFIG_JSON";
   private static Logger log = LoggerFactory.getLogger(DestinationsConfig.class);
 
   private HashMap<String, String> map = new LinkedHashMap<>();
@@ -45,7 +45,7 @@ public class DestinationsConfig {
         JSONObject elemJson = (JSONObject) elem;
         String filter = elemJson.getString("filter");
         if(map.containsKey(filter)){
-          throw new IllegalArgumentException("Duplicate filter in Destinations config");
+          throw new IllegalArgumentException("Duplicate filter in Destinations config. Use --send_to_all_matching_destinations for multiple destination filtering mode.");
         }
 
         map.put(filter, elemJson.getString("dicomweb_destination"));

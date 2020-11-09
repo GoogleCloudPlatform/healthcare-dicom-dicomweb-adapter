@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.google.cloud.healthcare.imaging.dicomadapter.cstoresender;
+package com.google.cloud.healthcare.imaging.dicomadapter.cmove;
 
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
 import java.io.Closeable;
 import java.io.IOException;
 
-public interface ICStoreSender extends Closeable {
+public interface ISender extends Closeable {
 
   /**
    * Sends instance via c-store (or test stub) to target AET, returns bytes sent
    */
-  long cstore(
+  long cmove(
       AetDictionary.Aet target,
       String studyUid,
       String seriesUid,

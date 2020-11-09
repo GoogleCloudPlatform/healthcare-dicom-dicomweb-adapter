@@ -16,8 +16,8 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.LogUtil;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.ICStoreSender;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.ICStoreSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.ISender;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.ISenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.DimseRSPAssert;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
 import java.io.IOException;
@@ -151,10 +151,10 @@ public final class CMoveServiceTest {
             return instances;
           }
         },
-        () -> new ICStoreSender() {
+        () -> new ISender() {
           @Override
-          public long cstore(AetDictionary.Aet target, String studyUid, String seriesUid,
-              String sopInstanceUid, String sopClassUid)
+          public long cmove(AetDictionary.Aet target, String studyUid, String seriesUid,
+                            String sopInstanceUid, String sopClassUid)
               throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
             throw new IDicomWebClient.DicomWebException("CStore Fail");
           }
@@ -180,11 +180,11 @@ public final class CMoveServiceTest {
             return instances;
           }
         },
-        () -> new ICStoreSender() {
+        () -> new ISender() {
           private int attempts = 0;
 
           @Override
-          public long cstore(AetDictionary.Aet target,
+          public long cmove(AetDictionary.Aet target,
               String studyUid,
               String seriesUid,
               String sopInstanceUid,
@@ -216,9 +216,9 @@ public final class CMoveServiceTest {
             return instances;
           }
         },
-        () -> new ICStoreSender() {
+        () -> new ISender() {
           @Override
-          public long cstore(AetDictionary.Aet target, String studyUid, String seriesUid,
+          public long cmove(AetDictionary.Aet target, String studyUid, String seriesUid,
               String sopInstanceUid, String sopClassUid)
               throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
             throw new InterruptedException();
@@ -242,7 +242,7 @@ public final class CMoveServiceTest {
   }
 
   public void basicCMoveServiceTest(IDicomWebClient serverDicomWebClient,
-      ICStoreSenderFactory senderFactory,
+      ISenderFactory senderFactory,
       int expectedStatus,
       String moveDestinationAET) throws Exception {
     // Create C-STORE DICOM server.
@@ -289,7 +289,7 @@ public final class CMoveServiceTest {
   // Creates a DICOM service and returns the port it is listening on.
   private int createDicomServer(
       IDicomWebClient dicomWebClient,
-      ICStoreSenderFactory senderFactory) throws Exception {
+      ISenderFactory senderFactory) throws Exception {
     int serverPort = PortUtil.getFreePort();
     DicomServiceRegistry serviceRegistry = new DicomServiceRegistry();
     serviceRegistry.addDicomService(new BasicCEchoSCP());
@@ -304,10 +304,10 @@ public final class CMoveServiceTest {
     return serverPort;
   }
 
-  private class CStoreSenderTest implements ICStoreSender {
+  private class CStoreSenderTest implements ISender {
 
     @Override
-    public long cstore(AetDictionary.Aet target, String studyUid, String seriesUid,
+    public long cmove(AetDictionary.Aet target, String studyUid, String seriesUid,
         String sopInstanceUid, String sopClassUid)
         throws IDicomWebClient.DicomWebException, IOException, InterruptedException {
       return 0;
