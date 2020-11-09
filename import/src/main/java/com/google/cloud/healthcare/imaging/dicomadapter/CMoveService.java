@@ -15,8 +15,8 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.google.cloud.healthcare.IDicomWebClient;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.ICStoreSender;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstoresender.ICStoreSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.ISender;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.ISenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import java.io.IOException;
@@ -45,16 +45,16 @@ public class CMoveService extends BasicCMoveSCP {
   private static Logger log = LoggerFactory.getLogger(CMoveService.class);
   private final IDicomWebClient dicomWebClient;
   private final AetDictionary aets;
-  private final ICStoreSenderFactory cstoreSenderFactory;
+  private final ISenderFactory senderFactory;
 
   CMoveService(
       IDicomWebClient dicomWebClient,
       AetDictionary aets,
-      ICStoreSenderFactory cstoreSenderFactory) {
+      ISenderFactory senderFactory) {
     super(UID.StudyRootQueryRetrieveInformationModelMOVE);
     this.dicomWebClient = dicomWebClient;
     this.aets = aets;
-    this.cstoreSenderFactory = cstoreSenderFactory;
+    this.senderFactory = senderFactory;
   }
 
   @Override
@@ -84,7 +84,7 @@ public class CMoveService extends BasicCMoveSCP {
     @Override
     public void run() {
       List<String> failedInstanceUids = new ArrayList<>();
-      ICStoreSender cstoreSender = null;
+      ISender sender = null;
       try {
         if (canceled) {
           throw new CancellationException();
@@ -126,7 +126,7 @@ public class CMoveService extends BasicCMoveSCP {
           return;
         }
 
-        cstoreSender = cstoreSenderFactory.create();
+        sender = senderFactory.create();
 
         int successfullInstances = 0;
         int remainingInstances = qidoResult.length();
@@ -149,7 +149,7 @@ public class CMoveService extends BasicCMoveSCP {
 
           try {
             MonitoringService.addEvent(Event.CMOVE_CSTORE_REQUEST);
-            long bytesSent = cstoreSender.cstore(cstoreTarget, studyUid, seriesUid,
+            long bytesSent = sender.cmove(cstoreTarget, studyUid, seriesUid,
                 instanceUid, classUid);
             successfullInstances++;
             MonitoringService.addEvent(Event.CMOVE_CSTORE_BYTES, bytesSent);
@@ -182,9 +182,9 @@ public class CMoveService extends BasicCMoveSCP {
         int msgId = cmd.getInt(Tag.MessageID, -1);
         as.removeCancelRQHandler(msgId);
 
-        if (cstoreSender != null) {
+        if (sender != null) {
           try {
-            cstoreSender.close();
+            sender.close();
           } catch (IOException e) {
             log.error("Failure closing cstoreSender: ", e);
           }

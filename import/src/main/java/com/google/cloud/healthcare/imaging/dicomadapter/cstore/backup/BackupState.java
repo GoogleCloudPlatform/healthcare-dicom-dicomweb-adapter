@@ -1,12 +1,12 @@
-package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 public class BackupState {
   private String uniqueFileName;
-  private int attemptsCountdown;
+  private int attemptsCountdown = 1;
 
   public BackupState(String uniqueFileName, int attemptsCountdown) {
     this.uniqueFileName = uniqueFileName;
-    this.attemptsCountdown = attemptsCountdown;
+    this.attemptsCountdown += attemptsCountdown;
   }
 
   public String getUniqueFileName() {

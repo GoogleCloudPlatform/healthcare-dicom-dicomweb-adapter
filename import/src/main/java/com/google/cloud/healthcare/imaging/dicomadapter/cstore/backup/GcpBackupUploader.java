@@ -1,4 +1,4 @@
-package com.google.cloud.healthcare.imaging.dicomadapter.backupuploader;
+package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -8,6 +8,8 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
+
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
@@ -28,11 +30,11 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     this.storage = storage;
   }
 
-  public GcpBackupUploader(String uploadFilePath, String gcpProjectId, String oauthScopes) throws IOException {
+  public GcpBackupUploader(String uploadFilePath, String gcpProjectId, GoogleCredentials googleCredentials) throws IOException {
     super(uploadFilePath);
     this.projectId = gcpProjectId;
     parseUploadFilePath(getUploadFilePath());
-    storage = getStorage(oauthScopes);
+    storage = getStorage(googleCredentials);
   }
 
   @Override
@@ -54,8 +56,7 @@ public class GcpBackupUploader extends AbstractBackupUploader {
   public InputStream doReadBackup(String uniqueFileName) throws BackupException {
     try {
       validatePathParameter(uniqueFileName, "unique file name");
-      Blob blob = storage.get(BlobId.of(bucketName, getFullUploadObject(uniqueFileName)));
-      ReadChannel channel = blob.reader();
+      ReadChannel channel = storage.reader(BlobId.of(bucketName, getFullUploadObject(uniqueFileName)));
       return Channels.newInputStream(channel);
     } catch (Exception e) {
       throw new BackupException("Error with reading backup file: " + e.getMessage(), e);
@@ -115,12 +116,15 @@ public class GcpBackupUploader extends AbstractBackupUploader {
     return uploadFolder.concat("/").concat(uniqueFileName);
   }
 
-  private Storage getStorage(String oauthScopes) throws IOException {
-    return StorageOptions.newBuilder().setCredentials(getCredential(oauthScopes))
-            .setProjectId(projectId).build().getService();
+  private Storage getStorage(GoogleCredentials googleCredentials) throws IOException {
+    return StorageOptions.newBuilder()
+        .setCredentials(googleCredentials)
+        .setProjectId(projectId)
+        .build()
+        .getService();
   }
 
-  class GcpUriParseException extends IOException {
+  public static class GcpUriParseException extends IOException {
     public GcpUriParseException(String message, Throwable cause) {
       super(message, cause);
     }

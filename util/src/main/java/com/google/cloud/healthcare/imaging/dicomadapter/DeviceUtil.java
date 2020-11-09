@@ -34,7 +34,7 @@ public class DeviceUtil {
   /**
    * Creates a DICOM server listening to the port for the given services handling all syntaxes
    */
-  static Device createServerDevice(
+  public static Device createServerDevice(
       String applicationEntityName, Integer dicomPort, DicomServiceRegistry serviceRegistry) {
     TransferCapability transferCapability =
         new TransferCapability(

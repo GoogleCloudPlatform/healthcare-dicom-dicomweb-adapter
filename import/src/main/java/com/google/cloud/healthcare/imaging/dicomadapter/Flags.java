@@ -188,6 +188,13 @@ public class Flags {
   )
   List<Integer> httpErrorCodesToRetry = new ArrayList<>();
 
+  @Parameter(
+      names = {"--send_to_all_matching_destinations"},
+      description = "If true, when processing C-STORE requests with a destination config specified, the adapter will " +
+          "send to all matching destinations rather than the first matching destination."
+  )
+  Boolean sendToAllMatchingDestinations = false;
+
   public Flags() {
   }
 }
