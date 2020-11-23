@@ -19,7 +19,7 @@ spec:
   addOwnerRef: true
   descriptor:
     type: dicom adapter
-    version: "0.2.14"
+    version: "0.2.18"
     keywords:
       - "dicom"
       - "adapter"
