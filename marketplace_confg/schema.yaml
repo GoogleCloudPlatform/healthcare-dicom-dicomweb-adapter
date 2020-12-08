@@ -57,16 +57,16 @@ properties:
       - both
   import.dicomweb_address:
     type: string
-    title: "Import Adapter: Dicom web address"
+    title: "Import Adapter: DICOMweb service address"
     description: >- 
-      Address for DicomWeb service. Must be a full path up to /dicomWeb if 
+      Address for DICOMweb service. Must be a full path up to /dicomWeb if 
       the Cloud Healthcare API is used. e.g. 
       https://healthcare.googleapis.com/v1/projects/myproject/locations/
       us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
   import.dimse_aet:
     type: string
-    title: "Import Adapter: DIMSE aet"
-    description: Title of DIMSE Application Entity
+    title: "Import Adapter: DIMSE AET"
+    description: DIMSE Application Entity Title.
     default: "IMPORTADAPTER"
   import.redact_remove_list:
     type: string
@@ -82,16 +82,16 @@ properties:
       Only one of 'redact' flags may be present.
   import.dimse_cmove_aet:
     type: string
-    title: "Import Adapter: C-MOVE aet (Optional)"
+    title: "Import Adapter: C-MOVE AET (Optional)"
     description:  >-
-      (Optional - C-MOVE) Separate AET used for C-STORE calls within context of C-MOVE.
+      (Optional - C-MOVE) Separate Application Entity Tilte used for C-STORE calls within context of C-MOVE.
       For details, go to:
       https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter#import-adapter
   import.aet_dictionary_inline:
     type: string
-    title: "Import Adapter: Inline aet dictionary (Optional)"
+    title: "Import Adapter: Inline AET dictionary (Optional)"
     description:  >-
-      (Optional - C-MOVE) Json array containing aet definitions (name/host/port per element).
+      (Optional - C-MOVE) Json array containing Application Entity definitions (name/host/port per element).
       e.g. [{"name":"DEVICE_A","host":"localhost","port":11113},
       {"name":"DEVICE_B","host":"192.168.0.1","port": 11114},...]
       For details, go to:
@@ -123,8 +123,8 @@ properties:
 
   export.peer_dimse_aet:
     type: string
-    title: "Export Adapter: Peer DIMSE aet"
-    description: (CStore) Application Entity Title of DIMSE peer.
+    title: "Export Adapter: Peer DIMSE AET"
+    description: (CStore) Application Entity Title of the DIMSE peer.
     default: "PEERAET"
   export.peer_dimse_ip:
     type: string
@@ -145,7 +145,7 @@ properties:
     description: The pubsub subscription id
   export.dicomweb_addr:
     type: string
-    title: "Export Adapter: Dicom web address"
+    title: "Export Adapter: DICOMweb address"
     description: >-
       Base api endpoint. e.g. 
       https://healthcare.googleapis.com/v1
@@ -156,9 +156,9 @@ properties:
     default: "https://www.googleapis.com/auth/pubsub"
   export.peer_dicomweb_address:
     type: string
-    title: "Export Adapter: Peer dicomweb address"
+    title: "Export Adapter: Peer DICOMweb address"
     description:  >-
-      (StowRs) Address of peer DicomWeb API serving STOW-RS. Must be a full path up 
+      (StowRs) Address of peer DICOMweb API serving STOW-RS. Must be a full path up 
       to /dicomWeb if the Cloud Healthcare API is used. e.g. 
       https://healthcare.googleapis.com/v1/projects/myproject/locations/
       us-central1/datasets/mydataset/dicomStores/mydicomstore/dicomWeb
@@ -167,7 +167,7 @@ properties:
     title: "Export Adapter: Enable gcp application default credentials"
     description:  >-
       (StowRs) If true, uses GCP Application Credentials to when sending HTTP requests 
-      to peer. This is useful if the peer DICOMWeb endpoint is running in GCP.
+      to peer. This is useful if the peer DICOMweb endpoint is running in GCP.
     enum:
     - true
     - false
