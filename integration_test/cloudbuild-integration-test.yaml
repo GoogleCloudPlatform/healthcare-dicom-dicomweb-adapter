@@ -67,7 +67,7 @@
                 -cp /app/resources:/app/classes:/app/libs/* com.google.cloud.healthcare.imaging.dicomadapter.ImportAdapter \
           --dimse_aet=IMPORTADAPTER \
           --dimse_port=${_ADAPTER_PORT_HTTP2} \
-          --stow_http2 \
+          --stow_http2=false \
           --dicomweb_address=https://healthcare.googleapis.com/${_VERSION}/projects/${_PROJECT}/locations/${_LOCATION}/datasets/${_DATASET}/dicomStores/${_STORE_NAME}/dicomWeb \
           --verbose & trap \"exit 0\" SIGTERM; while true; do sleep 1; done"]
   waitFor: ['adapter-build']
