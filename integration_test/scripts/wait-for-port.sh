@@ -1,5 +1,12 @@
 #!/bin/bash
 # host port
+# busybox
+apt-get update
+apt-get install -y busybox
+apt-get -qq install -y netcat-openbsd
+echo 'LISTEN PORTS LIST'
+netstat -ntlp | grep LISTEN
+
 echo 'waiting for' $1 $2
 while :
 do
