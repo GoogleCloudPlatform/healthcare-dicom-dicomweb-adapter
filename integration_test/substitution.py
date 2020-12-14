@@ -1,10 +1,10 @@
 VERSION = 'v1'
-PROJECT = 'dicom-adapter-261020'
+PROJECT = 'gcp-healthcare-oss-test'
 IMAGEPROJECT = 'cloud-healthcare-containers'
 LOCATION = 'us-central1'
-DATASET = "healthcare-dicom-dicomweb-adapter-test-refactor-19-11-20"
-STORE_NAME = 'integration-test-store-refactor'
-BUCKET = 'dicomweb-import-adapter-integration-test-refactor-19-11-20'
+DATASET = "healthcare-dicom-dicomweb-adapter-test"
+STORE_NAME = 'integration-test-store'
+BUCKET = 'dicomweb-import-adapter-integration-test'
 ADAPTER_PORT = '2575'
 STORE_SCP_PORT = '2576'
 # ADAPTER_PORT_HTTP2 = '2577'
