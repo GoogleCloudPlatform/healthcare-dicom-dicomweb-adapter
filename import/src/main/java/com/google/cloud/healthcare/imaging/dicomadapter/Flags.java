@@ -68,7 +68,7 @@ public class Flags {
       names = {"--stow_http2"},
       description = "Whether to use HTTP 2.0 for StowRS (i.e. StoreInstances) requests. True by default."
   )
-  Boolean useHttp2ForStow = true;
+  Boolean useHttp2ForStow = false;
 
   @Parameter(
       names = {"--oauth_scopes"},
