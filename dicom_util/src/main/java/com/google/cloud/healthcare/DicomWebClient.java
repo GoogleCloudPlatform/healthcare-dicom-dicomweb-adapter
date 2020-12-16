@@ -133,8 +133,12 @@ public class DicomWebClient implements IDicomWebClient {
       throw new IDicomWebClient.DicomWebException(e);
     }
     finally {
-      if ((resp) != null) {
-        resp.disconnect();
+      try {
+        if ((resp) != null) {
+          resp.disconnect();
+        }
+      } catch(IOException e) {
+        throw new IDicomWebClient.DicomWebException(e);
       }
     }
   }
