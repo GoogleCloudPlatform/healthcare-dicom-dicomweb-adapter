@@ -159,7 +159,7 @@ public class CStoreService extends BasicCStoreSCP {
         }
       } catch (IOException e) {
         reportError(e, null);
-        throw new DicomServiceException(e);
+        throw new DicomServiceException(Status.ProcessingFailure, e);
       }
     }
   }
