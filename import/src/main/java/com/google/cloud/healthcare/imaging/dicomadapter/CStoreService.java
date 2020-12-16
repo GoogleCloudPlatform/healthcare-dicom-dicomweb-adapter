@@ -130,12 +130,14 @@ public class CStoreService extends BasicCStoreSCP {
         });
       }
 
-      InputStream inWithHeader =
-          DicomStreamUtil.dicomStreamWithFileMetaHeader(
-              sopInstanceUID, sopClassUID, transferSyntax, countingStream);
+      try(InputStream inWithHeader = DicomStreamUtil.dicomStreamWithFileMetaHeader(
+              sopInstanceUID, sopClassUID, transferSyntax, countingStream)) {
+        processStream(association.getApplicationEntity().getDevice().getExecutor(),
+            inWithHeader, processorList);
+      } catch (IOException e) {
+        throw new DicomServiceException(Status.ProcessingFailure, e);
+      }
 
-      processStream(association.getApplicationEntity().getDevice().getExecutor(),
-          inWithHeader, processorList);
 
       response.setInt(Tag.Status, VR.US, Status.Success);
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());

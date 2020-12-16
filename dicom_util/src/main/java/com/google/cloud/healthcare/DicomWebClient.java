@@ -121,15 +121,25 @@ public class DicomWebClient implements IDicomWebClient {
     InputStreamContent dicomStream = new InputStreamContent("application/dicom", in);
     content.addPart(new MultipartContent.Part(dicomStream));
 
+    HttpResponse resp = null;
     try {
       HttpRequest httpRequest = requestFactory.buildPostRequest(url, content);
-      httpRequest.execute();
+      resp = httpRequest.execute();
     } catch (HttpResponseException e) {
       throw new DicomWebException(
           String.format("StowRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
           e, e.getStatusCode(), Status.ProcessingFailure);
     } catch (IOException e) {
       throw new IDicomWebClient.DicomWebException(e);
+    }
+    finally {
+      try {
+        if ((resp) != null) {
+          resp.disconnect();
+        }
+      } catch(IOException e) {
+        throw new IDicomWebClient.DicomWebException(e);
+      }
     }
   }
 }
