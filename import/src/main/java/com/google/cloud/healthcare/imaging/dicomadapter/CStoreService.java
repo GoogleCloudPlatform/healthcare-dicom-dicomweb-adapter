@@ -131,8 +131,7 @@ public class CStoreService extends BasicCStoreSCP {
         });
       }
 
-      InputStream inWithHeader =
-          DicomStreamUtil.dicomStreamWithFileMetaHeader(
+      inWithHeader = DicomStreamUtil.dicomStreamWithFileMetaHeader(
               sopInstanceUID, sopClassUID, transferSyntax, countingStream);
 
       processStream(association.getApplicationEntity().getDevice().getExecutor(),
