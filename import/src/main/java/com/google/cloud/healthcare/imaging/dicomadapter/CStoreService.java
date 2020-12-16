@@ -84,7 +84,6 @@ public class CStoreService extends BasicCStoreSCP {
       PDVInputStream inPdvStream,
       Attributes response)
       throws IOException {
-    InputStream inWithHeader = null;
     try {
       MonitoringService.addEvent(Event.CSTORE_REQUEST);
 
@@ -131,11 +130,14 @@ public class CStoreService extends BasicCStoreSCP {
         });
       }
 
-      inWithHeader = DicomStreamUtil.dicomStreamWithFileMetaHeader(
-              sopInstanceUID, sopClassUID, transferSyntax, countingStream);
+      try(InputStream inWithHeader = DicomStreamUtil.dicomStreamWithFileMetaHeader(
+              sopInstanceUID, sopClassUID, transferSyntax, countingStream)) {
+        processStream(association.getApplicationEntity().getDevice().getExecutor(),
+            inWithHeader, processorList);
+      } catch (IOException e) {
+        throw new DicomServiceException(Status.ProcessingFailure, e);
+      }
 
-      processStream(association.getApplicationEntity().getDevice().getExecutor(),
-          inWithHeader, processorList);
 
       response.setInt(Tag.Status, VR.US, Status.Success);
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
@@ -151,15 +153,6 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (Throwable e) {
       reportError(e, Event.CSTORE_ERROR);
       throw new DicomServiceException(Status.ProcessingFailure, e);
-    } finally {
-      try {
-        if (inWithHeader != null) {
-          inWithHeader.close();
-        }
-      } catch (IOException e) {
-        reportError(e, null);
-        throw new DicomServiceException(Status.ProcessingFailure, e);
-      }
     }
   }
 
