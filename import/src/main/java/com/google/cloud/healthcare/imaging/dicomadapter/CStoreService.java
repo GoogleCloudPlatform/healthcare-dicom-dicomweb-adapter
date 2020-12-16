@@ -84,6 +84,7 @@ public class CStoreService extends BasicCStoreSCP {
       PDVInputStream inPdvStream,
       Attributes response)
       throws IOException {
+    InputStream inWithHeader = null;
     try {
       MonitoringService.addEvent(Event.CSTORE_REQUEST);
 
@@ -151,6 +152,15 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (Throwable e) {
       reportError(e, Event.CSTORE_ERROR);
       throw new DicomServiceException(Status.ProcessingFailure, e);
+    } finally {
+      try {
+        if (inWithHeader != null) {
+          inWithHeader.close();
+        }
+      } catch (IOException e) {
+        reportError(e, null);
+        throw new DicomServiceException(e);
+      }
     }
   }
 
