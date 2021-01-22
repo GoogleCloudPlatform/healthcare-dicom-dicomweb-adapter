@@ -14,8 +14,6 @@ steps:
   args:
     - python
     - ./integration_test/step_2.py
-  waitFor:
-    - basic-test
 
 # local backup test
 - name: 'python:3.6'
@@ -23,8 +21,6 @@ steps:
   args:
     - python
     - ./integration_test/step_3.py
-  waitFor:
-    - http2-test
 
 # gcs backup test
 - name: 'python:3.6'
@@ -32,7 +28,17 @@ steps:
   args:
     - python
     - ./integration_test/step_4.py
-  waitFor:
-    - local-backup-test
 
-timeout: 1800s
+# publish
+- name: 'python:3.6'
+  id: publish
+  args:
+    - python
+    - ./integration_test/publish.py
+  waitFor:
+    - basic-test
+    - http2-test
+    - local-backup-test
+    - gcs-backup-test
+
+timeout: 3000s

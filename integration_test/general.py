@@ -2,7 +2,7 @@ import os
 import random
 import string
 
-ERROR_CODE = 88
+ERROR_CODE = 1
 
 def runCommand(command, message):
     result = os.system(command)
@@ -24,8 +24,8 @@ def clear_data():
     return runCommand("rm -R dcm4che", "remove dcm4che")
 
 # install environment
-def install_environvent():
-    return runCommand("./integration_test/scripts/install-env.sh", "install environvent exit with")
+def install_environment():
+    return runCommand("./integration_test/scripts/install-env.sh", "install environment exit with")
 
 # clone-dcm4che
 def clone_dcm4che():
@@ -52,7 +52,6 @@ def build_adapter_image(imageproject):
     return runCommand("./integration_test/scripts/build-adapter-image.sh "+imageproject+" local_run", "build adapter image exit with")
 
 # setup-dataset-and-dicom-store
-#     Create two dicom stores for this test, each with a random name.
 def setup_dataset_and_dicom_store(project, location, dataset, store_name):
     return runCommand("./integration_test/scripts/setup-dataset-and-store.sh "+project+" "+location+" "+dataset+" "+store_name, "setup-dataset-and-dicom-store exit with")
 
@@ -78,16 +77,10 @@ def wait_for_port(host, port):
     return runCommand("./integration_test/scripts/wait-for-port.sh "+host+" " + port, "wait-for-adapter exit with")
 
 # run-store-scu
-def run_store_scu(adapter_run_step, adapter_port):
+def run_store_scu(host, adapter_port, file_path):
     return runCommand("export PATH=/opt/apache-maven-3.6.3/bin:$PATH &&"
            "cd dcm4che/dcm4che-tool/dcm4che-tool-storescu &&"
-           "mvn -ntp exec:java -Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU -Dexec.args=-\"c IMPORTADAPTER@"+adapter_run_step+":"+adapter_port+" ../../../integration_test/data/example.dcm\"", "run-store-scu exit with")
-
-# run-store-scu-destination2
-def run_store_scu_destination2(host, adapter_port):
-    return runCommand("export PATH=/opt/apache-maven-3.6.3/bin:$PATH &&"
-           "cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-storescu &&"
-           "mvn -ntp  exec:java -Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU -Dexec.args=\"-c IMPORTADAPTER@"+host+":"+adapter_port+" ../../../integration_test/data/example-mg.dcm\"", "run-store-scu-destination2 exit with")
+           "mvn -ntp exec:java -Dexec.mainClass=org.dcm4che3.tool.storescu.StoreSCU -Dexec.args=-\"c IMPORTADAPTER@"+host+":"+adapter_port+" "+file_path+"\"", "run-store-scu exit with")
 
 # run-find-scu-instance
 def run_find_scu_instance(host, adapter_port):
@@ -114,46 +107,22 @@ def run_move_scu(host, adapter_port):
            "mvn -ntp  exec:java -Dexec.mainClass=org.dcm4che3.tool.movescu.MoveSCU -Dexec.args=\"-c IMPORTADAPTER@"+host+":"+adapter_port+" --dest STORESCP\"", "run-move-scu exit with")
 
 # run-commitment-scu
-def run_commitment_scu(host, adapter_port, com_scu_port):
+def run_commitment_scu(host, adapter_port, com_scu_port, file_path):
     return runCommand("export PATH=/opt/apache-maven-3.6.3/bin:$PATH &&"
            "cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu &&"
-           "mvn -ntp  exec:java -Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU -Dexec.args=\"-c IMPORTADAPTER@"+host+":"+adapter_port+" -b STGCMTSCU:"+com_scu_port+" --explicit-vr --directory /workspace/integration_test/commitment_result /workspace/integration_test/data/example-redacted-jp2k.dcm\"", "run-commitment-scu exit with")
+           "mvn -ntp  exec:java -Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU -Dexec.args=\"-c IMPORTADAPTER@"+host+":"+adapter_port+" -b STGCMTSCU:"+com_scu_port+" --explicit-vr --directory /workspace/integration_test/commitment_result "+file_path+"\"", "run-commitment-scu exit with")
 
 # close-store-scp
 def close_store_scp(store_scp_run_step, close_store_scp_port):
     return runCommand("apt-get install -y netcat && nc -z "+store_scp_run_step+" "+close_store_scp_port, "close-store-scp exit with")
 
 # check-store-curl
-def check_store_curl(version, project, location, dataset, store_name, replaced_uid):
-    return runCommand("integration_test/scripts/curl-dcm.sh https://healthcare.googleapis.com/"+version+"/projects/"+project+"/locations/"+location+"/datasets/"+dataset+"/dicomStores/"+store_name+"/dicomWeb/studies/"+replaced_uid+"/series/"+replaced_uid+"/instances/"+replaced_uid+" integration_test/downloaded.dcm", "check-store-curl exit with")
+def check_store_curl(version, project, location, dataset, store_name, replaced_uid, file_path):
+    return runCommand("integration_test/scripts/curl-dcm.sh https://healthcare.googleapis.com/"+version+"/projects/"+project+"/locations/"+location+"/datasets/"+dataset+"/dicomStores/"+store_name+"/dicomWeb/studies/"+replaced_uid+"/series/"+replaced_uid+"/instances/"+replaced_uid+" "+file_path, "check-store-curl exit with")
 
-# check-store-diff
-def check_store_diff(diffFileName):
-    return runCommand("diff integration_test/downloaded.dcm "+diffFileName, "check-store-diff exit with")
-
-# check-store-curl-destination-2
-def check_store_curl_destination2(version, project, location, dataset, store_name, replaced_uid):
-    return runCommand("integration_test/scripts/curl-dcm.sh https://healthcare.googleapis.com/"+version+"/projects/"+project+"/locations/"+location+"/datasets/"+dataset+"/dicomStores/"+store_name+"-destination-2/dicomWeb/studies/"+replaced_uid+"/series/"+replaced_uid+"/instances/"+replaced_uid+" integration_test/downloaded-destination-2.dcm", "check-store-curl-destination-2 exit with")
-
-# check-store-diff-destination-2
-def check_store_diff_destination2():
-    return runCommand("diff integration_test/downloaded-destination-2.dcm integration_test/data/example-redacted-mg-jp2k.dcm", "check-store-diff-destination-2 exit with")
-
-# check-find-diff-instance
-def check_find_diff_instance():
-    return runCommand("diff integration_test/findscu-instance-result1.xml integration_test/data/findscu-instance-expected.xml", "check-find-diff-instance exit with")
-
-# check-find-diff-series
-def check_find_diff_series():
-    return runCommand("diff integration_test/findscu-series-result1.xml integration_test/data/findscu-series-expected.xml", "check-find-diff-series exit with")
-
-# check-find-diff-study
-def check_find_diff_study():
-    return runCommand("diff integration_test/findscu-study-result1.xml integration_test/data/findscu-study-expected.xml", "check-find-diff-study exit with")
-
-# check-move-diff
-def check_move_diff(replaced_uid):
-    return runCommand("diff integration_test/storescp-data/"+replaced_uid+" integration_test/data/example-redacted-moved-jp2k.dcm", "check-move-diff exit with")
+# check diff
+def check_diff(file_path1, file_path2):
+    return runCommand("diff "+file_path1+" "+file_path2, "check-diff exit with")
 
 # check-commitment-diff
 def check_commitment_diff():
@@ -165,11 +134,16 @@ def check_commitment_diff():
 def delete_dicom_store(store_name, project, dataset, location):
     return runCommand("gcloud beta healthcare dicom-stores delete "+store_name+" --project="+project+" --dataset="+dataset+" --location="+location+" --quiet", "delete-dicom-store "+store_name+" exit with")
 
-# delete-dicom-store destination-2
-def delete_dicom_store_destination2(store_name, project, dataset, location):
-    return runCommand("gcloud beta healthcare dicom-stores delete "+store_name+"-destination-2 --project="+project+" --dataset="+dataset+" --location="+location+" --quiet", "delete-dicom-store "+store_name+"-destination2 exit with")
+# publish image
+def publish_image(imageproject, publish, repo, access_token_base64, project, kms_location,
+                  kms_keyring, kms_key):
+    return runCommand("./integration_test/scripts/publish-images.sh " + imageproject + " " + publish + " " + repo + " " + access_token_base64 + " " + project + " " + kms_location + " " + kms_keyring + " " + kms_key, "publish image exit with")
 
 # verify script result
 def verify_result(result):
     if result != 0:
         exit(ERROR_CODE)
+
+# change permission
+def change_permission():
+    return runCommand("chmod -R 777 /workspace/integration_test/scripts", "grant permission exit with")

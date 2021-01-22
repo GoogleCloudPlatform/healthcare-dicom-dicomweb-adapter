@@ -7,6 +7,4 @@ apt-get -qq update
 apt-get -qq install -y netcat-openbsd
 echo 'Waiting for connection on port '$3' to finish store-scp step'
 nc -l -p $3 &
-#lsof -t -i:$2
-netstat -ntlp | grep LISTEN
 echo 'Finishing store-scp step'
