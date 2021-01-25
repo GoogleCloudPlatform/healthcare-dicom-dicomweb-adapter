@@ -47,7 +47,7 @@ properties:
         For details on importer:
         https://github.com/GoogleCloudPlatform/
         healthcare-dicom-dicomweb-adapter#import-adapter,
-        For details on exporter:
+        for details on exporter:
         https://github.com/GoogleCloudPlatform/
         healthcare-dicom-dicomweb-adapter#export-adapter
       default: import adapter
@@ -125,7 +125,6 @@ properties:
     type: string
     title: "Export Adapter: Peer DIMSE AET"
     description: (CStore) Application Entity Title of the DIMSE peer.
-    default: "PEERAET"
   export.peer_dimse_ip:
     type: string
     title: "Export Adapter: Peer DIMSE IP"
@@ -187,5 +186,3 @@ properties:
 required:
 - name
 - namespace
-- import.dimse_aet
-- export.peer_dimse_aet
