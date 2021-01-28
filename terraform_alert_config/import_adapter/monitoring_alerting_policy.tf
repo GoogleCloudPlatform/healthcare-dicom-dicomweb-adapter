@@ -22,7 +22,7 @@ resource "google_monitoring_alert_policy" "alert_policy" {
       comparison = "COMPARISON_GT"
      aggregations {
         alignment_period   = var.alert_alignment_period
-        per_series_aligner = "ALIGN_RATE"
+        per_series_aligner = "ALIGN_COUNT"
       }
     }
   }

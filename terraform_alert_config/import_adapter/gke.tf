@@ -1,5 +1,3 @@
-# Google Kubernetes Engine prosessing
-# Kubernetes deployment Dicom Import Adapter
 resource "kubernetes_deployment" "dicom-adapter" {
   metadata {
     name = "dicom-adapter"
@@ -9,7 +7,7 @@ resource "kubernetes_deployment" "dicom-adapter" {
     }
   }
 
-  # customize nodes params 
+  # customize nodes params
   spec {
     progress_deadline_seconds = 2147483647
     replicas = var.replicas
@@ -56,17 +54,16 @@ resource "kubernetes_deployment" "dicom-adapter" {
           }
 
           args = [
-           "--dimse_aet=IMPORTADAPTER",
-           "--dimse_port=${var.dimse_port}",
-           "--monitoring_project_id=${var.project_id}",
-           "--gcs_backup_project_id=${var.project_id}",
-           "--dicomweb_address=https://healthcare.googleapis.com/v1/projects/${var.project_id}/locations/${var.region}/datasets/${var.dataset}/dicomStores/${var.store}/dicomWeb",
-           "--persistent_file_upload_retry_amount=${var.persistent_file_upload_retry_amount}",
-           "--min_upload_delay=${var.min_upload_delay}",
-           "--max_waiting_time_btw_uploads=${var.max_waiting_time_btw_uploads}",
-           "--persistent_file_storage_location=${var.persistent_file_storage_location}",
-           "--oauth_scopes=https://www.googleapis.com/auth/cloud-platform",
-           "--verbose"
+            "--dimse_aet=IMPORTADAPTER",
+            "--dimse_port=${var.dimse_port}",
+            "--monitoring_project_id=${var.project_id}",
+            "--gcs_backup_project_id=${var.project_id}",
+            "--dicomweb_address=https://healthcare.googleapis.com/v1/projects/${var.project_id}/locations/${var.region}/datasets/${var.dataset}/dicomStores/${var.store}/dicomWeb",
+            "--persistent_file_upload_retry_amount=${var.persistent_file_upload_retry_amount}",
+            "--min_upload_delay=${var.min_upload_delay}",
+            "--persistent_file_storage_location=${var.persistent_file_storage_location}",
+            "--oauth_scopes=https://www.googleapis.com/auth/cloud-platform",
+            "--verbose"
           ]
 
           env {
@@ -81,7 +78,7 @@ resource "kubernetes_deployment" "dicom-adapter" {
 
           env {
             name = "ENV_CONTAINER_NAME"
-            value = "dicom-import-adapter" 
+            value = "dicom-import-adapter"
           }
         }
         dns_policy = "ClusterFirst"
@@ -110,4 +107,3 @@ resource "kubernetes_service" "dicom-adapter" {
     type = "LoadBalancer"
   }
 }
-

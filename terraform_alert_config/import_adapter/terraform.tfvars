@@ -13,7 +13,7 @@ store = "your_healthcare_store_name"
 
 # Dicom import adapter setting
 # import adapter port
-dimse_port = 4070  
+dimse_port = 4070
 
 # set the backup storage location
 # you can specify a local storage path like "/tmp"
@@ -32,7 +32,8 @@ replicas   = 1
 # Monitoring and Alerting settings
 # user can customize filter and set custom events
 # you can add yours filters in this variable
-alert_filter     = "resource.type=starts_with(\"custom.googleapis.com/dicomadapter/import\")"
+alert_filter     = "metric.type=\"custom.googleapis.com/dicomadapter/import/cstore_errors\" AND resource.type=\"k8s_container\""
+
 alert_duration   = "60s"
 alert_alignment_period  = "60s"
 alert_notification_email      = "your_valid_email"
