@@ -1,5 +1,17 @@
 ## Terraform Alerting Config
-This document describes the example DICOM Import adapter terraform configuration. The terraform configuration deploys a DICOM Import adapter to Google Kubernetes Engine, creates a Cloud Healthcare dataset and dicom store, and configures monitoring to alert on the health of the adapter.
+This document describes the example DICOM Import adapter terraform configuration.
+The terraform configuration deploys a DICOM Import adapter to Google Kubernetes
+Engine, creates a Cloud Healthcare dataset and dicom store, and configures
+monitoring to alert on the health of the adapter. 
+
+A storage bucket configuration is also provided in storage.tf, which can be used to
+create a GCS storage bucket to use for [DICOM adapter backups](https://github.com/GoogleCloudPlatform/healthcare-dicom-dicomweb-adapter/wiki/C-STORE-Backup-and-Retries). 
+By default, this bucket is not used.
+
+*Warning*: this configuration is for test purposes only, and will generate a random
+password for the deployment and store it in the terraform state. For a real deployment,
+consider a [different method](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs#authentication)
+for managing authentication to kubernetes.
 
 ## Prepare workspace
 The following software must be installed to use this configuration:

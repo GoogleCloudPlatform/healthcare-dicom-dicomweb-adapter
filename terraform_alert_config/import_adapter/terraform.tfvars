@@ -24,7 +24,7 @@ min_upload_delay = 100
 max_waiting_time_btw_uploads = 5000
 
 # image with Dicom Import Adapter
-image      = "gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.2.17"
+image      = "gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.2.22"
 
 # Google Kubernetes Engine settings
 replicas   = 1
