@@ -1,3 +1,7 @@
 .gradle/
 
 .DS_STORE
+
+/terraform_alert_config/import_adapter/.terraform
+/terraform_alert_config/import_adapter/.terraform.tfstate
+/terraform_alert_config/import_adapter/.terraform.tfstate.backup
