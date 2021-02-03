@@ -15,9 +15,13 @@ def get_random_string(length):
     print("Store name is:", result_str)
     return result_str
 
-# get current host from env
-def get_host():
-   return os.environ.get("HOST")
+# get short SHA from env
+def get_short_sha():
+   return os.environ.get("SHORT_SHA")
+
+# get imageproject from env
+def get_imageproject():
+   return os.environ.get("IMAGEPROJECT")
 
 # clear data
 def clear_data():
@@ -48,28 +52,29 @@ def build_adapter():
     return runCommand("./integration_test/scripts/build-adapters.sh", "build adapter exit with")
 
 # build adapter image
-def build_adapter_image(imageproject):
-    return runCommand("./integration_test/scripts/build-adapter-image.sh "+imageproject+" local_run", "build adapter image exit with")
+def build_adapter_image(imageproject, short_sha):
+    return runCommand("./integration_test/scripts/build-adapter-image.sh "+imageproject+" "+short_sha, "build adapter image exit with")
 
 # setup-dataset-and-dicom-store
 def setup_dataset_and_dicom_store(project, location, dataset, store_name):
     return runCommand("./integration_test/scripts/setup-dataset-and-store.sh "+project+" "+location+" "+dataset+" "+store_name, "setup-dataset-and-dicom-store exit with")
 
 # run import adapter
-def run_import_adapter(adapter_port, version, project, location, dataset, store_name, store_scp_run_step, store_scp_port, com_scu_step, com_scu_port, imageproject, sha):
-    return runCommand("./integration_test/scripts/run-import-adapter.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name+" "+store_scp_run_step+" "+store_scp_port+" "+com_scu_step+" "+com_scu_port+" "+imageproject+" "+sha+" &", "run import adapter exit with")
+def run_import_adapter(adapter_port, version, project, location, dataset, store_name, store_scp_run_step, store_scp_port, com_scu_step, com_scu_port):
+    return runCommand("./integration_test/scripts/run-import-adapter.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name+" "+store_scp_run_step+" "+store_scp_port+" "+com_scu_step+" "+com_scu_port, "run import adapter exit with")
+
 
 # run import adapter with http2 mode
-def run_import_adapter_http2(adapter_port, version, project, location, dataset, store_name ,imageproject, sha):
-    return runCommand("./integration_test/scripts/run-import-adapter-http2.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name+" "+imageproject+" "+sha+" &", "run import adapter exit with")
+def run_import_adapter_http2(adapter_port, version, project, location, dataset, store_name):
+    return runCommand("./integration_test/scripts/run-import-adapter-http2.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name, "run import adapter exit with")
 
 # run import adapter with local backup mode
 def run_import_adapter_local_backup(adapter_port, version, project, location, dataset, store_name):
-    return runCommand("./integration_test/scripts/run-import-adapter-local-backup.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name+" &", "run import adapter exit with")
+    return runCommand("./integration_test/scripts/run-import-adapter-local-backup.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name, "run import adapter exit with")
 
 # run import adapter with gsc backup mode
 def run_import_adapter_gcs_backup(adapter_port, version, project, location, dataset, store_name, bucket):
-    return runCommand("./integration_test/scripts/run-import-adapter-gcs-backup.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name+" "+bucket+" &", "run import adapter exit with")
+    return runCommand("./integration_test/scripts/run-import-adapter-gcs-backup.sh "+adapter_port+" "+version+" "+project+" "+location+" "+dataset+" "+store_name+" "+bucket, "run import adapter exit with")
 
 # wait-for-adapter
 # wait-for-storescp

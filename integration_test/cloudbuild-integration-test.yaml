@@ -6,7 +6,8 @@ steps:
     - python
     - ./integration_test/step_1.py
   env:
-    - 'HOST=step_1'
+    - 'SHORT_SHA=${SHORT_SHA}'
+    - 'IMAGEPROJECT=${_IMAGEPROJECT}'
 
 # http2 test
 - name: 'python:3.6'
@@ -29,12 +30,10 @@ steps:
     - python
     - ./integration_test/step_4.py
 
-# publish
-- name: 'python:3.6'
-  id: publish
-  args:
-    - python
-    - ./integration_test/publish.py
+# publish image
+- name: ${_CLOUD_SDK_IMAGE}
+  id: publish-image
+  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "${REPO_NAME}" , "${_ACCESS_TOKEN_BASE64}", "${PROJECT_ID}", "${_KMS_LOCATION}", "${_KMS_KEYRING}", "${_KMS_KEY}" ]
   waitFor:
     - basic-test
     - http2-test
@@ -42,3 +41,12 @@ steps:
     - gcs-backup-test
 
 timeout: 3000s
+
+substitutions:
+  _IMAGEPROJECT: 'cloud-healthcare-containers'
+  _KMS_LOCATION: global
+  _KMS_KEYRING: default
+  _KMS_KEY: github-robot-access-token
+  _ACCESS_TOKEN_BASE64: CiQAM/SK3FUc1t+CnHDdgRzbc556FIyHddxRpsnolmSKfpiZ66sSUQDrEGO9gz15JIulryNagWzUOGbBEAaC04y85J8fNRjJZ8T8ntzh6Kt0Sa+GCG+3n5xSQdDJdj6xOG0LfVzvU+/K3mZ1KJlIcd0jiCeBrjYLlw==
+  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:290.0.0'
+  _PUBLISH: 'false'

@@ -31,7 +31,7 @@ verify_result(build_adapter())
 verify_result(setup_dataset_and_dicom_store(substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME))
 
 # run adapter
-verify_result(run_import_adapter_http2(substitution.ADAPTER_PORT, substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME, substitution.IMAGEPROJECT, "local_run"))
+verify_result(run_import_adapter_http2(substitution.ADAPTER_PORT, substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME))
 
 # wait-for-adapter
 verify_result(wait_for_port(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT))

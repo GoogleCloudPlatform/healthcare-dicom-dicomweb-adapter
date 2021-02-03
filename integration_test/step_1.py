@@ -2,7 +2,8 @@ import substitution
 from general import *
 
 STORE_NAME = get_random_string(20)
-HOST = get_host()
+SHORT_SHA = get_short_sha()
+IMAGEPROJECT = get_imageproject()
 
 # clear data
 clear_data()
@@ -30,8 +31,11 @@ verify_result(build_adapter())
 # setup-dataset-and-dicom-store
 verify_result(setup_dataset_and_dicom_store(substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME))
 
+# build adapter image
+verify_result(build_adapter_image(IMAGEPROJECT, SHORT_SHA))
+
 # run adapter
-verify_result(run_import_adapter(substitution.ADAPTER_PORT, substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME, substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT, substitution.COMMITMENT_SCU_STEP, substitution.COMMITMENT_SCU_PORT, substitution.IMAGEPROJECT, "local_run"))
+verify_result(run_import_adapter(substitution.ADAPTER_PORT, substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME, substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT, substitution.COMMITMENT_SCU_STEP, substitution.COMMITMENT_SCU_PORT))
 
 # wait-for-adapter
 verify_result(wait_for_port(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT))
@@ -43,22 +47,22 @@ verify_result(wait_for_port(substitution.STORE_SCP_RUN_STEP, substitution.STORE_
 verify_result(run_store_scu(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT, "../../../integration_test/data/example.dcm"))
 
 # run-store-scu-destination2
-verify_result(run_store_scu(HOST, substitution.ADAPTER_PORT, "../../../integration_test/data/example-mg.dcm"))
+verify_result(run_store_scu(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT, "../../../integration_test/data/example-mg.dcm"))
 
 # run-find-scu-instance
-verify_result(run_find_scu_instance(HOST, substitution.ADAPTER_PORT))
+verify_result(run_find_scu_instance(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT))
 
 # run-find-scu-series
-verify_result(run_find_scu_series(HOST, substitution.ADAPTER_PORT))
+verify_result(run_find_scu_series(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT))
 
 # run-find-scu-study
-verify_result(run_find_scu_study(HOST, substitution.ADAPTER_PORT))
+verify_result(run_find_scu_study(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT))
 
 # run-move-scu
-verify_result(run_move_scu(HOST, substitution.ADAPTER_PORT))
+verify_result(run_move_scu(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT))
 
 # run-commitment-scu
-verify_result(run_commitment_scu(HOST, substitution.ADAPTER_PORT, substitution.COMMITMENT_SCU_PORT, "/workspace/integration_test/data/example-redacted-jp2k.dcm"))
+verify_result(run_commitment_scu(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT, substitution.COMMITMENT_SCU_PORT, "/workspace/integration_test/data/example-redacted-jp2k.dcm"))
 
 # close-adapter
 runCommand("sudo kill -9 $(lsof -t -i:"+substitution.STORE_SCP_PORT+")", "Kill process on port "+ substitution.STORE_SCP_PORT)
