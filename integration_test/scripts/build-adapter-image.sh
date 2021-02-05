@@ -14,7 +14,7 @@ build_adapter () {
   gradle dockerBuildImage -Pdocker_tag=${adapter_name}:$2
 }
 apt-get -qq update
-apt-get install -y gnupg2
+apt-get install -y gnupg2 &&
 
 gradle build &&
 cd ./import &&
