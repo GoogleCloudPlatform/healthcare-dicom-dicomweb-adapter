@@ -10,5 +10,5 @@ mvn -q exec:java \
  -Dexec.args=/workspace/integration_test/commitment_result/$(ls /workspace/integration_test/commitment_result/) \
  >/workspace/integration_test/tmp.xml
 cd /workspace/integration_test
-perl -pe 's|<DicomAttribute keyword="TransactionUID".*?<\/DicomAttribute>||' tmp.xml >commitment-clean.xml
+perl -pe 's|<DicomAttribute keyword="TransactionUID".*?<\/DicomAttribute>||' tmp.xml >commitment-clean.xml &&
 diff commitment-clean.xml data/commitment-expected.xml

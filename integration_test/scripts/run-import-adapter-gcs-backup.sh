@@ -1,6 +1,5 @@
 #!/bin/bash
 # ADAPTER_PORT VERSION PROJECT LOCATION DATASET STORE_NAME BUCKET
-
 set -e
 set -o pipefail
 

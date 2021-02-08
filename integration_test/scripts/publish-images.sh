@@ -8,6 +8,8 @@ KMS_LOCATION=$6
 KMS_KEYRING=$7
 KMS_KEY=$8
 
+docker images | grep "healthcare-api-dicom-dicomweb-adapter-"
+
 # decryption of github access token
 accessToken=$(echo -n $ACCESS_TOKEN_BASE64 | base64 -d - | gcloud kms decrypt --ciphertext-file - --plaintext-file - --project $PROJECT_ID --location $KMS_LOCATION --keyring $KMS_KEYRING --key $KMS_KEY)
 
