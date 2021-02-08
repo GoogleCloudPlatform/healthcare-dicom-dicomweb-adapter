@@ -1,6 +1,9 @@
 #!/bin/bash
 # imageProject commitShortSha
 
+set -e
+set -o pipefail
+
 export PATH=$PATH:/opt/gradle/gradle-6.7/bin
 base_name="gcr.io/${1}/healthcare-api-dicom-dicomweb-adapter-"
 
@@ -14,10 +17,10 @@ build_adapter () {
   gradle dockerBuildImage -Pdocker_tag=${adapter_name}:$2
 }
 apt-get -qq update
-apt-get install -y gnupg2 &&
+apt-get install -y gnupg2
 
-gradle build &&
-cd ./import &&
-build_adapter import $2 &&
-cd ../export &&
+gradle build
+cd ./import
+build_adapter import $2
+cd ../export
 build_adapter export $2

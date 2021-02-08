@@ -1,6 +1,9 @@
 #!/bin/bash
 # ADAPTER_PORT VERSION PROJECT LOCATION DATASET STORE_NAME
 
+set -e
+set -o pipefail
+
 export PATH=$PATH:/opt/gradle/gradle-6.7/bin
 
 cd /workspace/import

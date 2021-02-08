@@ -1,8 +1,11 @@
 #!/bin/bash
 # ADAPTER_PORT VERSION PROJECT LOCATION DATASET STORE_NAME STORE_SCP_RUN_STEP STORE_SCP_PORT COMMITMENT_SCU_STEP COMMITMENT_SCU_PORT
 
-export PATH=$PATH:/opt/gradle/gradle-6.7/bin &&
-cd /workspace/import &&
+set -e
+set -o pipefail
+
+export PATH=$PATH:/opt/gradle/gradle-6.7/bin
+cd /workspace/import
 
 gradle run \
  -Dorg.dcm4che3.imageio.codec.ImageReaderFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageReaderFactory.properties \
