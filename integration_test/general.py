@@ -44,8 +44,8 @@ def build_tools():
     return runCommand("./integration_test/scripts/mvn-install-tools.sh", "build-tools exit with")
 
 # store-scp
-def store_scp(store_csp_run_step, store_scp_port, close_store_scp_run_step):
-    return runCommand("./integration_test/scripts/run-store-scp-and-wait.sh " + store_csp_run_step + " "+store_scp_port+" "+close_store_scp_run_step, "store-scp exit with")
+def store_scp(store_csp_run_step, store_scp_port):
+    return runCommand("./integration_test/scripts/run-store-scp-and-wait.sh " + store_csp_run_step + " "+store_scp_port, "store-scp exit with")
 
 # build adapter
 def build_adapter():
@@ -117,9 +117,9 @@ def run_commitment_scu(host, adapter_port, com_scu_port, file_path):
            "cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu &&"
            "mvn -ntp  exec:java -Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU -Dexec.args=\"-c IMPORTADAPTER@"+host+":"+adapter_port+" -b STGCMTSCU:"+com_scu_port+" --explicit-vr --directory /workspace/integration_test/commitment_result "+file_path+"\"", "run-commitment-scu exit with")
 
-# close-store-scp
-def close_store_scp(store_scp_run_step, close_store_scp_port):
-    return runCommand("apt-get install -y netcat && nc -z "+store_scp_run_step+" "+close_store_scp_port, "close-store-scp exit with")
+# # close-store-scp
+# def close_store_scp(store_scp_run_step, close_store_scp_port):
+#     return runCommand("apt-get install -y netcat && nc -z "+store_scp_run_step+" "+close_store_scp_port, "close-store-scp exit with")
 
 # check-store-curl
 def check_store_curl(version, project, location, dataset, store_name, replaced_uid, file_path):
@@ -138,11 +138,6 @@ def check_commitment_diff():
 # delete-dicom-store
 def delete_dicom_store(store_name, project, dataset, location):
     return runCommand("gcloud beta healthcare dicom-stores delete "+store_name+" --project="+project+" --dataset="+dataset+" --location="+location+" --quiet", "delete-dicom-store "+store_name+" exit with")
-
-# publish image
-def publish_image(imageproject, publish, repo, access_token_base64, project, kms_location,
-                  kms_keyring, kms_key):
-    return runCommand("./integration_test/scripts/publish-images.sh " + imageproject + " " + publish + " " + repo + " " + access_token_base64 + " " + project + " " + kms_location + " " + kms_keyring + " " + kms_key, "publish image exit with")
 
 # verify script result
 def verify_result(result):

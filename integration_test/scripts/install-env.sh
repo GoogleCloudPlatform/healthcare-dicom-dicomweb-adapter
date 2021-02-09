@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e
+set -o pipefail
+
 apt-get update
 
 # docker
@@ -17,21 +20,21 @@ apt-get install -y docker-ce
 docker -v
 
 # java
-apt install -y openjdk-11-jdk &&
+apt install -y openjdk-11-jdk
 java -version
 
 # maven
-wget https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz &&
-tar xzvf apache-maven-3.6.3-bin.tar.gz -C /opt &&
-export PATH=/opt/apache-maven-3.6.3/bin:$PATH &&
-mvn -v &&
+wget https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+tar xzvf apache-maven-3.6.3-bin.tar.gz -C /opt
+export PATH=/opt/apache-maven-3.6.3/bin:$PATH
+mvn -v
 
 # gradle
-wget https://services.gradle.org/distributions/gradle-6.7-bin.zip &&
-mkdir /opt/gradle &&
-unzip -d /opt/gradle gradle-6.7-bin.zip &&
-ls /opt/gradle/gradle-6.7 &&
-export PATH=$PATH:/opt/gradle/gradle-6.7/bin &&
+wget https://services.gradle.org/distributions/gradle-6.7-bin.zip
+mkdir /opt/gradle
+unzip -d /opt/gradle gradle-6.7-bin.zip
+ls /opt/gradle/gradle-6.7
+export PATH=$PATH:/opt/gradle/gradle-6.7/bin
 gradle -v
 
 # netstat

@@ -23,7 +23,7 @@ verify_result(checkout_dcm4che_tag())
 verify_result(build_tools())
 
 # store-scp
-verify_result(store_scp(substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT, substitution.CLOSE_STORE_SCP_PORT))
+verify_result(store_scp(substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT))
 
 # build adapter
 verify_result(build_adapter())
@@ -67,9 +67,6 @@ verify_result(run_commitment_scu(substitution.STORE_SCP_RUN_STEP, substitution.A
 # close-adapter
 runCommand("sudo kill -9 $(lsof -t -i:"+substitution.STORE_SCP_PORT+")", "Kill process on port "+ substitution.STORE_SCP_PORT)
 runCommand("sudo kill -9 $(lsof -t -i:"+substitution.ADAPTER_PORT+")", "Kill process on port "+ substitution.ADAPTER_PORT)
-
-# close-store-scp
-verify_result(close_store_scp(substitution.STORE_SCP_RUN_STEP, substitution.CLOSE_STORE_SCP_PORT))
 
 # check-store-curl
 verify_result(check_store_curl(substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME, substitution.REPLACED_UID, "integration_test/downloaded.dcm"))

@@ -15,3 +15,5 @@ COMMITMENT_SCU_STEP = '0.0.0.0'
 # Deid redactor replaces Instance/Series/Study UIDs with pseudo-random value seeded from original.
 # This value corresponds to '111'. UID replacement behavior is not configurable in redactor.
 REPLACED_UID = '2.25.140302709094137852884202099990798014056'
+REPLACED_UID_2 = '2.25.140302709094137852884202099990798014222'
+REPLACED_UID_3 = '2.25.140302709094137852884202099990798014333'
