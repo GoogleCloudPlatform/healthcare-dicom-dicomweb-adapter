@@ -1,4 +1,10 @@
 #!/bin/bash
+
+set -e
+set -o pipefail
+
+export PATH=/opt/apache-maven-3.6.3/bin:$PATH
+
 cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-storescu
 mvn install -ntp
 cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-movescu
@@ -11,3 +17,5 @@ cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu
 mvn install -ntp
 cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-dcm2xml
 mvn install -ntp
+
+chmod -R 777 /workspace/dcm4che
