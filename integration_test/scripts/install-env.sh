@@ -40,7 +40,4 @@ gradle -v
 # netstat
 apt install net-tools
 
-# hosts
-echo "0.0.0.0 step_1" >> /etc/hosts
-echo "192.168.0.1 localhost" >> /etc/hosts
 

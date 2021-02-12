@@ -18,7 +18,7 @@ setup_store () {
    "--quiet"
 }
 
-setup_store $1 $2 $3 $4
+setup_store $1 $2 $3 $4 &&
 setup_store $1 $2 $3 $4"-destination-2"
 
 
