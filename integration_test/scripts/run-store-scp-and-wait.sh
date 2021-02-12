@@ -9,5 +9,4 @@ mvn exec:java -ntp -Dexec.mainClass=org.dcm4che3.tool.storescp.StoreSCP -Dexec.a
 apt-get -qq update
 apt-get -qq install -y netcat-openbsd
 echo 'Waiting for connection on port '$3' to finish store-scp step'
-nc -l -p $3 &
 echo 'Finishing store-scp step'
