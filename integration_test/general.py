@@ -117,10 +117,6 @@ def run_commitment_scu(host, adapter_port, com_scu_port, file_path):
            "cd /workspace/dcm4che/dcm4che-tool/dcm4che-tool-stgcmtscu &&"
            "mvn -ntp  exec:java -Dexec.mainClass=org.dcm4che3.tool.stgcmtscu.StgCmtSCU -Dexec.args=\"-c IMPORTADAPTER@"+host+":"+adapter_port+" -b STGCMTSCU:"+com_scu_port+" --explicit-vr --directory /workspace/integration_test/commitment_result "+file_path+"\"", "run-commitment-scu exit with")
 
-# # close-store-scp
-# def close_store_scp(store_scp_run_step, close_store_scp_port):
-#     return runCommand("apt-get install -y netcat && nc -z "+store_scp_run_step+" "+close_store_scp_port, "close-store-scp exit with")
-
 # check-store-curl
 def check_store_curl(version, project, location, dataset, store_name, replaced_uid, file_path):
     return runCommand("integration_test/scripts/curl-dcm.sh https://healthcare.googleapis.com/"+version+"/projects/"+project+"/locations/"+location+"/datasets/"+dataset+"/dicomStores/"+store_name+"/dicomWeb/studies/"+replaced_uid+"/series/"+replaced_uid+"/instances/"+replaced_uid+" "+file_path, "check-store-curl exit with")
