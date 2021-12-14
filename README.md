@@ -160,7 +160,7 @@ spec:
     spec:
       containers:
         - name: dicom-import-adapter
-          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.2.1
+          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-import:0.2.6
           ports:
             - containerPort: 2575
               protocol: TCP
@@ -181,7 +181,7 @@ containers in `dicom_adapter.yaml`. Modify the flags for your use case.
 
 ```yaml
         - name: dicom-export-adapter
-          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-export:0.2.1
+          image: gcr.io/cloud-healthcare-containers/healthcare-api-dicom-dicomweb-adapter-export:0.2.6
           args:
             - "--peer_dimse_aet=PEERAET"
             - "--peer_dimse_ip=localhost"
