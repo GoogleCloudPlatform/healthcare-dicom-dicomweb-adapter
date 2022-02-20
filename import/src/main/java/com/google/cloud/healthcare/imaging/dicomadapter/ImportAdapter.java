@@ -19,22 +19,22 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.healthcare.DicomWebClientJetty;
-import com.google.cloud.healthcare.IDicomWebClient;
-import com.google.cloud.healthcare.StringUtil;
-import com.google.cloud.healthcare.DicomWebValidation;
-import com.google.cloud.healthcare.LogUtil;
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.DicomWebClientJetty;
+import com.google.cloud.healthcare.DicomWebValidation;
+import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.LogUtil;
+import com.google.cloud.healthcare.StringUtil;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig;
 import com.google.cloud.healthcare.deid.redactor.protos.DicomConfigProtos.DicomConfig.TagFilterProfile;
+import com.google.cloud.healthcare.imaging.dicomadapter.cmove.CMoveSenderFactory;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.DelayCalculator;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.GcpBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.BackupUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.LocalBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.cmove.CMoveSenderFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.MultipleDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.SingleDestinationClientFactory;
@@ -43,6 +43,10 @@ import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.send
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.collect.ImmutableList;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.List;
 import org.dcm4che3.net.Device;
 import org.dcm4che3.net.service.BasicCEchoSCP;
 import org.dcm4che3.net.service.DicomServiceRegistry;
@@ -50,15 +54,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 
 public class ImportAdapter {
 
@@ -163,13 +158,17 @@ public class ImportAdapter {
       Flags flags) {
     IDicomWebClient defaultCstoreDicomWebClient;
     if (flags.useHttp2ForStow) {
+      if (flags.useStowOverwrite) {
+        throw new IllegalArgumentException("--stow_overwrite is not supported with --stow_http2.");
+      }
       defaultCstoreDicomWebClient =
-        new DicomWebClientJetty(
-            credentials,
-            StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+          new DicomWebClientJetty(
+              credentials, StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
     } else {
+      log.debug("--stow_overwrite set to " + (flags.useStowOverwrite ? "true" : "false"));
       defaultCstoreDicomWebClient =
-        new DicomWebClient(requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath);
+          new DicomWebClient(
+              requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath, flags.useStowOverwrite);
     }
     return defaultCstoreDicomWebClient;
   }
@@ -181,8 +180,10 @@ public class ImportAdapter {
     IDestinationClientFactory destinationClientFactory;
     if (flags.sendToAllMatchingDestinations) {
       if (backupServicePresent == false) {
-        throw new IllegalArgumentException("backup is not configured properly. '--send_to_all_matching_destinations' " +
-            "flag must be used only in pair with backup, local or GCP. Please see readme to configure backup.");
+        throw new IllegalArgumentException(
+            "backup is not configured properly. '--send_to_all_matching_destinations' flag must be"
+                + " used only in pair with backup, local or GCP. Please see readme to configure"
+                + " backup.");
       }
       Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
           ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> multipleDestinations = configureMultipleDestinationTypesMap(
@@ -217,9 +218,15 @@ public class ImportAdapter {
     return null;
   }
 
-  private static BackupUploadService configureBackupUploadService(Flags flags, GoogleCredentials credentials) throws IOException {
+  private static BackupUploadService configureBackupUploadService(
+      Flags flags, GoogleCredentials credentials) throws IOException {
     String uploadPath = flags.persistentFileStorageLocation;
-
+    if (flags.useStowOverwrite
+        && (uploadPath.isBlank() || flags.persistentFileUploadRetryAmount < 1)) {
+      throw new IllegalArgumentException(
+          "--stow_overwrite requires the use of --persistent_file_storage_location and"
+              + " --persistent_file_upload_retry_amount >= 1");
+    }
     if (!uploadPath.isBlank()) {
       final IBackupUploader backupUploader;
       if (uploadPath.startsWith(GCP_PATH_PREFIX)) {
@@ -231,10 +238,8 @@ public class ImportAdapter {
           backupUploader,
           flags.persistentFileUploadRetryAmount,
           ImmutableList.copyOf(flags.httpErrorCodesToRetry),
-          new DelayCalculator(
-              flags.minUploadDelay,
-              flags.maxWaitingTimeBetweenUploads));
-      }
+          new DelayCalculator(flags.minUploadDelay, flags.maxWaitingTimeBetweenUploads));
+    }
     return null;
   }
 

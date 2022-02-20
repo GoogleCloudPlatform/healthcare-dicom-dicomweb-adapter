@@ -60,6 +60,16 @@ public class DicomWebClientJetty implements IDicomWebClient {
   }
 
   @Override
+  public void delete(String path) throws DicomWebException {
+    throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
+  }
+
+  @Override
+  public void delete(InputStream stream) throws DicomWebException {
+    throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
+  }
+
+  @Override
   public void stowRs(InputStream in) throws DicomWebException {
     try {
       log.debug("STOW-RS to: " + stowPath);
@@ -153,6 +163,11 @@ public class DicomWebClientJetty implements IDicomWebClient {
       }
       throw new DicomWebException(e);
     }
+  }
+
+  @Override
+  public Boolean getStowOverwrite() {
+    return false;
   }
 
   private static class DataStream {

@@ -27,6 +27,12 @@ public interface IDicomWebClient {
 
   void stowRs(InputStream in) throws DicomWebException;
 
+  Boolean getStowOverwrite();
+
+  void delete(String path) throws DicomWebException;
+
+  void delete(InputStream stream) throws DicomWebException;
+
   /**
    * An exception for errors returned by the DicomWeb server.
    */

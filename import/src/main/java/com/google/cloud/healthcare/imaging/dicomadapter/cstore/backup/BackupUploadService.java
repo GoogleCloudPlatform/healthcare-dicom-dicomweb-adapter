@@ -1,20 +1,20 @@
 package com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup;
 
+import com.google.api.client.http.HttpStatusCodes;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.sender.CStoreSender;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader.BackupException;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -188,7 +188,25 @@ public class BackupUploadService implements IBackupUploadService {
       } catch (DicomWebException dwe) {
         logUploadFailed(dwe);
 
-        if (filterHttpCode(dwe.getHttpStatus())) {
+        // If we get a conflict, and want to overwrite, then delete and retry. This
+        // could run several times if the instance is being recreated by others (non-atomic).
+        // Note that if the md5 of the instances match, we will get a HTTP 200. We will only get
+        // an HTTP 409 when there is a difference in the MD5 between the instances
+        int httpCode = dwe.getHttpStatus();
+        Boolean isHttpConflictAndRetry =
+            httpCode == HttpStatusCodes.STATUS_CODE_CONFLICT && webClient.getStowOverwrite();
+        if (isHttpConflictAndRetry) {
+          try {
+            InputStream deleteInputStream = readBackupExceptionally();
+            webClient.delete(deleteInputStream);
+            log.debug("stowOverwrite: instance deleted");
+          } catch (DicomWebException innerDwe) {
+            MonitoringService.addEvent(Event.CSTORE_ERROR);
+            throw new CompletionException(innerDwe);
+          }
+        }
+
+        if (filterHttpCode(httpCode) || isHttpConflictAndRetry) {
           if (backupState.getAttemptsCountdown() > 0) {
             try {
               scheduleUploadWithDelay(

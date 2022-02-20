@@ -71,6 +71,13 @@ public class Flags {
   Boolean useHttp2ForStow = false;
 
   @Parameter(
+      names = {"--stow_overwrite"},
+      description = "If STOW-RS request receives HTTP 409 (instance conflict), then perform HTTP DELETE on"
+        + " instance and retry. False by default."
+  )
+  Boolean useStowOverwrite = false;
+
+  @Parameter(
       names = {"--oauth_scopes"},
       description = "Comma seperated OAuth scopes used by adapter."
   )
