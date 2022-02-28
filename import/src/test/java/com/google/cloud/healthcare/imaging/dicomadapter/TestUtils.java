@@ -53,5 +53,20 @@ public class TestUtils {
     public void stowRs(InputStream in) throws DicomWebException {
 
     }
+
+    @Override
+    public Boolean getStowOverwrite() {
+      return false;
+    }
+  
+    @Override
+    public void delete(String path) throws DicomWebException {
+
+    }
+  
+    @Override
+    public void delete(InputStream stream) throws DicomWebException {
+
+    }
   }
 }
