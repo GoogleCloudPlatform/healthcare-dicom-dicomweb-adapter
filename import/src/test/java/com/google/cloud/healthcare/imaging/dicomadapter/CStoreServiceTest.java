@@ -716,6 +716,23 @@ public final class CStoreServiceTest {
         throw new DicomWebException(e);
       }
     }
+
+    @Override
+    public Boolean getStowOverwrite() {
+      return false;
+    }
+  
+    @Override
+    public void delete(String path) throws DicomWebException {
+      throw new UnsupportedOperationException();
+    }
+  
+    @Override
+    public void delete(InputStream stream) throws DicomWebException {
+      throw new UnsupportedOperationException();
+    }
+
+
   }
 
   private class MockDestinationConfig {

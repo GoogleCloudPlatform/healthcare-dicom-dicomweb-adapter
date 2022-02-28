@@ -15,27 +15,28 @@
 package com.google.cloud.healthcare;
 
 import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
-import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.MultipartContent;
-import java.util.UUID;
 import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import javax.inject.Inject;
+import org.dcm4che3.data.Attributes;
+import org.dcm4che3.data.Tag;
+import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.Status;
 import org.json.JSONArray;
 
-/**
- * A client for communicating with the Cloud Healthcare API.
- */
+/** A client for communicating with the Cloud Healthcare API. */
 public class DicomWebClient implements IDicomWebClient {
 
   // Factory to create HTTP requests with proper credentials.
@@ -44,8 +45,11 @@ public class DicomWebClient implements IDicomWebClient {
   // Service prefix all dicomWeb paths will be appended to.
   private final String serviceUrlPrefix;
 
-  // The path for a StowRS request to be appened to serviceUrlPrefix.
+  // The path for a StowRS request to be appended to serviceUrlPrefix.
   private final String stowPath;
+
+  // If we will delete and retry when we receive HTTP 409.
+  private final Boolean useStowOverwrite;
 
   @Inject
   public DicomWebClient(
@@ -55,17 +59,28 @@ public class DicomWebClient implements IDicomWebClient {
     this.requestFactory = requestFactory;
     this.serviceUrlPrefix = serviceUrlPrefix;
     this.stowPath = stowPath;
-
+    this.useStowOverwrite = false;
   }
 
-  /**
-   * Makes a WADO-RS call and returns the response InputStream.
-   */
+  @Inject
+  public DicomWebClient(
+      HttpRequestFactory requestFactory,
+      @Annotations.DicomwebAddr String serviceUrlPrefix,
+      String stowPath,
+      Boolean useStowOverwrite) {
+    this.requestFactory = requestFactory;
+    this.serviceUrlPrefix = serviceUrlPrefix;
+    this.stowPath = stowPath;
+    this.useStowOverwrite = useStowOverwrite;
+  }
+
+  /** Makes a WADO-RS call and returns the response InputStream. */
+  @Override
   public InputStream wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
-              + StringUtil.trim(path)));
+          requestFactory.buildGetRequest(
+              new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path)));
       httpRequest.getHeaders().put("Accept", "application/dicom; transfer-syntax=*");
       HttpResponse httpResponse = httpRequest.execute();
 
@@ -73,20 +88,21 @@ public class DicomWebClient implements IDicomWebClient {
     } catch (HttpResponseException e) {
       throw new DicomWebException(
           String.format("WadoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          e, e.getStatusCode(), Status.ProcessingFailure);
+          e,
+          e.getStatusCode(),
+          Status.ProcessingFailure);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
   }
 
-  /**
-   * Makes a QIDO-RS call and returns a JSON array.
-   */
+  /** Makes a QIDO-RS call and returns a JSON array. */
+  @Override
   public JSONArray qidoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(new GenericUrl(serviceUrlPrefix + "/"
-              + StringUtil.trim(path)));
+          requestFactory.buildGetRequest(
+              new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path)));
       HttpResponse httpResponse = httpRequest.execute();
 
       // dcm4che server can return 204 responses.
@@ -94,12 +110,14 @@ public class DicomWebClient implements IDicomWebClient {
         return new JSONArray();
       }
       return new JSONArray(
-          CharStreams
-              .toString(new InputStreamReader(httpResponse.getContent(), StandardCharsets.UTF_8)));
+          CharStreams.toString(
+              new InputStreamReader(httpResponse.getContent(), StandardCharsets.UTF_8)));
     } catch (HttpResponseException e) {
       throw new DicomWebException(
           String.format("QidoRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          e, e.getStatusCode(), Status.UnableToCalculateNumberOfMatches);
+          e,
+          e.getStatusCode(),
+          Status.UnableToCalculateNumberOfMatches);
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
@@ -110,6 +128,7 @@ public class DicomWebClient implements IDicomWebClient {
    *
    * @param in The DICOM input stream.
    */
+  @Override
   public void stowRs(InputStream in) throws IDicomWebClient.DicomWebException {
     GenericUrl url = new GenericUrl(StringUtil.joinPath(serviceUrlPrefix, this.stowPath));
 
@@ -128,18 +147,73 @@ public class DicomWebClient implements IDicomWebClient {
     } catch (HttpResponseException e) {
       throw new DicomWebException(
           String.format("StowRs: %d, %s", e.getStatusCode(), e.getStatusMessage()),
-          e, e.getStatusCode(), Status.ProcessingFailure);
+          e,
+          e.getStatusCode(),
+          Status.ProcessingFailure);
     } catch (IOException e) {
       throw new IDicomWebClient.DicomWebException(e);
-    }
-    finally {
+    } finally {
       try {
         if ((resp) != null) {
           resp.disconnect();
         }
-      } catch(IOException e) {
+      } catch (IOException e) {
         throw new IDicomWebClient.DicomWebException(e);
       }
+    }
+  }
+
+  /** Retry the STOW-RS on an HTTP409, after DELETE. */
+  @Override
+  public Boolean getStowOverwrite() {
+    return this.useStowOverwrite;
+  }
+
+  /**
+   * Deletes the resource and returns void.
+   *
+   * @param path The resource URL path to delete.
+   */
+  @Override
+  public void delete(String path) throws IDicomWebClient.DicomWebException {
+    try {
+      HttpRequest httpRequest =
+          requestFactory.buildDeleteRequest(
+              new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path)));
+      httpRequest.execute();
+    } catch (HttpResponseException e) {
+      throw new DicomWebException(
+          String.format("delete: %d, %s", e.getStatusCode(), e.getStatusMessage()),
+          e,
+          e.getStatusCode(),
+          Status.ProcessingFailure);
+    } catch (IOException | IllegalArgumentException e) {
+      throw new IDicomWebClient.DicomWebException(e);
+    }
+  }
+
+  /**
+   * Reads the resource to figure out the study/series/instance UID path, deletes it and returns
+   * void.
+   *
+   * @param stream The unread stream containing the DICOM instance.
+   */
+  @Override
+  public void delete(InputStream stream) throws IDicomWebClient.DicomWebException {
+    try {
+      // TODO: HTTP 409 content has RetrieveURL as StudyUID, so we need to construct the instance
+      // path. Can we receive the RetrieveURL as the full instance path, as we're constructing here?
+      DicomInputStream dis = new DicomInputStream(stream);
+      Attributes attrs = dis.readDataset(-1, Tag.PixelData);
+      String instanceUrl =
+          String.format(
+              "studies/%s/series/%s/instances/%s",
+              attrs.getString(Tag.StudyInstanceUID, 0),
+              attrs.getString(Tag.SeriesInstanceUID, 0),
+              attrs.getString(Tag.SOPInstanceUID, 0));
+      this.delete(instanceUrl);
+    } catch (IOException e) {
+      throw new IDicomWebClient.DicomWebException(e);
     }
   }
 }
