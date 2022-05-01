@@ -121,10 +121,16 @@ public class ImportAdapter {
     BackupUploadService backupUploadService = configureBackupUploadService(flags, credentials);
 
     IDestinationClientFactory destinationClientFactory = configureDestinationClientFactory(
-        defaultCstoreDicomWebClient, credentials, flags, backupUploadService != null);
+      defaultCstoreDicomWebClient, credentials, flags, backupUploadService != null);
 
-    MultipleDestinationUploadService multipleDestinationSendService = configureMultipleDestinationUploadService(
-        flags, cstoreSubAet, backupUploadService);
+    // NOTE: This is a dependency for cStoreService if stow retry is used or if multiple
+    // destinations are leveraged, due to the backupUploadService dependency.
+    MultipleDestinationUploadService multipleDestinationSendService = null;
+    if (flags.sendToAllMatchingDestinations) {
+      multipleDestinationSendService = configureMultipleDestinationUploadService(flags, cstoreSubAet, backupUploadService);
+    } else if (flags.useStowOverwrite) {
+      throw new IllegalArgumentException("--stow_overwrite requires the use of --send_to_all_matching_destinations");
+    }
 
     CStoreService cStoreService =
         new CStoreService(destinationClientFactory, redactor, flags.transcodeToSyntax, multipleDestinationSendService);
@@ -157,15 +163,12 @@ public class ImportAdapter {
       GoogleCredentials credentials,
       Flags flags) {
     IDicomWebClient defaultCstoreDicomWebClient;
+    log.debug("--stow_overwrite set to " + (flags.useStowOverwrite ? "true" : "false"));
     if (flags.useHttp2ForStow) {
-      if (flags.useStowOverwrite) {
-        throw new IllegalArgumentException("--stow_overwrite is not supported with --stow_http2.");
-      }
       defaultCstoreDicomWebClient =
           new DicomWebClientJetty(
-              credentials, StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath));
+              credentials, StringUtil.joinPath(cstoreDicomwebAddr, cstoreDicomwebStowPath), flags.useStowOverwrite);
     } else {
-      log.debug("--stow_overwrite set to " + (flags.useStowOverwrite ? "true" : "false"));
       defaultCstoreDicomWebClient =
           new DicomWebClient(
               requestFactory, cstoreDicomwebAddr, cstoreDicomwebStowPath, flags.useStowOverwrite);
@@ -178,6 +181,9 @@ public class ImportAdapter {
       GoogleCredentials credentials,
       Flags flags, boolean backupServicePresent) throws IOException {
     IDestinationClientFactory destinationClientFactory;
+    log.debug(
+        "--send_to_all_matching_destinations set to "
+            + (flags.sendToAllMatchingDestinations ? "true" : "false"));
     if (flags.sendToAllMatchingDestinations) {
       if (backupServicePresent == false) {
         throw new IllegalArgumentException(
@@ -190,7 +196,7 @@ public class ImportAdapter {
           flags.destinationConfigInline,
           flags.destinationConfigPath,
           DestinationsConfig.ENV_DESTINATION_CONFIG_JSON,
-          credentials);
+          credentials, flags.useStowOverwrite);
 
       destinationClientFactory = new MultipleDestinationClientFactory(
           multipleDestinations.getLeft(),
@@ -199,7 +205,7 @@ public class ImportAdapter {
     } else { // with or without backup usage.
       destinationClientFactory = new SingleDestinationClientFactory(
           configureDestinationMap(
-              flags.destinationConfigInline, flags.destinationConfigPath, credentials),
+              flags.destinationConfigInline, flags.destinationConfigPath, credentials, flags.useStowOverwrite),
           defaultCstoreDicomWebClient);
     }
     return destinationClientFactory;
@@ -276,30 +282,32 @@ public class ImportAdapter {
   }
 
   private static ImmutableList<Pair<DestinationFilter, IDicomWebClient>> configureDestinationMap(
-      String destinationJsonInline,
-      String destinationsJsonPath,
-      GoogleCredentials credentials) throws IOException {
-    DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
+    String destinationJsonInline,
+    String destinationsJsonPath,
+    GoogleCredentials credentials,
+    Boolean useStowOverwrite) throws IOException {
+  DestinationsConfig conf = new DestinationsConfig(destinationJsonInline, destinationsJsonPath);
 
-    ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> filterPairBuilder = ImmutableList.builder();
-    for (String filterString : conf.getMap().keySet()) {
-      String filterPath = StringUtil.trim(conf.getMap().get(filterString));
-      filterPairBuilder.add(
-          new Pair(
-              new DestinationFilter(filterString),
-              new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))
-      ));
-    }
-    ImmutableList resultList = filterPairBuilder.build();
-    return resultList.size() > 0 ? resultList : null;
+  ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> filterPairBuilder = ImmutableList.builder();
+  for (String filterString : conf.getMap().keySet()) {
+    String filterPath = StringUtil.trim(conf.getMap().get(filterString));
+    filterPairBuilder.add(
+        new Pair(
+            new DestinationFilter(filterString),
+            new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES), useStowOverwrite)
+    ));
   }
+  ImmutableList resultList = filterPairBuilder.build();
+  return resultList.size() > 0 ? resultList : null;
+}
 
   public static Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
                      ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> configureMultipleDestinationTypesMap(
       String destinationJsonInline,
       String jsonPath,
       String jsonEnvKey,
-      GoogleCredentials credentials) throws IOException {
+      GoogleCredentials credentials,
+      Boolean useStowOverwrite) throws IOException {
 
     ImmutableList.Builder<Pair<DestinationFilter, AetDictionary.Aet>> dicomDestinationFiltersBuilder = ImmutableList.builder();
     ImmutableList.Builder<Pair<DestinationFilter, IDicomWebClient>> healthDestinationFiltersBuilder = ImmutableList.builder();
@@ -327,7 +335,7 @@ public class ImportAdapter {
           healthDestinationFiltersBuilder.add(
               new Pair(
                   destinationFilter,
-                  new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES))));
+                  new DicomWebClientJetty(credentials, filterPath.endsWith(STUDIES)? filterPath : StringUtil.joinPath(filterPath, STUDIES), useStowOverwrite)));
         }
       }
     }

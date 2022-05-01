@@ -9,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.dcm4che3.data.Attributes;
+import org.dcm4che3.data.Tag;
+import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.net.Status;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
@@ -28,8 +31,6 @@ import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.FuturePromise;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,14 +40,17 @@ public class DicomWebClientJetty implements IDicomWebClient {
 
   private static final int CONNECT_PORT = 443;
 
+  private final Boolean useStowOverwrite;
   private final String stowPath;
   private final OAuth2Credentials credentials;
 
   public DicomWebClientJetty(
       OAuth2Credentials credentials,
-      String stowPath) {
+      String stowPath,
+      Boolean useStowOverwrite) {
     this.credentials = credentials;
     this.stowPath = StringUtil.trim(stowPath);
+    this.useStowOverwrite = useStowOverwrite;
   }
 
   @Override
@@ -56,16 +60,6 @@ public class DicomWebClientJetty implements IDicomWebClient {
 
   @Override
   public JSONArray qidoRs(String path) throws DicomWebException {
-    throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
-  }
-
-  @Override
-  public void delete(String path) throws DicomWebException {
-    throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
-  }
-
-  @Override
-  public void delete(InputStream stream) throws DicomWebException {
     throw new UnsupportedOperationException("Not Implemented, use DicomWebClient");
   }
 
@@ -155,7 +149,8 @@ public class DicomWebClientJetty implements IDicomWebClient {
       int httpStatus = responseCodeFuture.get();
       if (httpStatus != HttpStatus.OK_200) {
         String resp = resultBuilder.toString();
-        throw new DicomWebException("Http_" + httpStatus + ": " + resp, httpStatus, Status.ProcessingFailure);
+        throw new DicomWebException(
+            "Http_" + httpStatus + ": " + resp, httpStatus, Status.ProcessingFailure);
       }
     } catch (Exception e) {
       if (e instanceof DicomWebException) {
@@ -165,9 +160,125 @@ public class DicomWebClientJetty implements IDicomWebClient {
     }
   }
 
+  /** Retry the STOW-RS on an HTTP409, after DELETE. */
   @Override
   public Boolean getStowOverwrite() {
-    return false;
+    return this.useStowOverwrite;
+  }
+
+  /**
+   * Deletes the resource and returns void.
+   *
+   * @param path The resource URL path to delete.
+   */
+  @Override
+  public void delete(String path) throws IDicomWebClient.DicomWebException {
+    try {
+      String deletePath = String.format("%s/%s", stowPath, StringUtil.trim(path));
+      log.debug("DELETE to: " + deletePath);
+
+      HTTP2Client client = new HTTP2Client();
+      SslContextFactory sslContextFactory = new SslContextFactory.Client();
+      client.addBean(sslContextFactory);
+      client.start();
+
+      HttpURI uri = new HttpURI(deletePath);
+
+      FuturePromise<Session> sessionPromise = new FuturePromise<>();
+      client.connect(
+          sslContextFactory,
+          new InetSocketAddress(uri.getHost(), CONNECT_PORT),
+          new ServerSessionListener.Adapter(),
+          sessionPromise);
+
+      // Applied based on logic in the STOW request.
+      Session session = sessionPromise.get(300, TimeUnit.SECONDS);
+
+      // Prepare the request
+      HttpFields requestFields = new HttpFields();
+      if (credentials != null) {
+        credentials.getRequestMetadata();
+        requestFields.add(
+            HttpHeader.AUTHORIZATION, "Bearer " + credentials.getAccessToken().getTokenValue());
+      }
+
+      MetaData.Request request =
+          new MetaData.Request("DELETE", uri, HttpVersion.HTTP_2, requestFields);
+      HeadersFrame headersFrame = new HeadersFrame(request, null, true);
+
+      // Prepare the listener to receive the HTTP response frames.
+      final StringBuilder resultBuilder = new StringBuilder();
+      final CompletableFuture<Integer> responseCodeFuture = new CompletableFuture<>();
+      final CompletableFuture<Boolean> doneFuture = new CompletableFuture<>();
+
+      session.newStream(
+          headersFrame,
+          new FuturePromise<>(),
+          new Stream.Listener.Adapter() {
+            @Override
+            public void onReset(Stream stream, ResetFrame frame) {
+              doneFuture.complete(false);
+            }
+
+            @Override
+            public void onHeaders(Stream stream, HeadersFrame frame) {
+              if (frame.getMetaData() instanceof Response) {
+                responseCodeFuture.complete(((Response) frame.getMetaData()).getStatus());
+              }
+            }
+
+            @Override
+            public void onData(Stream stream, DataFrame frame, Callback callback) {
+              byte[] bytes = new byte[frame.getData().remaining()];
+              frame.getData().get(bytes);
+              resultBuilder.append(new String(bytes, StandardCharsets.UTF_8));
+
+              if (frame.isEndStream()) {
+                doneFuture.complete(true);
+              }
+
+              callback.succeeded();
+            }
+          });
+
+      doneFuture.get();
+      client.stop();
+
+      int httpStatus = responseCodeFuture.get();
+      if (httpStatus != HttpStatus.OK_200) {
+        String resp = resultBuilder.toString();
+        throw new DicomWebException(
+            "Http_" + httpStatus + ": " + resp, httpStatus, Status.ProcessingFailure);
+      }
+    } catch (Exception e) {
+      if (e instanceof DicomWebException) {
+        throw (DicomWebException) e;
+      }
+      throw new DicomWebException(e);
+    }
+  }
+
+  /**
+   * Reads the resource to figure out the study/series/instance UID path, deletes it and returns
+   * void.
+   *
+   * @param stream The unread stream containing the DICOM instance.
+   */
+  @Override
+  public void delete(InputStream stream) throws IDicomWebClient.DicomWebException {
+    try {
+      DicomInputStream dis = new DicomInputStream(stream);
+      Attributes attrs = dis.readDataset(-1, Tag.PixelData);
+      String instanceUrl =
+          String.format(
+              "%s/series/%s/instances/%s", // NOTE: /studies/ already in stowPath
+              attrs.getString(Tag.StudyInstanceUID, 0),
+              attrs.getString(Tag.SeriesInstanceUID, 0),
+              attrs.getString(Tag.SOPInstanceUID, 0));
+      this.delete(instanceUrl);
+    } catch (IOException e) {
+      throw new IDicomWebClient.DicomWebException(e);
+    }
   }
 
   private static class DataStream {
