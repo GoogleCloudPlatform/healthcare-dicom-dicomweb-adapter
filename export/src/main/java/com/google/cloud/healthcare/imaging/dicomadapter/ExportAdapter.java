@@ -89,7 +89,7 @@ public class ExportAdapter {
       String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
       IDicomWebClient exportDicomWebClient =
           new DicomWebClientJetty(flags.useGcpApplicationDefaultCredentials ? null : credentials,
-              StringUtil.joinPath(peerDicomwebAddress, peerDicomwebStowpath));
+              StringUtil.joinPath(peerDicomwebAddress, peerDicomwebStowpath), false);
       dicomSender =
           new StowRsSender(dicomWebClient, exportDicomWebClient);
       System.out.printf(
