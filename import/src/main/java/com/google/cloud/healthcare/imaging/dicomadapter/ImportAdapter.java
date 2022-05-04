@@ -123,14 +123,8 @@ public class ImportAdapter {
     IDestinationClientFactory destinationClientFactory = configureDestinationClientFactory(
       defaultCstoreDicomWebClient, credentials, flags, backupUploadService != null);
 
-    // NOTE: This is a dependency for cStoreService if stow retry is used or if multiple
-    // destinations are leveraged, due to the backupUploadService dependency.
-    MultipleDestinationUploadService multipleDestinationSendService = null;
-    if (flags.sendToAllMatchingDestinations) {
-      multipleDestinationSendService = configureMultipleDestinationUploadService(flags, cstoreSubAet, backupUploadService);
-    } else if (flags.useStowOverwrite) {
-      throw new IllegalArgumentException("--stow_overwrite requires the use of --send_to_all_matching_destinations");
-    }
+    MultipleDestinationUploadService multipleDestinationSendService = configureMultipleDestinationUploadService(
+        flags, cstoreSubAet, backupUploadService);
 
     CStoreService cStoreService =
         new CStoreService(destinationClientFactory, redactor, flags.transcodeToSyntax, multipleDestinationSendService);
@@ -163,7 +157,6 @@ public class ImportAdapter {
       GoogleCredentials credentials,
       Flags flags) {
     IDicomWebClient defaultCstoreDicomWebClient;
-    log.debug("--stow_overwrite set to " + (flags.useStowOverwrite ? "true" : "false"));
     if (flags.useHttp2ForStow) {
       defaultCstoreDicomWebClient =
           new DicomWebClientJetty(
@@ -181,9 +174,6 @@ public class ImportAdapter {
       GoogleCredentials credentials,
       Flags flags, boolean backupServicePresent) throws IOException {
     IDestinationClientFactory destinationClientFactory;
-    log.debug(
-        "--send_to_all_matching_destinations set to "
-            + (flags.sendToAllMatchingDestinations ? "true" : "false"));
     if (flags.sendToAllMatchingDestinations) {
       if (backupServicePresent == false) {
         throw new IllegalArgumentException(
@@ -203,6 +193,12 @@ public class ImportAdapter {
           multipleDestinations.getRight(),
           defaultCstoreDicomWebClient);
     } else { // with or without backup usage.
+      if ((flags.destinationConfigPath != null || flags.destinationConfigInline != null)
+          && flags.useStowOverwrite) {
+        throw new IllegalArgumentException(
+            "Must use '--send_to_all_matching_destinations' when using '--stow_overwrite' and"
+                + " providing a destination config.");
+      }
       destinationClientFactory = new SingleDestinationClientFactory(
           configureDestinationMap(
               flags.destinationConfigInline, flags.destinationConfigPath, credentials, flags.useStowOverwrite),

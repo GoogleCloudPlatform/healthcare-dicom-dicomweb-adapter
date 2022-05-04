@@ -201,16 +201,14 @@ public class DicomWebClient implements IDicomWebClient {
   @Override
   public void delete(InputStream stream) throws IDicomWebClient.DicomWebException {
     try {
-      // TODO: HTTP 409 content has RetrieveURL as StudyUID, so we need to construct the instance
-      // path. Can we receive the RetrieveURL as the full instance path, as we're constructing here?
       DicomInputStream dis = new DicomInputStream(stream);
       Attributes attrs = dis.readDataset(-1, Tag.PixelData);
       String instanceUrl =
           String.format(
               "studies/%s/series/%s/instances/%s",
-              attrs.getString(Tag.StudyInstanceUID, 0),
-              attrs.getString(Tag.SeriesInstanceUID, 0),
-              attrs.getString(Tag.SOPInstanceUID, 0));
+              StringUtil.getTagValueAsStringOrException(attrs, Tag.StudyInstanceUID),
+              StringUtil.getTagValueAsStringOrException(attrs, Tag.SeriesInstanceUID),
+              StringUtil.getTagValueAsStringOrException(attrs, Tag.SOPInstanceUID));
       this.delete(instanceUrl);
     } catch (IOException e) {
       throw new IDicomWebClient.DicomWebException(e);

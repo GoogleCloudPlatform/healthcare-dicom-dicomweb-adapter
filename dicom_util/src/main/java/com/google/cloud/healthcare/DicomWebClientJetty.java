@@ -272,9 +272,9 @@ public class DicomWebClientJetty implements IDicomWebClient {
       String instanceUrl =
           String.format(
               "%s/series/%s/instances/%s", // NOTE: /studies/ already in stowPath
-              attrs.getString(Tag.StudyInstanceUID, 0),
-              attrs.getString(Tag.SeriesInstanceUID, 0),
-              attrs.getString(Tag.SOPInstanceUID, 0));
+              StringUtil.getTagValueAsStringOrException(attrs, Tag.StudyInstanceUID),
+              StringUtil.getTagValueAsStringOrException(attrs, Tag.SeriesInstanceUID),
+              StringUtil.getTagValueAsStringOrException(attrs, Tag.SOPInstanceUID));
       this.delete(instanceUrl);
     } catch (IOException e) {
       throw new IDicomWebClient.DicomWebException(e);
