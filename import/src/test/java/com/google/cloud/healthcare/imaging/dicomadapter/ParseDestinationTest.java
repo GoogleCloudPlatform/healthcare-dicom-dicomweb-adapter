@@ -35,7 +35,7 @@ public class ParseDestinationTest {
   public void parseDestination() throws IOException {
     Pair<ImmutableList<Pair<DestinationFilter, IDicomWebClient>>,
         ImmutableList<Pair<DestinationFilter, AetDictionary.Aet>>> dsc = ImportAdapter.configureMultipleDestinationTypesMap(
-            JSON, "", "", null);
+            JSON, "", "", null, true);
 
     ImmutableList<Pair<DestinationFilter, IDicomWebClient>> healthDistList = dsc.getLeft();
     assertThat(healthDistList).hasSize(3);
@@ -60,7 +60,7 @@ public class ParseDestinationTest {
     exceptionRule.expect(IOException.class);
     exceptionRule.expectMessage("Mandatory key absent: filter");
 
-    ImportAdapter.configureMultipleDestinationTypesMap(JSON_WITHOUT_FILTER_KEY, "", "", null);
+    ImportAdapter.configureMultipleDestinationTypesMap(JSON_WITHOUT_FILTER_KEY, "", "", null, true);
   }
 
   private void assertDestFilterAndClient(Pair<DestinationFilter, IDicomWebClient> distToClient, String aet) {
