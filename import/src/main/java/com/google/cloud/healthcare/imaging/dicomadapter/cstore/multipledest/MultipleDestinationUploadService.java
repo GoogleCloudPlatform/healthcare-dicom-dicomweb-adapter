@@ -140,6 +140,29 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     removeLazyResolvers(associationId);
   }
 
+  /* Wait on all futures for this association and delete files with no exceptions. */
+  private void waitOnUploadFutures(String sopInstanceUID, List<CompletableFuture> futures) {
+    List<Throwable> exceptions = new ArrayList<>();
+    for (CompletableFuture uploadFuture : futures) {
+      try {
+        uploadFuture.get();
+      } catch (ExecutionException eex) {
+        exceptions.add(eex.getCause());
+      } catch (InterruptedException iex) {
+        Thread.currentThread().interrupt();
+        exceptions.add(new MultipleDestinationUploadServiceException(iex).getCause());
+      }
+    }
+    // If there are no exceptions, then we remove the file. Otherwise leave it for follow-up.
+    if (exceptions.isEmpty()) {
+      backupUploadService.removeBackup(sopInstanceUID);
+    } else {
+      log.error(
+          "Exception messages of the upload async jobs:\n{}",
+          exceptions.stream().map(t -> t.getMessage()).collect(Collectors.joining("\n")));
+    }
+  }
+
   private void addLazyResolvers(
       int associationId, String sopInstanceUID, List<CompletableFuture> futures) {
     HashMap<String, List<CompletableFuture>> resolverMap =
@@ -155,10 +178,8 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     HashMap<String, List<CompletableFuture>> resolverMap = lazyFutureResolvers.get(associationId);
     if (resolverMap != null) {
       log.debug("Cleaning up " + resolverMap.size() + " files for association " + associationId);
-      resolverMap.forEach(
-          (sopInstanceUID, futures) -> {
-            futures.forEach(CompletableFuture::join);
-            backupUploadService.removeBackup(sopInstanceUID);
+      resolverMap.forEach((sopInstanceUID, futures) -> {
+            waitOnUploadFutures(sopInstanceUID, futures);
           });
       lazyFutureResolvers.remove(associationId);
     }
