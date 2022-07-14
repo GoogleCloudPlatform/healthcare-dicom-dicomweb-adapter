@@ -17,8 +17,8 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 import com.google.cloud.healthcare.IDicomWebClient.DicomWebException;
 import com.google.cloud.healthcare.deid.redactor.DicomRedactor;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.DicomStreamUtil;
-import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.DestinationHolder;
+import com.google.cloud.healthcare.imaging.dicomadapter.cstore.destination.IDestinationClientFactory;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.IMultipleDestinationUploadService;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest.IMultipleDestinationUploadService.MultipleDestinationUploadServiceException;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
@@ -35,7 +35,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
-
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.VR;
@@ -121,7 +120,8 @@ public class CStoreService extends BasicCStoreSCP {
               destinationHolder.getDicomDestinations(),
               inputStream,
               sopClassUID,
-              sopInstanceUID
+              sopInstanceUID,
+              association.getSerialNo()
             );
         });
       } else {
@@ -138,7 +138,6 @@ public class CStoreService extends BasicCStoreSCP {
         throw new DicomServiceException(Status.ProcessingFailure, e);
       }
 
-
       response.setInt(Tag.Status, VR.US, Status.Success);
       MonitoringService.addEvent(Event.CSTORE_BYTES, countingStream.getCount());
     } catch (DicomWebException e) {
@@ -153,6 +152,14 @@ public class CStoreService extends BasicCStoreSCP {
     } catch (Throwable e) {
       reportError(e, Event.CSTORE_ERROR);
       throw new DicomServiceException(Status.ProcessingFailure, e);
+    }
+  }
+
+  @Override
+  public void onClose(Association association) {
+    super.onClose(association);
+    if (multipleSendService != null) {
+      multipleSendService.cleanup(association.getSerialNo());
     }
   }
 
