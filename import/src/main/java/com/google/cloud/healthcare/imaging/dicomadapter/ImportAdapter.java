@@ -208,14 +208,23 @@ public class ImportAdapter {
   }
 
   private static MultipleDestinationUploadService configureMultipleDestinationUploadService(
-      Flags flags,
-      String cstoreSubAet,
-      BackupUploadService backupUploadService) {
+      Flags flags, String cstoreSubAet, BackupUploadService backupUploadService) {
+    if (flags.autoAckCStore) {
+      if (backupUploadService == null) {
+        throw new IllegalArgumentException(
+            "--auto_ack_cstore requires the use of --persistent_file_storage_location and"
+                + " --persistent_file_upload_retry_amount >= 1");
+      }
+      log.warn(
+          "Using flag --auto_ack_cstore will acknowledge DIMSE store requests before the"
+              + " instances are persisted to the DICOMweb destination.");
+    }
     if (backupUploadService != null) {
       return new MultipleDestinationUploadService(
           new CStoreSenderFactory(cstoreSubAet),
           backupUploadService,
-          flags.persistentFileUploadRetryAmount);
+          flags.persistentFileUploadRetryAmount,
+          flags.autoAckCStore);
     }
     return null;
   }

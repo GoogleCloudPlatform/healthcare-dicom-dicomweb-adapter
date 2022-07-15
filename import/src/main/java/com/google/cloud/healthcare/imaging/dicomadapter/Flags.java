@@ -16,7 +16,6 @@ package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,28 +52,29 @@ public class Flags {
   @Parameter(
       names = {"--dicomweb_stow_path"},
       description =
-          "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of --dicomweb_addr flag. "
-              + "Deprecated and used only with C-STORE. If dicomweb_address is also specified, it takes precedence."
-  )
+          "Path to send StowRS requests for DicomWeb peer. This is appended to the contents of"
+              + " --dicomweb_addr flag. Deprecated and used only with C-STORE. If dicomweb_address"
+              + " is also specified, it takes precedence.")
   String dicomwebStowPath = "";
 
   @Parameter(
       names = {"--dicomweb_address"},
-      description = "Address for DicomWeb service. Must be a full path up to /dicomWeb if the Cloud Healthcare API is used."
-  )
+      description =
+          "Address for DicomWeb service. Must be a full path up to /dicomWeb if the Cloud"
+              + " Healthcare API is used.")
   String dicomwebAddress = "";
 
   @Parameter(
       names = {"--stow_http2"},
-      description = "Whether to use HTTP 2.0 for StowRS (i.e. StoreInstances) requests. True by default."
-  )
+      description =
+          "Whether to use HTTP 2.0 for StowRS (i.e. StoreInstances) requests. True by default.")
   Boolean useHttp2ForStow = false;
 
   @Parameter(
       names = {"--stow_overwrite"},
-      description = "If STOW-RS request receives HTTP 409 (instance conflict), then perform HTTP DELETE on"
-        + " instance and retry. False by default."
-  )
+      description =
+          "If STOW-RS request receives HTTP 409 (instance conflict), then perform HTTP DELETE on"
+              + " instance and retry. False by default.")
   Boolean useStowOverwrite = false;
 
   @Parameter(
@@ -91,8 +91,8 @@ public class Flags {
 
   @Parameter(
       names = {"--aet_dictionary"},
-      description = "Path to json containing aet definitions (array containing name/host/port per element)"
-  )
+      description =
+          "Path to json containing aet definitions (array containing name/host/port per element)")
   String aetDictionaryPath = "";
 
   @Parameter(
@@ -104,27 +104,30 @@ public class Flags {
 
   @Parameter(
       names = {"--monitoring_project_id"},
-      description = "Stackdriver monitoring project id, must be the same as the project id in which the adapter is running"
-  )
+      description =
+          "Stackdriver monitoring project id, must be the same as the project id in which the"
+              + " adapter is running")
   String monitoringProjectId = "";
 
   @Parameter(
       names = {"--redact_remove_list"},
-      description = "Tags to remove during C-STORE upload, comma separated. Only one of 'redact' flags may be present"
-  )
+      description =
+          "Tags to remove during C-STORE upload, comma separated. Only one of 'redact' flags may be"
+              + " present")
   String tagsToRemove = "";
 
   @Parameter(
       names = {"--redact_keep_list"},
-      description = "Tags to keep during C-STORE upload, comma separated. Only one of 'redact' flags may be present"
-  )
+      description =
+          "Tags to keep during C-STORE upload, comma separated. Only one of 'redact' flags may be"
+              + " present")
   String tagsToKeep = "";
 
   @Parameter(
       names = {"--redact_filter_profile"},
-      description = "Filter tags by predefined profile during C-STORE upload. Only one of 'redact' flags may be present. "
-      + "Values: CHC_BASIC"
-  )
+      description =
+          "Filter tags by predefined profile during C-STORE upload. Only one of 'redact' flags may"
+              + " be present. Values: CHC_BASIC")
   String tagsProfile = "";
 
   @Parameter(
@@ -136,23 +139,26 @@ public class Flags {
 
   @Parameter(
       names = {"--destination_config_path"},
-      description = "Path to json array containing destination definitions (filter/dicomweb_destination per element)"
-  )
+      description =
+          "Path to json array containing destination definitions (filter/dicomweb_destination per"
+              + " element)")
   String destinationConfigPath = "";
 
   @Parameter(
       names = {"--destination_config_inline"},
-      description = "Json array containing destination definitions (filter/dicomweb_destination per element). "
-          + "Only one of destination_config_path and destination_config_inline needs to be specified."
-  )
+      description =
+          "Json array containing destination definitions (filter/dicomweb_destination per element)."
+              + " Only one of destination_config_path and destination_config_inline needs to be"
+              + " specified.")
   String destinationConfigInline = "";
 
   @Parameter(
       names = {"--store_compress_to_transfer_syntax"},
-      description = "Transfer Syntax to convert instances to during C-STORE upload. See Readme for list of supported syntaxes."
-  )
+      description =
+          "Transfer Syntax to convert instances to during C-STORE upload. See Readme for list of"
+              + " supported syntaxes.")
   String transcodeToSyntax = "";
-  
+
   @Parameter(
       names = {"--fuzzy_matching"},
       description = "negotiate fuzzy semantic person name attribute matching. False by default."
@@ -178,6 +184,13 @@ public class Flags {
   Integer persistentFileUploadRetryAmount = 0;
 
   @Parameter(
+      names = {"--auto_ack_cstore"},
+      description =
+          "If true, when processing C-STORE requests, will acknowledge request after persisting"
+              + " file and not wait on response from DICOMweb STOW-RS.")
+  Boolean autoAckCStore = false;
+
+  @Parameter(
           names = {"--min_upload_delay"},
           description = "minimum delay before upload backup file (ms)"
   )
@@ -197,9 +210,10 @@ public class Flags {
 
   @Parameter(
       names = {"--send_to_all_matching_destinations"},
-      description = "If true, when processing C-STORE requests with a destination config specified, the adapter will " +
-          "send to all matching destinations rather than the first matching destination."
-  )
+      description =
+          "If true, when processing C-STORE requests with a destination config specified, the"
+              + " adapter will send to all matching destinations rather than the first matching"
+              + " destination.")
   Boolean sendToAllMatchingDestinations = false;
 
   public Flags() {

@@ -3,17 +3,21 @@ package com.google.cloud.healthcare.imaging.dicomadapter.cstore.multipledest;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.AetDictionary;
 import com.google.cloud.healthcare.imaging.dicomadapter.cstore.backup.IBackupUploader;
-import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.common.collect.ImmutableList;
 import java.io.InputStream;
 
 public interface IMultipleDestinationUploadService {
 
-  void start(ImmutableList<IDicomWebClient> healthcareDestinations,
-             ImmutableList<AetDictionary.Aet> dicomDestinations,
-             InputStream inputStream,
-             String sopClassUID,
-             String sopInstanceUID) throws MultipleDestinationUploadServiceException;
+  void start(
+      ImmutableList<IDicomWebClient> healthcareDestinations,
+      ImmutableList<AetDictionary.Aet> dicomDestinations,
+      InputStream inputStream,
+      String sopClassUID,
+      String sopInstanceUID,
+      int associationId)
+      throws MultipleDestinationUploadServiceException;
+
+  void cleanup(int associationId);
 
   class MultipleDestinationUploadServiceException extends Exception {
 
@@ -24,8 +28,8 @@ public interface IMultipleDestinationUploadService {
     }
 
     public MultipleDestinationUploadServiceException(IBackupUploader.BackupException be) {
-     super(be);
-     this.dicomStatus = be.getDicomStatus();
+      super(be);
+      this.dicomStatus = be.getDicomStatus();
     }
 
     public Integer getDicomStatus() {

@@ -81,6 +81,7 @@ public final class CStoreServiceTest {
   private static String serverHostname = "localhost";
   private static String SOP_INSTANCE_UID = "1.0.0.0";
   private static final Integer RETRY_ATTEMPTS_AMOUNT_ZERO = 0;
+  private static final Boolean DEFAULT_CSTORE_AUTO_ACK = false;
   private final int RETRY_ATTEMPTS_AMOUNT_ONE = 1;
   private final int RETRY_ATTEMPTS_AMOUNT_TWO = 2;
   private final String DEFAULT_DESTINATION_CONFIG_FILTER = "StudyDate=19921012&SOPInstanceUID=1.0.0.0";
@@ -380,7 +381,8 @@ public final class CStoreServiceTest {
     multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactoryMock,
         backupUploadService,
-        RETRY_ATTEMPTS_AMOUNT_ZERO);
+        RETRY_ATTEMPTS_AMOUNT_ZERO,
+        DEFAULT_CSTORE_AUTO_ACK);
 
 
     doThrow(new IBackupUploader.BackupException("errMsg")).when(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
@@ -411,7 +413,8 @@ public final class CStoreServiceTest {
     multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactoryMock,
         backupUploadService,
-        RETRY_ATTEMPTS_AMOUNT_ZERO);
+        RETRY_ATTEMPTS_AMOUNT_ZERO,
+        DEFAULT_CSTORE_AUTO_ACK);
 
     doThrow(new IDicomWebClient.DicomWebException("conflictTestCode409", HttpStatus.CONFLICT_409, Status.ProcessingFailure))
         .when(spyStowClient).stowRs(any(InputStream.class));
@@ -443,7 +446,8 @@ public final class CStoreServiceTest {
     multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactoryMock,
         backupUploadService,
-        RETRY_ATTEMPTS_AMOUNT_ONE);
+        RETRY_ATTEMPTS_AMOUNT_ONE,
+        DEFAULT_CSTORE_AUTO_ACK);
 
     doThrow(new IDicomWebClient.DicomWebException(" Request Timeout 408", HttpStatus.REQUEST_TIMEOUT_408, Status.ProcessingFailure))
         .doNothing()
@@ -476,7 +480,8 @@ public final class CStoreServiceTest {
     multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactoryMock,
         backupUploadService,
-        RETRY_ATTEMPTS_AMOUNT_ONE);
+        RETRY_ATTEMPTS_AMOUNT_ONE,
+        DEFAULT_CSTORE_AUTO_ACK);
 
         doNothing()
         .when(spyStowClient).stowRs(any(InputStream.class));
@@ -521,7 +526,8 @@ public final class CStoreServiceTest {
     multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactoryMock,
         backupUploadService,
-        RETRY_ATTEMPTS_AMOUNT_TWO);
+        RETRY_ATTEMPTS_AMOUNT_TWO,
+        DEFAULT_CSTORE_AUTO_ACK);
 
 
     doThrow(new IDicomWebClient.DicomWebException("testCode500", HttpStatus.INTERNAL_SERVER_ERROR_500, HttpStatusCodes.STATUS_CODE_SERVER_ERROR))
@@ -556,7 +562,8 @@ public final class CStoreServiceTest {
     multipleDestinationSendService = new MultipleDestinationUploadService(
         cStoreSenderFactoryMock,
         backupUploadService,
-        RETRY_ATTEMPTS_AMOUNT_ZERO);
+        RETRY_ATTEMPTS_AMOUNT_ZERO,
+        DEFAULT_CSTORE_AUTO_ACK);
 
     basicCStoreServiceTest(
         Status.Success,

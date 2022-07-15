@@ -42,6 +42,7 @@ import static org.mockito.Mockito.when;
 @RunWith(JUnit4.class)
 public class MultipleDestinationUploadServiceTest {
 
+  private final static int ASSOCIATION_ID = 1;
   private final static String SOP_CLASS_UID = "1.2.840.10008.5.1.4.1.1.4";
   private final static String SOP_INSTANCE_UID = "1.0.0.0";
   private final static String DICOM_DEST_UPLOAD_FAILED_MSG = "DicomDest upload failed";
@@ -81,7 +82,7 @@ public class MultipleDestinationUploadServiceTest {
 
   @Before
   public void before() {
-    multipleDestinationUploadService = new MultipleDestinationUploadService(cStoreSenderFactoryMock, backupUploadServiceMock, 0);
+    multipleDestinationUploadService = new MultipleDestinationUploadService(cStoreSenderFactoryMock, backupUploadServiceMock, 0, false);
     inputStream = new ByteArrayInputStream(new byte[]{1,2,3,4});
 
     when(cStoreSenderFactoryMock.create()).thenReturn(cStoreSenderMock);
@@ -94,8 +95,8 @@ public class MultipleDestinationUploadServiceTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void backupUploadServiceEmpty_exception() throws Exception {
-    multipleDestinationUploadService = new MultipleDestinationUploadService(cStoreSenderFactoryMock, null, 0);
-    multipleDestinationUploadService.start(ImmutableList.of(), ImmutableList.of(), inputStream, null, null);
+    multipleDestinationUploadService = new MultipleDestinationUploadService(cStoreSenderFactoryMock, null, 0, false);
+    multipleDestinationUploadService.start(ImmutableList.of(), ImmutableList.of(), inputStream, null, null, 0);
   }
 
   @Test
@@ -105,7 +106,7 @@ public class MultipleDestinationUploadServiceTest {
 
     doThrow(new BackupException("createBackupFailed")).when(backupUploadServiceMock).createBackup(any(), any());
 
-    multipleDestinationUploadService.start(ImmutableList.of(), ImmutableList.of(), inputStream, null, null);
+    multipleDestinationUploadService.start(ImmutableList.of(), ImmutableList.of(), inputStream, null, null, 0);
   }
 
   @Test
@@ -114,7 +115,7 @@ public class MultipleDestinationUploadServiceTest {
 
     doAnswer(invocation -> null).when(healthcareDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploading(1);
@@ -131,7 +132,7 @@ public class MultipleDestinationUploadServiceTest {
     doAnswer(invocation -> null).when(healthcareDestUploadFutureMock).get();
     doAnswer(invocation -> null).when(dicomDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock, aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock, aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploading(1);
@@ -146,7 +147,7 @@ public class MultipleDestinationUploadServiceTest {
 
     doAnswer(invocation -> null).when(dicomDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploadingNever();
@@ -165,7 +166,7 @@ public class MultipleDestinationUploadServiceTest {
 
     doAnswer(invocation -> null).when(dicomDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploadingNever();
@@ -184,7 +185,7 @@ public class MultipleDestinationUploadServiceTest {
 
     doAnswer(invocation -> null).when(healthcareDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploading(1);
@@ -201,7 +202,7 @@ public class MultipleDestinationUploadServiceTest {
     doThrow(new BackupException(DICOM_DEST_UPLOAD_FAILED_MSG)).when(backupUploadServiceMock).startUploading(
         any(CStoreSender.class), any(Aet.class), anyString(), anyString(), any(BackupState.class));
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploadingNever();
@@ -221,7 +222,7 @@ public class MultipleDestinationUploadServiceTest {
     doThrow(new ExecutionException(new BackupException(HEALTH_DEST_EXCEPTION_EXCEPTION_MSG))).when(healthcareDestUploadFutureMock).get();
     doThrow(new ExecutionException(new BackupException(DICOM_DEST_EXCEPTION_EXCEPTION_MSG))).when(dicomDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock, aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock, aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploadingNever();
@@ -240,7 +241,7 @@ public class MultipleDestinationUploadServiceTest {
 
     doThrow(new InterruptedException()).when(dicomDestUploadFutureMock).get();
 
-    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID);
+    multipleDestinationUploadService.start(ImmutableList.of(dicomWebClientMock), ImmutableList.of(aetMock), inputStream, SOP_CLASS_UID, SOP_INSTANCE_UID, ASSOCIATION_ID);
 
     verifyCreateBackup();
     verifyHealthDestStartUploadingNever();
