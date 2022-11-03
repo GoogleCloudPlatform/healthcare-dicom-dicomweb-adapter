@@ -90,6 +90,19 @@ public class Flags {
   boolean verbose = false;
 
   @Parameter(
+      names = {"--aet_dicom_map"},
+      description =
+          "Path to json containing aet dicom definitions (array containing name/dicom/port per element)")
+  String aetDicomMapPath = "";
+
+  @Parameter(
+      names = {"--aet_dicom_map_inline"},
+      description = "Json array containing aet dicom definitions (name/dicom/port per element). "
+          + "Only one of aet_dicom_map and aet_dicom_map_inline needs to be specified."
+  )
+  String aetDicomMapInline;
+
+  @Parameter(
       names = {"--aet_dictionary"},
       description =
           "Path to json containing aet definitions (array containing name/host/port per element)")
