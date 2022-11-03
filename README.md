@@ -30,6 +30,34 @@ The Import Adapter converts incoming DIMSE requests to corresponding DICOMWeb re
 WADO-RS request to fetch the instance and a C-STORE request to transfer it to the C-MOVE destination
 - Storage commitment service to QIDO-RS
 
+The following configuration needs to be added to the dicom-adapter.yaml file to use C-STORE. 
+Please see the [Deployment using Kubernetes](#deployment-using-kubernetes) section for more information.
+```yaml
+env:
+- name: ENV_AETS_DICOM_JSON
+  valueFrom:
+    configMapKeyRef:
+      name: aet_dicom_map
+      key: AETs.json
+```
+
+Here is an example JSON dictionary:
+```shell
+[
+	{
+		"name": "AET1", 
+		"dicom": "HEALTHcARE_DICOM_PATH", 
+		"port": 11113
+	},
+	{
+		"name": "AET2", 
+		"dicom": "HEALTHcARE_DICOM_PATH", 
+		"port": 11114
+	},
+	...
+]
+```
+
 Note that any C-FIND query on the ModalitiesInStudy tag will result in 1 QIDO-RS query per modality.
 
 Available AET destinations for the C-MOVE and storage commitment services are configured via an AET dictionary json file, 
