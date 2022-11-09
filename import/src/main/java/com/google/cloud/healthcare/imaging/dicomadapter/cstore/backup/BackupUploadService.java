@@ -14,12 +14,14 @@ import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BackupUploadService implements IBackupUploadService {
-
+  private final static Executor uploadThreadPool = Executors.newCachedThreadPool();
   private final DelayCalculator delayCalculator;
   private final IBackupUploader backupUploader;
   private final ImmutableList<Integer> httpErrorCodesToRetry;
@@ -94,11 +96,13 @@ public class BackupUploadService implements IBackupUploadService {
     }
 
     protected void logUploadFailed(Exception e) {
-      log.error("sopInstanceUID={}, upload attempt № {} - failed.", uniqueFileName, attemptNumber, e);
+      log.error(
+          "sopInstanceUID={}, upload attempt № {} - failed.", uniqueFileName, attemptNumber, e);
     }
 
     protected void logSuccessUpload() {
-      log.debug("sopInstanceUID={}, upload attempt № {}, - successful.", uniqueFileName, attemptNumber);
+      log.debug(
+          "sopInstanceUID={}, upload attempt № {}, - successful.", uniqueFileName, attemptNumber);
     }
 
     protected InputStream readBackupExceptionally() throws CompletionException {
@@ -239,8 +243,9 @@ public class BackupUploadService implements IBackupUploadService {
       return CompletableFuture.runAsync(
           uploadJob,
           CompletableFuture.delayedExecutor(
-              delayMillis,
-              TimeUnit.MILLISECONDS));
+            delayMillis,
+            TimeUnit.MILLISECONDS,
+            uploadThreadPool));
     } else {
       MonitoringService.addEvent(Event.CSTORE_ERROR);
       throw getNoResendAttemptLeftException(null, uniqueFileName);
