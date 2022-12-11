@@ -8,8 +8,9 @@ import com.google.common.collect.ImmutableList;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.io.DicomInputStream;
-import java.io.IOException;
+import java.io.BufferedInputStream;
 import java.io.InputStream;
+import java.io.IOException;
 
 public abstract class DestinationClientFactory implements IDestinationClientFactory {
 
@@ -30,13 +31,13 @@ public abstract class DestinationClientFactory implements IDestinationClientFact
   }
 
   @Override
-  public DestinationHolder create(String callingAet, InputStream inputStream) throws IOException {
+  public DestinationHolder create(String callingAet, String transferSyntax, InputStream inputStream) throws IOException {
     DestinationHolder destinationHolder;
-
+    
     if ((healthcareDestinations != null && !healthcareDestinations.isEmpty()) || dicomDestinationsNotEmpty) {
-      DicomInputStream inDicomStream = createDicomInputStream(inputStream);
+      DicomInputStream inDicomStream = createDicomInputStream(transferSyntax, inputStream);
       Attributes attrs = getFilteringAttributes(inDicomStream);
-
+      
       destinationHolder = new DestinationHolder(inDicomStream, defaultDicomWebClient);
       selectAndPutDestinationClients(destinationHolder, callingAet, attrs);
     } else {
@@ -47,8 +48,8 @@ public abstract class DestinationClientFactory implements IDestinationClientFact
   }
 
   @VisibleForTesting
-  DicomInputStream createDicomInputStream(InputStream inputStream) throws IOException {
-    return new DicomInputStream(inputStream);
+  DicomInputStream createDicomInputStream(String transferSyntax, InputStream inputStream) throws IOException {
+    return new DicomInputStream(new BufferedInputStream(inputStream), transferSyntax);
   }
 
   private Attributes getFilteringAttributes(DicomInputStream inDicomStream) throws IOException {
