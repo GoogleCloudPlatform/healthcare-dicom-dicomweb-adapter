@@ -4,5 +4,5 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public interface IDestinationClientFactory {
-  DestinationHolder create(String callingAet, InputStream inPdvStream) throws IOException;
+  DestinationHolder create(String callingAet, String transferSyntax, InputStream inPdvStream) throws IOException;
 }

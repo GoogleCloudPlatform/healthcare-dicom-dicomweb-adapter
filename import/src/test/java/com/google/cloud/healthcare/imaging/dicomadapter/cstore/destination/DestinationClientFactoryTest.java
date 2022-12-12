@@ -32,7 +32,7 @@ public class DestinationClientFactoryTest {
   private final String DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_FIRST = "AETitle=testCallingAet1&SOPInstanceUID=1.0.0.0";
   private final String DESTINATION_CONFIG_FILTER_WITH_AE_TITLE_SECOND = "AETitle=testCallingAet2&SOPInstanceUID=1.0.0.0";
   private final String CALLING_AE_TITLE_FIRST = "testCallingAet1";
-  private final String CALLING_AE_TITLE_SECOND = "testCallingAet2";
+  private final String DEFAULT_TRANSFER_SYNTAX = "1.2.840.10008.1.2.1";
   private final byte [] BYTES_TO_SEND = new byte [] {1,2,3,4};
   private InputStream inputStream;
 
@@ -89,11 +89,11 @@ public class DestinationClientFactoryTest {
 
     SingleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
 
-    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, inputStream);
+    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, DEFAULT_TRANSFER_SYNTAX, inputStream);
 
     assertThat(destinationHolder.getSingleDestination()).isEqualTo(dicomWebClientMockFirst);
     assertThat(destinationHolder.getCountingInputStream()).isInstanceOf(CountingInputStream.class);
@@ -108,6 +108,7 @@ public class DestinationClientFactoryTest {
 
     DestinationHolder destinationHolder = destinationFactory.create(
         CALLING_AE_TITLE_FIRST,
+        DEFAULT_TRANSFER_SYNTAX,
         inputStream);
 
     assertThat(destinationHolder.getSingleDestination()).isEqualTo(defaultDicomWebClientMock);
@@ -136,11 +137,11 @@ public class DestinationClientFactoryTest {
 
     MultipleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
 
-    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, inputStream);
+    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, DEFAULT_TRANSFER_SYNTAX, inputStream);
 
     assertThat(destinationHolder.getHealthcareDestinations()).containsExactly(dicomWebClientMockFirst, dicomWebClientMockSecond, dicomWebClientMockSecond);
     assertThat(destinationHolder.getDicomDestinations()).containsExactly(aetMockFirst, aetMockFirst, aetMockSecond);
@@ -159,12 +160,12 @@ public class DestinationClientFactoryTest {
 
     MultipleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(false)
         .doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
 
-    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, inputStream);
+    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, DEFAULT_TRANSFER_SYNTAX, inputStream);
 
     assertThat(destinationHolder.getHealthcareDestinations()).containsExactly(defaultDicomWebClientMock);
     assertThat(destinationHolder.getDicomDestinations()).containsExactly(aetMockSecond);
@@ -184,12 +185,12 @@ public class DestinationClientFactoryTest {
 
     MultipleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(false)
         .doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
 
-    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, inputStream);
+    DestinationHolder destinationHolder = destinationFactorySpy.create(CALLING_AE_TITLE_FIRST, DEFAULT_TRANSFER_SYNTAX, inputStream);
 
     assertThat(destinationHolder.getHealthcareDestinations()).containsExactly(dicomWebClientMockSecond);
     assertThat(destinationHolder.getDicomDestinations()).isEmpty();
@@ -203,7 +204,7 @@ public class DestinationClientFactoryTest {
         null,
         defaultDicomWebClientMock);
 
-    DestinationHolder destinationHolder = destinationFactory.create(CALLING_AE_TITLE_FIRST, inputStream);
+    DestinationHolder destinationHolder = destinationFactory.create(CALLING_AE_TITLE_FIRST, DEFAULT_TRANSFER_SYNTAX, inputStream);
 
     assertThat(destinationHolder.getHealthcareDestinations()).containsExactly(defaultDicomWebClientMock);
     assertThat(destinationHolder.getDicomDestinations()).isEmpty();

@@ -94,7 +94,7 @@ public class CStoreService extends BasicCStoreSCP {
       validateParam(sopInstanceUID, "AffectedSOPInstanceUID");
 
       DestinationHolder destinationHolder =
-          destinationClientFactory.create(association.getAAssociateAC().getCallingAET(), inPdvStream);
+          destinationClientFactory.create(association.getAAssociateAC().getCallingAET(), transferSyntax, inPdvStream);
 
       final CountingInputStream countingStream = destinationHolder.getCountingInputStream();
 
