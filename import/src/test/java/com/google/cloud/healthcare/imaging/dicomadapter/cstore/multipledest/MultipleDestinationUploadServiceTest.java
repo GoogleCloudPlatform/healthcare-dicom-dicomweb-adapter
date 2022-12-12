@@ -266,15 +266,15 @@ public class MultipleDestinationUploadServiceTest {
   }
 
   private void verifyCreateBackup() throws BackupException {
-    verify(backupUploadServiceMock).createBackup(eq(inputStream), eq(SOP_INSTANCE_UID));
+    verify(backupUploadServiceMock).createBackup(eq(inputStream), anyString());
   }
 
   private void verifyRemoveBackup() {
-    verify(backupUploadServiceMock).removeBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploadServiceMock).removeBackup(anyString());
   }
 
   private void verifyRemoveBackupNever() {
-    verify(backupUploadServiceMock, never()).removeBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploadServiceMock, never()).removeBackup(anyString());
   }
 
   private static class CauseMatcher extends TypeSafeMatcher<Throwable> {

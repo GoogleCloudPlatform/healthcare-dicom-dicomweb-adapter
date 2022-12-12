@@ -508,7 +508,7 @@ public final class CStoreServiceTest {
     verify(backupUploaderMock, times(2)).doReadBackup(anyString());
     verify(spyStowClient).stowRs(any(InputStream.class));
     verify(cStoreSenderMock).cstore(eq(target), eq(SOP_INSTANCE_UID), eq("1.2.840.10008.5.1.4.1.1.4"), any(InputStream.class));
-    verify(backupUploaderMock).doRemoveBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploaderMock).doRemoveBackup(anyString());
   }
 
   @Test
@@ -571,10 +571,10 @@ public final class CStoreServiceTest {
         spyStowClient,
         null);
 
-    verify(backupUploaderMock).doWriteBackup(any(InputStream.class), eq(SOP_INSTANCE_UID));
-    verify(backupUploaderMock).doReadBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploaderMock).doWriteBackup(any(InputStream.class), anyString());
+    verify(backupUploaderMock).doReadBackup(anyString());
     verify(spyStowClient).stowRs(any(InputStream.class));
-    verify(backupUploaderMock).doRemoveBackup(eq(SOP_INSTANCE_UID));
+    verify(backupUploaderMock).doRemoveBackup(anyString());
   }
 
   private void basicCStoreServiceTest(

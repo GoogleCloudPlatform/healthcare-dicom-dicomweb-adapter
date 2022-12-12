@@ -27,6 +27,7 @@ import java.util.HashMap;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
 public class GcpBackupUploaderTest {
@@ -96,7 +97,7 @@ public class GcpBackupUploaderTest {
             } catch (Exception ignored) {
                 return false;
             }
-        }).when(storageMock).delete(any(String.class), any(String.class));
+        }).when(storageMock).delete(anyString(), anyString());
     }
 
     @After
