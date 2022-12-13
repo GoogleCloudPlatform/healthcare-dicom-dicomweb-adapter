@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
@@ -89,7 +90,7 @@ public class DestinationClientFactoryTest {
 
     SingleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(anyString(), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
 
@@ -137,7 +138,7 @@ public class DestinationClientFactoryTest {
 
     MultipleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(anyString(), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
 
@@ -160,7 +161,7 @@ public class DestinationClientFactoryTest {
 
     MultipleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(anyString(), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(false)
         .doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());
@@ -185,7 +186,7 @@ public class DestinationClientFactoryTest {
 
     MultipleDestinationClientFactory destinationFactorySpy = spy(destinationFactory);
 
-    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(any(String.class), any(InputStream.class));
+    doReturn(dicomInputStreamMock).when(destinationFactorySpy).createDicomInputStream(anyString(), any(InputStream.class));
     doReturn(attributesMock).when(dicomInputStreamMock).readDataset(anyInt(), anyInt());
     doReturn(false)
         .doReturn(true).when(attributesMock).matches(any(Attributes.class), anyBoolean(), anyBoolean());

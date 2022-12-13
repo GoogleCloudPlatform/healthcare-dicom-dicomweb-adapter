@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -56,9 +57,10 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     }
 
     List<Throwable> asyncUploadProcessingExceptions = new ArrayList<>();
+    String uniqueFileName = UUID.randomUUID().toString() + ".dcm";
 
     try {
-      backupUploadService.createBackup(inputStream, sopInstanceUID);
+      backupUploadService.createBackup(inputStream, uniqueFileName);
     } catch (BackupException be) {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
       log.error("{} processing failed.", this.getClass().getSimpleName(), be);
@@ -72,7 +74,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
       try {
         healthcareUploadFuture =
             backupUploadService.startUploading(
-                healthcareDest, new BackupState(sopInstanceUID, attemptsAmount));
+                healthcareDest, new BackupState(uniqueFileName, attemptsAmount));
 
         uploadFutures.add(healthcareUploadFuture);
       } catch (BackupException be) {
@@ -93,7 +95,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
                   dicomDest,
                   sopInstanceUID,
                   sopClassUID,
-                  new BackupState(sopInstanceUID, attemptsAmount));
+                  new BackupState(uniqueFileName, attemptsAmount));
 
           uploadFutures.add(dicomUploadFuture);
         } catch (BackupException be) {
@@ -106,7 +108,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     // Don't wait on upload when we are auto-acknowledging and add lazy resolvers to cleanup the
     // files when the association closes.
     if (autoAckCStore) {
-      addLazyResolvers(associationId, sopInstanceUID, uploadFutures);
+      addLazyResolvers(associationId, uniqueFileName, uploadFutures);
     } else {
       for (CompletableFuture uploadFuture : uploadFutures) {
         try {
@@ -121,7 +123,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
         }
       }
       if (asyncUploadProcessingExceptions.isEmpty()) {
-        backupUploadService.removeBackup(sopInstanceUID);
+        backupUploadService.removeBackup(uniqueFileName);
       }
     }
 
@@ -141,7 +143,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
   }
 
   /* Wait on all futures for this association and delete files with no exceptions. */
-  private void waitOnUploadFutures(String sopInstanceUID, List<CompletableFuture> futures) {
+  private void waitOnUploadFutures(String uniqueFileName, List<CompletableFuture> futures) {
     List<Throwable> exceptions = new ArrayList<>();
     for (CompletableFuture uploadFuture : futures) {
       try {
@@ -155,7 +157,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     }
     // If there are no exceptions, then we remove the file. Otherwise leave it for follow-up.
     if (exceptions.isEmpty()) {
-      backupUploadService.removeBackup(sopInstanceUID);
+      backupUploadService.removeBackup(uniqueFileName);
     } else {
       log.error(
           "Exception messages of the upload async jobs:\n{}",
@@ -164,11 +166,11 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
   }
 
   private void addLazyResolvers(
-      int associationId, String sopInstanceUID, List<CompletableFuture> futures) {
+      int associationId, String uniqueFileName, List<CompletableFuture> futures) {
     HashMap<String, List<CompletableFuture>> resolverMap =
         lazyFutureResolvers.getOrDefault(
             associationId, new HashMap<String, List<CompletableFuture>>());
-    resolverMap.put(sopInstanceUID, futures);
+    resolverMap.put(uniqueFileName, futures);
     if (!lazyFutureResolvers.containsKey(associationId)) {
       lazyFutureResolvers.put(associationId, resolverMap);
     }
@@ -178,8 +180,8 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     HashMap<String, List<CompletableFuture>> resolverMap = lazyFutureResolvers.get(associationId);
     if (resolverMap != null) {
       log.debug("Cleaning up " + resolverMap.size() + " files for association " + associationId);
-      resolverMap.forEach((sopInstanceUID, futures) -> {
-            waitOnUploadFutures(sopInstanceUID, futures);
+      resolverMap.forEach((uniqueFileName, futures) -> {
+            waitOnUploadFutures(uniqueFileName, futures);
           });
       lazyFutureResolvers.remove(associationId);
     }

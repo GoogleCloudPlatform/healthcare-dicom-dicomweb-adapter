@@ -45,7 +45,7 @@ public class BackupUploadService implements IBackupUploadService {
   @Override
   public void createBackup(InputStream inputStream, String uniqueFileName) throws BackupException {
     backupUploader.doWriteBackup(inputStream, uniqueFileName);
-    log.debug("sopInstanceUID={}, backup saved.", uniqueFileName);
+    log.debug("fileName={}, backup saved.", uniqueFileName);
   }
 
   @Override
@@ -77,10 +77,10 @@ public class BackupUploadService implements IBackupUploadService {
   public void removeBackup(String fileName) {
     try {
       backupUploader.doRemoveBackup(fileName);
-      log.debug("sopInstanceUID={}, removeBackup successful.", fileName);
+      log.debug("fileName={}, removeBackup successful.", fileName);
     } catch (IOException ex) {
       MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-      log.error("sopInstanceUID={}, removeBackup failed.", fileName, ex);
+      log.error("fileName={}, removeBackup failed.", fileName, ex);
     }
   }
 
@@ -97,12 +97,12 @@ public class BackupUploadService implements IBackupUploadService {
 
     protected void logUploadFailed(Exception e) {
       log.error(
-          "sopInstanceUID={}, upload attempt № {} - failed.", uniqueFileName, attemptNumber, e);
+          "fileName={}, upload attempt № {} - failed.", uniqueFileName, attemptNumber, e);
     }
 
     protected void logSuccessUpload() {
       log.debug(
-          "sopInstanceUID={}, upload attempt № {}, - successful.", uniqueFileName, attemptNumber);
+          "fileName={}, upload attempt № {}, - successful.", uniqueFileName, attemptNumber);
     }
 
     protected InputStream readBackupExceptionally() throws CompletionException {
@@ -110,7 +110,7 @@ public class BackupUploadService implements IBackupUploadService {
         return backupUploader.doReadBackup(uniqueFileName);
       } catch (BackupException ex) {
         MonitoringService.addEvent(Event.CSTORE_BACKUP_ERROR);
-        log.error("sopInstanceUID={}, read backup failed.", uniqueFileName, ex.getCause());
+        log.error("fileName={}, read backup failed.", uniqueFileName, ex.getCause());
         throw new CompletionException(ex);
       }
     }
@@ -236,7 +236,7 @@ public class BackupUploadService implements IBackupUploadService {
 
   private CompletableFuture scheduleUploadWithDelay(BackupState backupState, Runnable uploadJob, long delayMillis) throws BackupException {
     String uniqueFileName = backupState.getUniqueFileName();
-    log.info("Trying to send data, sopInstanceUID={}, attempt № {}. ",
+    log.info("Trying to send data, fileName={}, attempt № {}. ",
         uniqueFileName,
         2 + attemptsAmount - backupState.getAttemptsCountdown());
     if (backupState.decrement()) {
@@ -267,7 +267,7 @@ public class BackupUploadService implements IBackupUploadService {
   }
 
   private BackupException getNoResendAttemptLeftException(DicomWebException dwe, String uniqueFileName) {
-    String errorMessage = "sopInstanceUID=" + uniqueFileName + ". No upload attempt left.";
+    String errorMessage = "fileName=" + uniqueFileName + ". No upload attempt left.";
     log.debug(errorMessage);
     if (dwe != null) {
       return new BackupException(dwe.getStatus(), dwe, errorMessage);
