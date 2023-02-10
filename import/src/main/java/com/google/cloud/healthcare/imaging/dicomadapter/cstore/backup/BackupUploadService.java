@@ -228,7 +228,7 @@ public class BackupUploadService implements IBackupUploadService {
           }
         } else {
           MonitoringService.addEvent(Event.CSTORE_ERROR);
-          throwOnHttpFilterFail(dwe, dwe.getHttpStatus());
+          throwOnHttpFilterFail(dwe, dwe.getHttpStatus(), uniqueFileName);
         }
       }
     }
@@ -256,9 +256,9 @@ public class BackupUploadService implements IBackupUploadService {
     return actualHttpStatus >= 500 || httpErrorCodesToRetry.contains(actualHttpStatus);
   }
 
-  private void throwOnHttpFilterFail(DicomWebException dwe, int httpCode) throws CompletionException {
-    String errorMessage = "Not retried due to HTTP code=" + httpCode;
-    log.debug(errorMessage);
+  private void throwOnHttpFilterFail(DicomWebException dwe, int httpCode, String uniqueFileName) throws CompletionException {
+    String errorMessage = "filename=" + uniqueFileName + ". Not retried due to HTTP code=" + httpCode;
+    log.error(errorMessage);
     throw new CompletionException(new BackupException(dwe.getStatus(), dwe, errorMessage));
   }
 
@@ -268,7 +268,7 @@ public class BackupUploadService implements IBackupUploadService {
 
   private BackupException getNoResendAttemptLeftException(DicomWebException dwe, String uniqueFileName) {
     String errorMessage = "fileName=" + uniqueFileName + ". No upload attempt left.";
-    log.debug(errorMessage);
+    log.error(errorMessage);
     if (dwe != null) {
       return new BackupException(dwe.getStatus(), dwe, errorMessage);
     } else {

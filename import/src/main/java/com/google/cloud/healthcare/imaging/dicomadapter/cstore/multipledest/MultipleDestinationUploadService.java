@@ -14,7 +14,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 public class MultipleDestinationUploadService implements IMultipleDestinationUploadService {
 
+  private static Random rand = new Random();
   private Logger log = LoggerFactory.getLogger(MultipleDestinationUploadService.class);
 
   private CStoreSenderFactory cStoreSenderFactory;
@@ -57,7 +58,7 @@ public class MultipleDestinationUploadService implements IMultipleDestinationUpl
     }
 
     List<Throwable> asyncUploadProcessingExceptions = new ArrayList<>();
-    String uniqueFileName = UUID.randomUUID().toString() + ".dcm";
+    String uniqueFileName = String.format("%s_%s.dcm", sopInstanceUID, rand.nextInt(1000));
 
     try {
       backupUploadService.createBackup(inputStream, uniqueFileName);
