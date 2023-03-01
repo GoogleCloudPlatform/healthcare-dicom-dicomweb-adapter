@@ -59,6 +59,9 @@ public final class StorageCommitmentServiceTest {
   final static String clientAET = "CLIENT";
   final static String clientHostname = "localhost";
 
+  // Default negotiated transfer syntax
+  final static String transferSyntax = UID.ImplicitVRLittleEndian;
+
 
   // Client properties.
   ApplicationEntity clientAE;
@@ -142,7 +145,7 @@ public final class StorageCommitmentServiceTest {
     // Associate with peer AE.
     Association association =
         associate(serverHostname, serverPort,
-            UID.StorageCommitmentPushModelSOPClass, UID.ExplicitVRLittleEndian);
+            UID.StorageCommitmentPushModelSOPClass, transferSyntax);
 
     // Issue N-ACTION
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
@@ -151,7 +154,7 @@ public final class StorageCommitmentServiceTest {
         UID.StorageCommitmentPushModelSOPInstance,
         1,
         requestData,
-        UID.ExplicitVRLittleEndian,
+        transferSyntax,
         rspAssert);
     association.waitForOutstandingRSP();
 
@@ -204,7 +207,7 @@ public final class StorageCommitmentServiceTest {
         new TransferCapability(null,
             UID.StorageCommitmentPushModelSOPClass,
             TransferCapability.Role.SCU,
-            UID.ExplicitVRLittleEndian));
+            transferSyntax));
     serverDevice.bindConnections();
     return serverDevice;
   }
