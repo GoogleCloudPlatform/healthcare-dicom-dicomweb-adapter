@@ -50,6 +50,9 @@ public class StorageCommitmentService extends AbstractDicomService {
   private final IDicomWebClient dicomWebClient;
   private final AetDictionary aets;
 
+  // Set as default negotiated transfer syntax
+  private final String transferSyntax = UID.ImplicitVRLittleEndian;
+
   StorageCommitmentService(IDicomWebClient dicomWebClient, AetDictionary aets) {
     super(UID.StorageCommitmentPushModelSOPClass);
     this.dicomWebClient = dicomWebClient;
@@ -188,7 +191,7 @@ public class StorageCommitmentService extends AbstractDicomService {
             UID.StorageCommitmentPushModelSOPInstance,
             eventTypeId,
             makeDataset(presentInstances, absentInstances),
-            UID.ExplicitVRLittleEndian,
+            transferSyntax,
             handler);
 
         handler.next();
@@ -217,7 +220,7 @@ public class StorageCommitmentService extends AbstractDicomService {
           new PresentationContext(
               1,
               UID.StorageCommitmentPushModelSOPClass,
-              UID.ExplicitVRLittleEndian));
+              transferSyntax));
       aarq.addRoleSelection(
           new RoleSelection(UID.StorageCommitmentPushModelSOPClass, false, true));
       return aarq;
