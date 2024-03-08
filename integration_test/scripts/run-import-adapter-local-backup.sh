@@ -1,7 +1,7 @@
 #!/bin/bash
 # ADAPTER_PORT VERSION PROJECT LOCATION DATASET STORE_NAME
 
-export PATH=$PATH:/opt/gradle/gradle-6.7/bin
+export PATH=$PATH:/opt/gradle/gradle-6.9/bin
 
 cd /workspace/import
 

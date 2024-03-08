@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-export PATH=$PATH:/opt/gradle/gradle-6.7/bin
+export PATH=$PATH:/opt/gradle/gradle-6.9/bin
 
 apt-get -qq update
 apt-get install -y gnupg2

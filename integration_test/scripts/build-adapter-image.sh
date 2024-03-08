@@ -4,7 +4,7 @@
 set -e
 set -o pipefail
 
-export PATH=$PATH:/opt/gradle/gradle-6.7/bin
+export PATH=$PATH:/opt/gradle/gradle-6.9/bin
 base_name="gcr.io/${1}/healthcare-api-dicom-dicomweb-adapter-"
 
 build_adapter () {

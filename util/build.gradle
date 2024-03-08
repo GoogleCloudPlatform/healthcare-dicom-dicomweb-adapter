@@ -34,8 +34,8 @@ repositories {
 }
 
 dependencies {
-    compile "org.dcm4che:dcm4che-core:5.18.1"
-    compile "org.dcm4che:dcm4che-net:5.18.1"
+    compile "org.dcm4che:dcm4che-core:5.31.2"
+    compile "org.dcm4che:dcm4che-net:5.31.2"
     compile "org.json:json:20180813"
     compile "com.google.cloud:google-cloud-monitoring:1.98.0"
 

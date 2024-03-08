@@ -5,22 +5,10 @@ STORE_NAME = get_random_string(20)
 SHORT_SHA = get_short_sha()
 IMAGEPROJECT = get_imageproject()
 
-# clear data
-clear_data()
-
 verify_result(change_permission())
 
 # install environment
 verify_result(install_environment())
-
-# clone-dcm4che
-verify_result(clone_dcm4che())
-
-# checkout-dcm4che-tag
-verify_result(checkout_dcm4che_tag())
-
-# build-tools
-verify_result(build_tools())
 
 # store-scp
 verify_result(store_scp(substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT))
@@ -44,10 +32,10 @@ verify_result(wait_for_port(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_
 verify_result(wait_for_port(substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT))
 
 # run-store-scu
-verify_result(run_store_scu(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT, "../../../integration_test/data/example.dcm"))
+verify_result(run_store_scu(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT, "/workspace/integration_test/data/example.dcm"))
 
 # run-store-scu-destination2
-verify_result(run_store_scu(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT, "../../../integration_test/data/example-mg.dcm"))
+verify_result(run_store_scu(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT, "/workspace/integration_test/data/example-mg.dcm"))
 
 # run-find-scu-instance
 verify_result(run_find_scu_instance(substitution.STORE_SCP_RUN_STEP, substitution.ADAPTER_PORT))
@@ -72,13 +60,13 @@ runCommand("sudo kill -9 $(lsof -t -i:"+substitution.ADAPTER_PORT+")", "Kill pro
 verify_result(check_store_curl(substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME, substitution.REPLACED_UID, "integration_test/downloaded.dcm"))
 
 # check-store-diff
-verify_result(check_diff("integration_test/downloaded.dcm", "integration_test/data/example-redacted-jp2k.dcm"))
+verify_result(check_diff_dcm("integration_test/downloaded.dcm", "integration_test/data/example-redacted-jp2k.dcm"))
 
 # # check-store-curl-destination-2
 verify_result(check_store_curl(substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME+"-destination-2", substitution.REPLACED_UID, "integration_test/downloaded-destination-2.dcm"))
 
 # check-store-diff-destination-2
-verify_result(check_diff("integration_test/downloaded-destination-2.dcm", "integration_test/data/example-redacted-mg-jp2k.dcm"))
+verify_result(check_diff_dcm("integration_test/downloaded-destination-2.dcm", "integration_test/data/example-redacted-mg-jp2k.dcm"))
 
 # check-find-diff-instance
 verify_result(check_diff("integration_test/findscu-instance-result1.xml", "integration_test/data/findscu-instance-expected.xml"))
@@ -90,7 +78,7 @@ verify_result(check_diff("integration_test/findscu-series-result1.xml", "integra
 verify_result(check_diff("integration_test/findscu-study-result1.xml", "integration_test/data/findscu-study-expected.xml"))
 
 # check-move-diff
-verify_result(check_diff("integration_test/storescp-data/"+substitution.REPLACED_UID, "integration_test/data/example-redacted-moved-jp2k.dcm"))
+verify_result(check_diff_dcm("integration_test/storescp-data/"+substitution.REPLACED_UID, "integration_test/data/example-redacted-moved-jp2k.dcm"))
 
 # check-commitment-diff
 verify_result(check_commitment_diff())

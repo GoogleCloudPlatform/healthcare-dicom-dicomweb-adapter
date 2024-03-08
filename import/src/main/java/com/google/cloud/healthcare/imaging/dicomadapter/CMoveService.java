@@ -51,7 +51,7 @@ public class CMoveService extends BasicCMoveSCP {
       IDicomWebClient dicomWebClient,
       AetDictionary aets,
       ISenderFactory senderFactory) {
-    super(UID.StudyRootQueryRetrieveInformationModelMOVE);
+    super(UID.StudyRootQueryRetrieveInformationModelMove);
     this.dicomWebClient = dicomWebClient;
     this.aets = aets;
     this.senderFactory = senderFactory;

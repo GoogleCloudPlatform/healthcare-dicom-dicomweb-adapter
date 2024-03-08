@@ -48,7 +48,7 @@ public class CFindService extends BasicCFindSCP {
   private final Flags cFINDFlags;
 
   CFindService(IDicomWebClient dicomWebClient, Flags flags) {
-    super(UID.StudyRootQueryRetrieveInformationModelFIND);
+    super(UID.StudyRootQueryRetrieveInformationModelFind);
     this.dicomWebClient = dicomWebClient;
     this.cFINDFlags = flags;
   }
