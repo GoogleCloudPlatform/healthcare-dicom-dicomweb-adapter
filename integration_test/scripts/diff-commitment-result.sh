@@ -3,12 +3,16 @@
 set -e
 set -o pipefail
 
-export PATH=/opt/apache-maven-3.6.3/bin:$PATH
+export PATH=/opt/dcm4che/bin:$PATH
+tmp_dir=$(mktemp -d)
 
-mvn -q exec:java \
- -Dexec.mainClass=org.dcm4che3.tool.dcm2xml.Dcm2Xml \
- -Dexec.args=/workspace/integration_test/commitment_result/$(ls /workspace/integration_test/commitment_result/) \
- >/workspace/integration_test/tmp.xml
-cd /workspace/integration_test
-perl -pe 's|<DicomAttribute keyword="TransactionUID".*?<\/DicomAttribute>||' tmp.xml >commitment-clean.xml
-diff commitment-clean.xml data/commitment-expected.xml
+dcm2xml /workspace/integration_test/commitment_result/$(ls /workspace/integration_test/commitment_result/) \
+        > $tmp_dir/got.xml
+
+IGNORE_TRANSACTION_AND_IMPLEMENTATION='.NativeDicomModel.DicomAttribute[] | select(."+@keyword" != "ImplementationVersionName" and ."+@keyword" != "TransactionUID")'
+
+diff \
+	<(yq -oj "$IGNORE_TRANSACTION_AND_IMPLEMENTATION"  $tmp_dir/got.xml) \
+	<(yq -oj "$IGNORE_TRANSACTION_AND_IMPLEMENTATION"  /workspace/integration_test/data/commitment-expected.xml)
+
+rm -rf $tmp_dir

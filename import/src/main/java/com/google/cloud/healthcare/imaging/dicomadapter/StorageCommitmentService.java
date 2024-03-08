@@ -54,7 +54,7 @@ public class StorageCommitmentService extends AbstractDicomService {
   private final String transferSyntax = UID.ImplicitVRLittleEndian;
 
   StorageCommitmentService(IDicomWebClient dicomWebClient, AetDictionary aets) {
-    super(UID.StorageCommitmentPushModelSOPClass);
+    super(UID.StorageCommitmentPushModel);
     this.dicomWebClient = dicomWebClient;
     this.aets = aets;
   }
@@ -66,11 +66,11 @@ public class StorageCommitmentService extends AbstractDicomService {
       if (dimse != Dimse.N_ACTION_RQ) {
         throw new DicomServiceException(Status.UnrecognizedOperation);
       }
-      if (!cmd.getString(Tag.RequestedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass)) {
+      if (!cmd.getString(Tag.RequestedSOPClassUID).equals(UID.StorageCommitmentPushModel)) {
         throw new DicomServiceException(Status.NoSuchSOPclass);
       }
       if (!cmd.getString(Tag.RequestedSOPInstanceUID)
-          .equals(UID.StorageCommitmentPushModelSOPInstance)) {
+          .equals(UID.StorageCommitmentPushModelInstance)) {
         throw new DicomServiceException(Status.NoSuchObjectInstance);
       }
       int actionTypeID = cmd.getInt(Tag.ActionTypeID, 0);
@@ -187,8 +187,8 @@ public class StorageCommitmentService extends AbstractDicomService {
 
         int eventTypeId =
             absentInstances.size() > 0 ? EVENT_ID_FAILURES_PRESENT : EVENT_ID_ALL_SUCCESS;
-        association.neventReport(UID.StorageCommitmentPushModelSOPClass,
-            UID.StorageCommitmentPushModelSOPInstance,
+        association.neventReport(UID.StorageCommitmentPushModel,
+            UID.StorageCommitmentPushModelInstance,
             eventTypeId,
             makeDataset(presentInstances, absentInstances),
             transferSyntax,
@@ -219,10 +219,10 @@ public class StorageCommitmentService extends AbstractDicomService {
       aarq.addPresentationContext(
           new PresentationContext(
               1,
-              UID.StorageCommitmentPushModelSOPClass,
+              UID.StorageCommitmentPushModel,
               transferSyntax));
       aarq.addRoleSelection(
-          new RoleSelection(UID.StorageCommitmentPushModelSOPClass, false, true));
+          new RoleSelection(UID.StorageCommitmentPushModel, false, true));
       return aarq;
     }
 

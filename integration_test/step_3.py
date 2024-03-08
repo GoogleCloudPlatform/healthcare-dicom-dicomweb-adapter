@@ -26,7 +26,7 @@ verify_result(wait_for_port(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_
 verify_result(wait_for_port(substitution.STORE_SCP_RUN_STEP, substitution.STORE_SCP_PORT))
 
 # run-store-scu
-verify_result(run_store_scu(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT, "../../../integration_test/data/example2.dcm"))
+verify_result(run_store_scu(substitution.ADAPTER_RUN_STEP, substitution.ADAPTER_PORT, "/workspace/integration_test/data/example2.dcm"))
 
 # close-adapter
 runCommand("sudo kill -9 $(lsof -t -i:"+substitution.STORE_SCP_PORT+")", "Kill process on port "+ substitution.STORE_SCP_PORT)
@@ -36,7 +36,7 @@ runCommand("sudo kill -9 $(lsof -t -i:"+substitution.ADAPTER_PORT+")", "Kill pro
 verify_result(check_store_curl(substitution.VERSION, substitution.PROJECT, substitution.LOCATION, substitution.DATASET, STORE_NAME, substitution.REPLACED_UID_2, "integration_test/downloaded2.dcm"))
 
 # check-store-diff
-verify_result(check_diff("integration_test/downloaded2.dcm", "integration_test/data/example2.dcm"))
+verify_result(check_diff_dcm("integration_test/downloaded2.dcm", "integration_test/data/example2.dcm"))
 
 # delete-dicom-store
 verify_result(delete_dicom_store(STORE_NAME, substitution.PROJECT, substitution.DATASET, substitution.LOCATION))

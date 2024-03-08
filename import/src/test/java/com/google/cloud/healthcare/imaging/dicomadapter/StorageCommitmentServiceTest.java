@@ -145,13 +145,13 @@ public final class StorageCommitmentServiceTest {
     // Associate with peer AE.
     Association association =
         associate(serverHostname, serverPort,
-            UID.StorageCommitmentPushModelSOPClass, transferSyntax);
+            UID.StorageCommitmentPushModel, transferSyntax);
 
     // Issue N-ACTION
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
     association.naction(
-        UID.StorageCommitmentPushModelSOPClass,
-        UID.StorageCommitmentPushModelSOPInstance,
+        UID.StorageCommitmentPushModel,
+        UID.StorageCommitmentPushModelInstance,
         1,
         requestData,
         transferSyntax,
@@ -205,7 +205,7 @@ public final class StorageCommitmentServiceTest {
 
     Device serverDevice = DeviceUtil.createServerDevice(clientAET, listenerPort, serviceRegistry,
         new TransferCapability(null,
-            UID.StorageCommitmentPushModelSOPClass,
+            UID.StorageCommitmentPushModel,
             TransferCapability.Role.SCU,
             transferSyntax));
     serverDevice.bindConnections();
@@ -219,7 +219,7 @@ public final class StorageCommitmentServiceTest {
 
     public StorageCommitmentSCUService(Attributes expectReportAttrs,
         CompletableFuture<Boolean> checkFuture) {
-      super(UID.StorageCommitmentPushModelSOPClass);
+      super(UID.StorageCommitmentPushModel);
       this.expectReportAttrs = expectReportAttrs;
       this.checkFuture = checkFuture;
     }
@@ -235,12 +235,12 @@ public final class StorageCommitmentServiceTest {
         throw new DicomServiceException(Status.UnrecognizedOperation);
       }
 
-      if (!cmd.getString(Tag.AffectedSOPClassUID).equals(UID.StorageCommitmentPushModelSOPClass)) {
+      if (!cmd.getString(Tag.AffectedSOPClassUID).equals(UID.StorageCommitmentPushModel)) {
         throw new DicomServiceException(Status.NoSuchSOPclass);
       }
 
       if (!cmd.getString(Tag.AffectedSOPInstanceUID)
-          .equals(UID.StorageCommitmentPushModelSOPInstance)) {
+          .equals(UID.StorageCommitmentPushModelInstance)) {
         throw new DicomServiceException(Status.NoSuchObjectInstance);
       }
 

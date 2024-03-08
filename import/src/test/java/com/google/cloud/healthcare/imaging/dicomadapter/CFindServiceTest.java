@@ -159,7 +159,7 @@ public final class CFindServiceTest {
     // Associate with peer AE.
     Association association =
         associate(serverHostname, serverPort,
-            UID.StudyRootQueryRetrieveInformationModelFIND, UID.ExplicitVRLittleEndian);
+            UID.StudyRootQueryRetrieveInformationModelFind, UID.ExplicitVRLittleEndian);
 
     Attributes findData = new Attributes();
     findData.setString(Tag.QueryRetrieveLevel, VR.CS, "IMAGE");
@@ -167,7 +167,7 @@ public final class CFindServiceTest {
     // Issue CFIND
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
     association.cfind(
-        UID.StudyRootQueryRetrieveInformationModelFIND,
+        UID.StudyRootQueryRetrieveInformationModelFind,
         1,
         findData, // I mock IDicomWebClient anyway, AttributesUtil will be tested separately
         UID.ExplicitVRLittleEndian,

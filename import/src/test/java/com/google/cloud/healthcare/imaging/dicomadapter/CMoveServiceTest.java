@@ -251,7 +251,7 @@ public final class CMoveServiceTest {
     // Associate with peer AE.
     Association association =
         associate(serverHostname, serverPort,
-            UID.StudyRootQueryRetrieveInformationModelMOVE, UID.ExplicitVRLittleEndian);
+            UID.StudyRootQueryRetrieveInformationModelMove, UID.ExplicitVRLittleEndian);
 
     Attributes moveDataset = new Attributes();
     moveDataset.setString(Tag.QueryRetrieveLevel, VR.CS, "STUDY");
@@ -260,7 +260,7 @@ public final class CMoveServiceTest {
     // Issue CMOVE
     DimseRSPAssert rspAssert = new DimseRSPAssert(association, expectedStatus);
     association.cmove(
-        UID.StudyRootQueryRetrieveInformationModelMOVE,
+        UID.StudyRootQueryRetrieveInformationModelMove,
         1,
         moveDataset,
         UID.ExplicitVRLittleEndian,
