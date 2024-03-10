@@ -116,7 +116,7 @@ def check_commitment_diff():
 
 # delete-dicom-store
 def delete_dicom_store(store_name, project, dataset, location):
-    return runCommand("gcloud beta healthcare dicom-stores delete "+store_name+" --project="+project+" --dataset="+dataset+" --location="+location+" --quiet", "delete-dicom-store "+store_name+" exit with")
+    return runCommand("gcloud healthcare dicom-stores delete "+store_name+" --project="+project+" --dataset="+dataset+" --location="+location+" --quiet", "delete-dicom-store "+store_name+" exit with")
 
 # verify script result
 def verify_result(result):
