@@ -89,7 +89,7 @@ dependencies {
 apply plugin: 'com.bmuschko.docker-java-application'
 docker {
     javaApplication {
-        baseImage = 'openjdk:11'
+        baseImage = 'eclipse-temurin:11-jammy'
         images = [project.findProperty("docker_tag") ?: "import_adapter"]
         jvmArgs = transcoderJvmArgs
     }
