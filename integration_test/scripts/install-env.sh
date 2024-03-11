@@ -19,7 +19,7 @@ apt-get install -y \
 curl -fsSL https://get.docker.com | sh
 docker -v
 
-curl -sSL https://sdk.cloud.google.com | bash -s -- --install-dir=/opt/gcloud --disable-prompts
+curl -sSL https://sdk.cloud.google.com | bash -s -- --install-dir=/opt/gcloud --disable-prompts > /dev/null
 ln -s /opt/gcloud/google-cloud-sdk/bin/* /usr/bin/
 gcloud --version
 
