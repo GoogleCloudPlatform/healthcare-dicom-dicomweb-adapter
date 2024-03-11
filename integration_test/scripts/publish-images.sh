@@ -19,7 +19,7 @@ base_name="gcr.io/${1}/healthcare-api-dicom-dicomweb-adapter-"
 
 publish_adapter () {
   adapter_name=${base_name}${1}
-  docker push $adapter_name > /dev/null 2> /dev/null
+  docker push $adapter_name > /tmp/docker-pub-stdout.txt 2> /tmp/docker-pub-stderr.txt
   echo "https://${adapter_name}:${2}"
 }
 if [ "$2" == "true" ]
@@ -30,7 +30,11 @@ then
   version=`docker images | grep $base_name | awk '{print $2}' | grep "\." | head -n 1`
   version=${version[0]}
   import=$(publish_adapter import $version)
+  cat /tmp/docker-pub-stdout.txt
+  cat /tmp/docker-pub-stderr.txt
   export=$(publish_adapter export $version)
+  cat /tmp/docker-pub-stdout.txt
+  cat /tmp/docker-pub-stderr.txt
   body="$import\n$export"
   echo {\"tag_name\": \"$version\",\"name\": \"$version\",\"body\": \"$body\"} > /workspace/request.json
   responseCode=$(curl -# -XPOST -H "Authorization: Bearer $GH_TOKEN" -H 'Content-Type:application/json' -H 'Accept:application/json' -w "%{http_code}" --data-binary @/workspace/request.json \

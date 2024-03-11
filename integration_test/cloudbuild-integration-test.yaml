@@ -45,7 +45,7 @@ timeout: 3000s
 
 substitutions:
   _IMAGEPROJECT: 'cloud-healthcare-containers'
-  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:467.0.0'
+  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:290.0.0'
   _PUBLISH: 'false'
 
 availableSecrets:
