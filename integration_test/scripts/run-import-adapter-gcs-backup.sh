@@ -3,7 +3,6 @@
 set -e
 set -o pipefail
 
-export PATH=$PATH:/opt/gradle/gradle-6.9/bin
 cd /workspace/import
 gradle run \
  -Dorg.dcm4che3.imageio.codec.ImageReaderFactory=com/google/cloud/healthcare/imaging/dicomadapter/transcoder/ImageReaderFactory.properties \

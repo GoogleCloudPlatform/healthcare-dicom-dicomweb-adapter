@@ -1,39 +1,40 @@
 steps:
 # basic funtionality test
-- name: 'python:3.6'
+- name: 'gradle:6.9.4-jdk11-focal'
   id: basic-test
   args:
-    - python
+    - python3
     - ./integration_test/step_1.py
   env:
     - 'SHORT_SHA=${SHORT_SHA}'
     - 'IMAGEPROJECT=${_IMAGEPROJECT}'
 
 # http2 test
-- name: 'python:3.6'
+- name: 'gradle:6.9.4-jdk11-focal'
   id: http2-test
   args:
-    - python
+    - python3
     - ./integration_test/step_2.py
 
 # local backup test
-- name: 'python:3.6'
+- name: 'gradle:6.9.4-jdk11-focal'
   id: local-backup-test
   args:
-    - python
+    - python3
     - ./integration_test/step_3.py
 
 # gcs backup test
-- name: 'python:3.6'
+- name: 'gradle:6.9.4-jdk11-focal'
   id: gcs-backup-test
   args:
-    - python
+    - python3
     - ./integration_test/step_4.py
 
 # publish image
 - name: ${_CLOUD_SDK_IMAGE}
   id: publish-image
-  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', "${_PUBLISH}", "${REPO_NAME}" , "${_ACCESS_TOKEN_BASE64}", "${PROJECT_ID}", "${_KMS_LOCATION}", "${_KMS_KEYRING}", "${_KMS_KEY}" ]
+  args: [ 'bash', 'integration_test/scripts/publish-images.sh', '${_IMAGEPROJECT}', '${_PUBLISH}', '${REPO_NAME}', '${PROJECT_ID}']
+  secretEnv: ['GH_TOKEN']
   waitFor:
     - basic-test
     - http2-test
@@ -44,9 +45,10 @@ timeout: 3000s
 
 substitutions:
   _IMAGEPROJECT: 'cloud-healthcare-containers'
-  _KMS_LOCATION: global
-  _KMS_KEYRING: default
-  _KMS_KEY: github-robot-access-token
-  _ACCESS_TOKEN_BASE64: CiQAM/SK3FUc1t+CnHDdgRzbc556FIyHddxRpsnolmSKfpiZ66sSUQDrEGO9gz15JIulryNagWzUOGbBEAaC04y85J8fNRjJZ8T8ntzh6Kt0Sa+GCG+3n5xSQdDJdj6xOG0LfVzvU+/K3mZ1KJlIcd0jiCeBrjYLlw==
-  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:290.0.0'
+  _CLOUD_SDK_IMAGE: 'google/cloud-sdk:467.0.0'
   _PUBLISH: 'false'
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/$PROJECT_ID/secrets/GH_TOKEN/versions/latest
+    env: GH_TOKEN
