@@ -37,7 +37,9 @@ dependencies {
     compile "org.dcm4che:dcm4che-core:5.31.2"
     compile "org.dcm4che:dcm4che-net:5.31.2"
     compile "org.json:json:20180813"
-    compile "com.google.cloud:google-cloud-monitoring:1.98.0"
+    compile platform('com.google.cloud:libraries-bom:5.1.0')
+    compile platform('com.google.cloud:google-cloud-shared-dependencies:0.1.0')
+    compile "com.google.cloud:google-cloud-monitoring"
 
     testCompile "com.google.truth:truth:1.0"
     testCompile "junit:junit:4.2"
