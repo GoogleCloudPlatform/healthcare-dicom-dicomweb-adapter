@@ -76,7 +76,7 @@ public class ExportAdapter {
     boolean isStowRs = !flags.peerDicomwebAddress.isEmpty()
         || (!flags.peerDicomwebAddr.isEmpty() && !flags.peerDicomwebStowPath.isEmpty());
     boolean isCStore =
-        !flags.peerDimseAET.isEmpty() && !flags.peerDimseIP.isEmpty() && flags.peerDimsePort != 0;
+        !flags.peerDimseAET.isEmpty() && !flags.peerDimseIP.isEmpty() && flags.peerDimsePort != 0 && !flags.clientAET.isEmpty();
     DicomSender dicomSender = null;
     if (isStowRs && isCStore) {
       System.err.println("Both C-STORE and STOW-RS flags should not be specified.");
@@ -99,7 +99,7 @@ public class ExportAdapter {
       // C-Store sender.
       //
       // DIMSE application entity.
-      ApplicationEntity applicationEntity = new ApplicationEntity("EXPORTADAPTER");
+      ApplicationEntity applicationEntity = new ApplicationEntity(StringUtil.trim(flags.clientAET));
       Connection conn = new Connection();
       DeviceUtil.createClientDevice(applicationEntity, conn);
       applicationEntity.addConnection(conn);
@@ -111,8 +111,8 @@ public class ExportAdapter {
               flags.peerDimsePort,
               dicomWebClient);
       System.out.printf(
-          "Export adapter set-up to export via C-STORE to AET: %s, IP: %s, Port: %d\n",
-          flags.peerDimseAET, flags.peerDimseIP, flags.peerDimsePort);
+          "Export adapter set-up to export via C-STORE to AET: %s, IP: %s, Port: %d, client AET: %s\n",
+          flags.peerDimseAET, flags.peerDimseIP, flags.peerDimsePort, flags.clientAET);
     } else {
       System.err.println("Neither C-STORE nor STOW-RS flags have been specified.");
       System.exit(1);

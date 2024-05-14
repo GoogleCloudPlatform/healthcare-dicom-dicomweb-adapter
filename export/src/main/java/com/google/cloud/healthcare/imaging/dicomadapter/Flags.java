@@ -38,6 +38,12 @@ public class Flags {
   )
   public static Integer peerDimsePort = 0;
 
+  @Parameter(
+    names = {"--client_aet"},
+    description = "Application Entity Title of export adapter."
+  )
+  public static String clientAET = "EXPORTADAPTER";
+
   /** Flags for exporting via DicomWeb STOW-RS. */
   @Deprecated
   @Parameter(
