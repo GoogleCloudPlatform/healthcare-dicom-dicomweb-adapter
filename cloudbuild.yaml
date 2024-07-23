@@ -7,4 +7,4 @@ steps:
   - build
 
 substitutions:
-  _GRADLE_IMAGE: 'gradle:5.6-jdk11'
+  _GRADLE_IMAGE: 'gradle:7-jdk11'
