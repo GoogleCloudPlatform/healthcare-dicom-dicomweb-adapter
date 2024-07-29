@@ -1,0 +1,54 @@
+/*
+ * Copyright 2019 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'java-library'
+    id 'com.google.protobuf' version "0.8.13"
+    id 'maven'
+}
+
+repositories {
+    google()
+    jcenter()
+    mavenCentral()
+    maven { url 'http://www.dcm4che.org/maven2/' }
+}
+
+group = "com.google.cloud.healthcare.deid"
+archivesBaseName = "redactor"
+version = "0.1.0"
+
+buildDir = "/tmp/gradle_build/redactor"
+
+dependencies {
+    implementation "org.dcm4che:dcm4che-core:3.3.8"
+    implementation "org.dcm4che:dcm4che-imageio:3.3.8"
+
+    protobuf 'com.google.protobuf:protobuf-java:3.7.1'
+
+    api "com.google.api.grpc:proto-google-common-protos:1.16.0"
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'com.google.truth:truth:0.39'
+    testImplementation 'commons-io:commons-io:2.6'
+}
+
+protobuf {
+  generatedFilesBaseDir = "/tmp/gradle_build/redactor/gen"
+  protoc {
+    artifact = "com.google.protobuf:protoc:3.7.1";
+  }
+}
