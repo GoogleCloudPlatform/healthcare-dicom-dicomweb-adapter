@@ -65,7 +65,7 @@ dependencies {
     compile 'com.google.guava:guava:28.1-jre'
     compile 'com.google.auth:google-auth-library-oauth2-http'
     compile "com.google.api-client:google-api-client"
-  
+
     compile "com.beust:jcommander:1.72"
     compile "org.dcm4che:dcm4che-core:5.31.2"
     compile "org.dcm4che:dcm4che-net:5.31.2"
@@ -77,7 +77,7 @@ dependencies {
     compile project(":dicom_util")
     compile project(":util")
 
-    compile "com.github.red1408:deid-redactor:233908ca"
+    compile project(":deid-redactor")
 
     compile "com.google.cloud:google-cloud-storage:1.98.0"
     compile 'com.google.cloud:google-cloud-nio:0.116.0-alpha'

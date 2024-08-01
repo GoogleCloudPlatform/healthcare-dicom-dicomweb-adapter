@@ -1,0 +1,50 @@
+//    Copyright 2019 Google Inc.
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        https://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+
+syntax = "proto2";
+
+package redactor;
+
+option java_package = "com.google.cloud.healthcare.deid.redactor.protos";
+option java_outer_classname = "DicomConfigProtos";
+
+// Specifies the parameters needed for de-identification of DICOM stores.
+message DicomConfig {
+  // List of tags to be filtered.
+  message TagFilterList {
+    // Tags to be filtered. Tags must be DICOM Data Elements, as defined at:
+    // http://dicom.nema.org/medical/dicom/current/output/html/part06.html#table_6-1.
+    // They may be provided by "Keyword" or "Tag". For example "PatientID",
+    // "00100010".
+    repeated string tags = 1;
+  }
+
+  // Profile that determines which tags to keep/remove.
+  enum TagFilterProfile {
+    // No tag filtration profile provided. Same as CHC_BASIC.
+    TAG_FILTER_PROFILE_UNSPECIFIED = 0;
+    // Redacts basic tags which commonly contain sensitive data.
+    CHC_BASIC = 1;
+  }
+
+  // Determines tag filtering method (meaning which tags to keep/remove).
+  oneof tag_filter {
+    // List of tags to keep. Remove all other tags.
+    TagFilterList keep_list = 1;
+    // List of tags to remove. Keep all other tags.
+    TagFilterList remove_list = 2;
+    // Tag filtering profile that determines which tags to keep/remove.
+    TagFilterProfile filter_profile = 3;
+  }
+}

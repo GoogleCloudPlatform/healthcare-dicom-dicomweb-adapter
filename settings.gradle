@@ -19,4 +19,8 @@ include ":import"
 include ":util"
 include ':dicom_util'
 include ':jai-imageio-jpeg2000'
+include ':deid-redactor'
+include ':deid-redactor-examples'
 project(':jai-imageio-jpeg2000').projectDir = new File('third_party/jai-imageio-jpeg2000')
+project(':deid-redactor').projectDir = new File('third_party/deid-redactor/lib')
+project(':deid-redactor-examples').projectDir = new File('third_party/deid-redactor/examples/tag_remover')
