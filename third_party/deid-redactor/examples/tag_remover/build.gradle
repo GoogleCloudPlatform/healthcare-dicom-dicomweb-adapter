@@ -23,7 +23,7 @@ repositories {
     google()
     jcenter()
     mavenCentral()
-    maven { url 'http://www.dcm4che.org/maven2/' }
+    maven { url 'https://www.dcm4che.org/maven2/' }
   }
 
 buildDir = "/tmp/gradle_build/redactor/examples"
@@ -33,7 +33,7 @@ dependencies {
   implementation 'commons-cli:commons-cli:1.4'
 
   testImplementation 'junit:junit:4.12'
-  testImplementation 'com.google.truth:truth:0.39'
+  testImplementation 'com.google.truth:truth:1.4.4'
   testImplementation 'commons-io:commons-io:2.6'
 }
 

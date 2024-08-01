@@ -34,7 +34,6 @@ repositories {
 
 dependencies {
     implementation platform('com.google.cloud:libraries-bom:26.43.0')
-    implementation platform('com.google.cloud:google-cloud-shared-dependencies:3.32.0')
     implementation "com.google.api-client:google-api-client"
     implementation "com.google.inject:guice:4.1.0"
 
@@ -44,7 +43,7 @@ dependencies {
     implementation "org.dcm4che:dcm4che-core:5.31.2"
     implementation "org.dcm4che:dcm4che-net:5.31.2"
 
-    implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
     implementation 'org.eclipse.jetty.http2:http2-client:9.4.55.v20240627'
     implementation 'org.eclipse.jetty:jetty-alpn-java-client:9.4.55.v20240627'
 

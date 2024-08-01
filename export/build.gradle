@@ -53,7 +53,6 @@ repositories {
 
 dependencies {
     implementation platform('com.google.cloud:libraries-bom:26.43.0')
-    implementation platform('com.google.cloud:google-cloud-shared-dependencies:3.32.0')
     implementation 'com.google.cloud:google-cloud-pubsub'
     implementation 'com.google.guava:guava:33.1.0-jre'
     implementation 'com.google.auth:google-auth-library-oauth2-http'
