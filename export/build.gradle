@@ -26,7 +26,7 @@ buildscript {
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.hierynomus.license' version '0.14.0'
+    id 'com.github.hierynomus.license' version '0.16.1'
 }
 
 mainClassName = "com.google.cloud.healthcare.imaging.dicomadapter.ExportAdapter"
@@ -48,27 +48,27 @@ compileJava {
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
-    maven { url 'http://www.dcm4che.org/maven2/' }
+    maven { url 'https://www.dcm4che.org/maven2/' }
 }
 
 dependencies {
-    compile platform('com.google.cloud:libraries-bom:5.1.0')
-    compile platform('com.google.cloud:google-cloud-shared-dependencies:0.1.0')
-    compile 'com.google.cloud:google-cloud-pubsub'
-    compile 'com.google.guava:guava:28.1-jre'
-    compile 'com.google.auth:google-auth-library-oauth2-http'
-    compile "com.google.api-client:google-api-client"
+    implementation platform('com.google.cloud:libraries-bom:26.43.0')
+    implementation 'com.google.cloud:google-cloud-pubsub'
+    implementation 'com.google.guava:guava:33.1.0-jre'
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
+    implementation "com.google.api-client:google-api-client"
+    implementation "org.json:json:20240303"
 
-    compile "com.beust:jcommander:1.72"
-    compile "org.dcm4che:dcm4che-core:5.31.2"
-    compile "org.dcm4che:dcm4che-net:5.31.2"
-    compile project(":dicom_util")
-    compile project(":util")
+    implementation "com.beust:jcommander:1.72"
+    implementation "org.dcm4che:dcm4che-core:5.31.2"
+    implementation "org.dcm4che:dcm4che-net:5.31.2"
+    implementation project(":dicom_util")
+    implementation project(":util")
 
-    testCompile "com.google.truth:truth:1.0"
-    testCompile "junit:junit:4.2"
-    testCompile project(path: ":util", configuration: 'testArtifacts')
-    testCompile project(path: ":dicom_util", configuration: 'testArtifacts')
+    testImplementation "com.google.truth:truth:1.0"
+    testImplementation "junit:junit:4.2"
+    testImplementation project(path: ":util", configuration: 'testArtifacts')
+    testImplementation project(path: ":dicom_util", configuration: 'testArtifacts')
 }
 
 apply plugin: 'com.bmuschko.docker-java-application'
@@ -84,7 +84,7 @@ docker {
 task downloadOpensSourceLicenses(type: nl.javadude.gradle.plugins.license.DownloadLicenses) {
   // These libraries have their license in a non-standard location.
   licenses = specialCaseLicenses
-  dependencyConfiguration = 'compile'
+  dependencyConfiguration = 'runtimeClasspath'
   doLast {
     downloadLicensesText(buildDir)
   }
@@ -93,7 +93,7 @@ task downloadOpensSourceLicenses(type: nl.javadude.gradle.plugins.license.Downlo
 // Download full source jar for all dependencies.
 // https://stackoverflow.com/questions/16154458/how-to-copy-all-source-jars-using-gradle
 task downloadSourceJars( type: Copy ) {
-  def sources = configurations.runtime.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+  def sources = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
     project.dependencies.create( [
       group: artifact.moduleVersion.id.group,
       name: artifact.moduleVersion.id.name,

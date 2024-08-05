@@ -1,6 +1,6 @@
 steps:
 # basic funtionality test
-- name: 'gradle:6.9.4-jdk11-focal'
+- name: 'gradle:7-jdk11-focal'
   id: basic-test
   args:
     - python3
@@ -10,21 +10,21 @@ steps:
     - 'IMAGEPROJECT=${_IMAGEPROJECT}'
 
 # http2 test
-- name: 'gradle:6.9.4-jdk11-focal'
+- name: 'gradle:7-jdk11-focal'
   id: http2-test
   args:
     - python3
     - ./integration_test/step_2.py
 
 # local backup test
-- name: 'gradle:6.9.4-jdk11-focal'
+- name: 'gradle:7-jdk11-focal'
   id: local-backup-test
   args:
     - python3
     - ./integration_test/step_3.py
 
 # gcs backup test
-- name: 'gradle:6.9.4-jdk11-focal'
+- name: 'gradle:7-jdk11-focal'
   id: gcs-backup-test
   args:
     - python3

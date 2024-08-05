@@ -15,6 +15,7 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -217,7 +218,7 @@ public class AttributesUtil {
           break;
         case FL:
         case FD:
-          double[] dValues = jsonValues.toList().stream().mapToDouble(i -> (Double) i).toArray();
+          double[] dValues = jsonValues.toList().stream().mapToDouble(i -> ((BigDecimal) i).doubleValue()).toArray();
           attrs.setDouble(tag, vr, dValues);
           break;
         default:

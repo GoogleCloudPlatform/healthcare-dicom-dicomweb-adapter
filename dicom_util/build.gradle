@@ -29,30 +29,29 @@ compileJava {
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
-    maven { url 'http://www.dcm4che.org/maven2/' }
+    maven { url 'https://www.dcm4che.org/maven2/' }
 }
 
 dependencies {
-    compile platform('com.google.cloud:libraries-bom:5.1.0')
-    compile platform('com.google.cloud:google-cloud-shared-dependencies:0.1.0')
-    compile "com.google.api-client:google-api-client"
-    compile "com.google.inject:guice:4.1.0"
+    implementation platform('com.google.cloud:libraries-bom:26.43.0')
+    implementation "com.google.api-client:google-api-client"
+    implementation "com.google.inject:guice:4.1.0"
 
-    compile "org.json:json:20170516"
-    compile "junit:junit:4.12"
-    compile "org.junit.jupiter:junit-jupiter-engine:5.0.0"
-    compile "org.dcm4che:dcm4che-core:5.31.2"
-    compile "org.dcm4che:dcm4che-net:5.31.2"
+    implementation "org.json:json:20240303"
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:5.0.0"
+    implementation "org.dcm4che:dcm4che-core:5.31.2"
+    implementation "org.dcm4che:dcm4che-net:5.31.2"
 
-    compile 'com.google.auth:google-auth-library-oauth2-http:0.17.2'
-    compile group: 'org.eclipse.jetty.http2', name: 'http2-client', version: '9.4.20.v20190813'
-    compile group: 'org.eclipse.jetty', name: 'jetty-alpn-java-client', version: '9.4.20.v20190813'
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
+    implementation 'org.eclipse.jetty.http2:http2-client:9.4.55.v20240627'
+    implementation 'org.eclipse.jetty:jetty-alpn-java-client:9.4.55.v20240627'
 
-    compile group: 'org.slf4j', name: 'slf4j-reload4j', version: '2.0.12'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.23.0'
+    implementation group: 'org.slf4j', name: 'slf4j-reload4j', version: '2.0.12'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.0'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.23.0'
 
-    testCompile "com.google.truth:truth:1.0"
+    testImplementation "com.google.truth:truth:1.0"
 }
 
 configurations {
@@ -60,7 +59,7 @@ configurations {
 }
 
 task testJar (type: Jar) {
-    baseName = "${project.name}-test"
+    archiveBaseName = "${project.name}-test"
     from sourceSets.test.output
 }
 

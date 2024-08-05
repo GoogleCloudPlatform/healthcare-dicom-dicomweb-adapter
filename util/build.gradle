@@ -30,20 +30,21 @@ compileJava {
 
 repositories {
     mavenCentral()
-    maven { url 'http://www.dcm4che.org/maven2/' }
+    maven { url 'https://www.dcm4che.org/maven2/' }
 }
 
 dependencies {
-    compile "org.dcm4che:dcm4che-core:5.31.2"
-    compile "org.dcm4che:dcm4che-net:5.31.2"
-    compile "org.json:json:20180813"
-    compile platform('com.google.cloud:libraries-bom:5.1.0')
-    compile platform('com.google.cloud:google-cloud-shared-dependencies:0.1.0')
-    compile "com.google.cloud:google-cloud-monitoring"
+    implementation "org.dcm4che:dcm4che-core:5.31.2"
+    implementation "org.dcm4che:dcm4che-net:5.31.2"
+    implementation "org.json:json:20240303"
+    implementation platform('com.google.cloud:libraries-bom:26.43.0')
+    implementation "com.google.cloud:google-cloud-monitoring"
+    implementation "com.google.protobuf:protobuf-java-util"
+    implementation "com.google.api-client:google-api-client"
 
-    testCompile "com.google.truth:truth:1.0"
-    testCompile "junit:junit:4.2"
-    testCompile project(path: ":dicom_util", configuration: 'testArtifacts')
+    testImplementation "com.google.truth:truth:1.0"
+    testImplementation "junit:junit:4.2"
+    testImplementation project(path: ":dicom_util", configuration: 'testArtifacts')
 }
 
 configurations {
@@ -51,7 +52,7 @@ configurations {
 }
 
 task testJar (type: Jar) {
-    baseName = "${project.name}-test"
+    archiveBaseName = "${project.name}-test"
     from sourceSets.test.output
 }
 
