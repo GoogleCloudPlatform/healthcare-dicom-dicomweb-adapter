@@ -132,6 +132,10 @@ public class CFindService extends BasicCFindSCP {
             throw new CancellationException();
           }
           Attributes attrs = AttributesUtil.jsonToAttributes(obj);
+          String queryRetrieveLevel = keys.getString(Tag.QueryRetrieveLevel);
+          if (queryRetrieveLevel != null) {
+            attrs.setString(Tag.QueryRetrieveLevel, VR.CS, queryRetrieveLevel);
+          }
           as.writeDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.Pending), attrs);
         }
         as.writeDimseRSP(pc, Commands.mkCFindRSP(cmd, Status.Success));
