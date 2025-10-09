@@ -104,6 +104,10 @@ def check_store_curl(version, project, location, dataset, store_name, replaced_u
 def check_diff(file_path1, file_path2):
     return runCommand("diff "+file_path1+" "+file_path2, "check-diff exit with")
 
+# check diff xml
+def check_diff_xml(file_path1, file_path2):
+    return runCommand(f"./integration_test/scripts/check-diff-xml.sh {file_path1} {file_path2}", "check-diff-xml exit with")
+
 #check-dcm-diff
 def check_diff_dcm(file_path1, file_path2):
     return runCommand(

@@ -69,13 +69,13 @@ verify_result(check_store_curl(substitution.VERSION, substitution.PROJECT, subst
 verify_result(check_diff_dcm("integration_test/downloaded-destination-2.dcm", "integration_test/data/example-redacted-mg-jp2k.dcm"))
 
 # check-find-diff-instance
-verify_result(check_diff("integration_test/findscu-instance-result1.xml", "integration_test/data/findscu-instance-expected.xml"))
+verify_result(check_diff_xml("integration_test/findscu-instance-result1.xml", "integration_test/data/findscu-instance-expected.xml"))
 
 # check-find-diff-series
-verify_result(check_diff("integration_test/findscu-series-result1.xml", "integration_test/data/findscu-series-expected.xml"))
+verify_result(check_diff_xml("integration_test/findscu-series-result1.xml", "integration_test/data/findscu-series-expected.xml"))
 
 # check-find-diff-study
-verify_result(check_diff("integration_test/findscu-study-result1.xml", "integration_test/data/findscu-study-expected.xml"))
+verify_result(check_diff_xml("integration_test/findscu-study-result1.xml", "integration_test/data/findscu-study-expected.xml"))
 
 # check-move-diff
 verify_result(check_diff_dcm("integration_test/storescp-data/"+substitution.REPLACED_UID, "integration_test/data/example-redacted-moved-jp2k.dcm"))
