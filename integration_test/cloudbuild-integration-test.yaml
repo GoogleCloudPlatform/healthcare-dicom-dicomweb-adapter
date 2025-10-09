@@ -42,6 +42,8 @@ steps:
     - gcs-backup-test
 
 timeout: 3000s
+options:
+  machineType: 'E2_HIGHCPU_32'
 
 substitutions:
   _IMAGEPROJECT: 'cloud-healthcare-containers'
