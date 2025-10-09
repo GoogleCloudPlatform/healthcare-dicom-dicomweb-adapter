@@ -9,7 +9,7 @@ tmp_dir=$(mktemp -d)
 dcm2xml /workspace/integration_test/commitment_result/$(ls /workspace/integration_test/commitment_result/) \
         > $tmp_dir/got.xml
 
-IGNORE_TRANSACTION_AND_IMPLEMENTATION=.NativeDicomModel.DicomAttribute[] | select(."+@keyword" != "ImplementationVersionName" and ."+@keyword" != "TransactionUID" and ."+@keyword" != "InstanceAvailability" and ."+@keyword" != "RetrieveURL")
+IGNORE_TRANSACTION_AND_IMPLEMENTATION='.NativeDicomModel.DicomAttribute[] | select(."+@keyword" != "ImplementationVersionName" and ."+@keyword" != "TransactionUID" and ."+@keyword" != "InstanceAvailability" and ."+@keyword" != "RetrieveURL")'
 
 
 diff \
