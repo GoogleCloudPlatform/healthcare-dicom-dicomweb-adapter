@@ -88,7 +88,7 @@ dependencies {
     testImplementation project(path: ":dicom_util", configuration: 'testArtifacts')
     testImplementation project(path: ":util", configuration: 'testArtifacts')
 
-    testImplementation 'org.eclipse.jetty:jetty-http:9.4.55.v20240627'
+    testImplementation 'org.eclipse.jetty:jetty-http:9.4.58.v20250814'
 }
 
 apply plugin: 'com.bmuschko.docker-java-application'

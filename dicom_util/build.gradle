@@ -44,8 +44,8 @@ dependencies {
     implementation "org.dcm4che:dcm4che-net:5.31.2"
 
     implementation 'com.google.auth:google-auth-library-oauth2-http'
-    implementation 'org.eclipse.jetty.http2:http2-client:9.4.55.v20240627'
-    implementation 'org.eclipse.jetty:jetty-alpn-java-client:9.4.55.v20240627'
+    implementation 'org.eclipse.jetty.http2:http2-client:9.4.58.v20250814'
+    implementation 'org.eclipse.jetty:jetty-alpn-java-client:9.4.58.v20250814'
 
     implementation group: 'org.slf4j', name: 'slf4j-reload4j', version: '2.0.12'
     implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.0'
