@@ -124,3 +124,5 @@ dockerCreateDockerfile {
     instruction 'ADD source /usr/share/oss-source'
 }
 
+
+// Security Update: Trigger rebuild for CVE-2026-33636, CVE-2026-27135, CVE-2026-33416
