@@ -48,8 +48,8 @@ dependencies {
     implementation 'org.eclipse.jetty:jetty-alpn-java-client:9.4.58.v20250814'
 
     implementation group: 'org.slf4j', name: 'slf4j-reload4j', version: '2.0.12'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.0'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.23.0'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.25.4'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.25.4'
 
     testImplementation "com.google.truth:truth:1.0"
 }
