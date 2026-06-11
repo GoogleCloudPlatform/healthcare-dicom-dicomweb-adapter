@@ -149,3 +149,5 @@ dockerCreateDockerfile {
 // Security Update: Trigger rebuild for CVE-2026-22801
 
 // Security Update: Trigger rebuild for CVE-2026-33636, CVE-2026-27135, CVE-2026-33416
+
+// Security Update: Trigger rebuild for CVE-2026-34480 (log4j)
