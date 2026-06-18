@@ -1,0 +1,23 @@
+name: Weekly CI Webhook Trigger
+
+on:
+  schedule:
+    # Runs every Sunday at 4:00 AM UTC
+    - cron: '0 4 * * 0'
+  workflow_dispatch: # Allows manual verification button in GitHub UI
+
+jobs:
+  ping-gcp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allows pushing empty commit with default repository token
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Dispatch Empty Commit to Trigger GCP Webhook
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: weekly automated rebuild to pull fresh base OS patches"
+          git push
