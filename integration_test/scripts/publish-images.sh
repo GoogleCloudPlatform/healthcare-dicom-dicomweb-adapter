@@ -35,6 +35,14 @@ then
   export=$(publish_adapter export $version)
   cat /tmp/docker-pub-stdout.txt
   cat /tmp/docker-pub-stderr.txt
+
+  # Automatically sunset prior active image builds
+  for img in import export; do
+    OLD_DIGEST=$(gcloud container images list-tags gcr.io/${1}/healthcare-api-dicom-dicomweb-adapter-$img --filter="tags:latest" --format="get(digest)" --limit=1)
+    if [ -n "$OLD_DIGEST" ]; then
+      gcloud container images add-tag gcr.io/${1}/healthcare-api-dicom-dicomweb-adapter-$img@$OLD_DIGEST gcr.io/${1}/healthcare-api-dicom-dicomweb-adapter-$img:deprecated-public-image-$(date +%Y%m%d%H%M%S) --quiet || true
+    fi
+  done
   body="$import\n$export"
   echo {\"tag_name\": \"$version\",\"name\": \"$version\",\"body\": \"$body\"} > /workspace/request.json
   responseCode=$(curl -# -XPOST -H "Authorization: Bearer $GH_TOKEN" -H 'Content-Type:application/json' -H 'Accept:application/json' -w "%{http_code}" --data-binary @/workspace/request.json \
