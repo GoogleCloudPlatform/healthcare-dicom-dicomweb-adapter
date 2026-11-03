@@ -45,6 +45,10 @@ public class ExportAdapter {
     return new NetHttpTransport().createRequestFactory(new HttpCredentialsAdapter(credentials));
   }
 
+  static GoogleCredentials selectPeerCredentials(Flags flags, GoogleCredentials credentials) {
+    return flags.useGcpApplicationDefaultCredentials ? credentials : null;
+  }
+
   public static void main(String[] args) throws IOException {
     Flags flags = new Flags();
     JCommander jCommander = new JCommander(flags);
@@ -88,7 +92,7 @@ public class ExportAdapter {
         isLegacyAdress ? flags.peerDicomwebAddr : flags.peerDicomwebAddress;
       String peerDicomwebStowpath = isLegacyAdress ? flags.peerDicomwebStowPath : "studies";
       IDicomWebClient exportDicomWebClient =
-          new DicomWebClientJetty(flags.useGcpApplicationDefaultCredentials ? null : credentials,
+          new DicomWebClientJetty(selectPeerCredentials(flags, credentials),
               StringUtil.joinPath(peerDicomwebAddress, peerDicomwebStowpath), false);
       dicomSender =
           new StowRsSender(dicomWebClient, exportDicomWebClient);

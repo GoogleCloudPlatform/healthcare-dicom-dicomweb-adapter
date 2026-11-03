@@ -18,6 +18,8 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.testing.http.HttpTesting;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.util.FakeWebServer;
@@ -257,5 +259,28 @@ public final class ExportMessageReceiverTest {
         testStowRsExportMessageReceiver(
             fakeSourceDicomWebServer, fakeSinkDicomWebServer, replyConsumer);
     assertThat(replyConsumer.isAck()).isFalse();
+  }
+
+  @Test
+  public void selectPeerCredentials_defaultFalse_returnsNull() {
+    Flags flags = new Flags();
+    Flags.useGcpApplicationDefaultCredentials = false;
+    GoogleCredentials credentials = GoogleCredentials.create(new AccessToken("test-token", null));
+
+    assertThat(ExportAdapter.selectPeerCredentials(flags, credentials)).isNull();
+  }
+
+  @Test
+  public void selectPeerCredentials_true_returnsCredentials() {
+    Flags flags = new Flags();
+    Flags.useGcpApplicationDefaultCredentials = true;
+    GoogleCredentials credentials = GoogleCredentials.create(new AccessToken("test-token", null));
+
+    try {
+      assertThat(ExportAdapter.selectPeerCredentials(flags, credentials))
+          .isSameInstanceAs(credentials);
+    } finally {
+      Flags.useGcpApplicationDefaultCredentials = false;
+    }
   }
 }
