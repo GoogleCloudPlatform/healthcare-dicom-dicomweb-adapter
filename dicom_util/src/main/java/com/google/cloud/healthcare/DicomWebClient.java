@@ -27,7 +27,9 @@ import com.google.common.io.CharStreams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.UUID;
 import javax.inject.Inject;
 import org.dcm4che3.data.Attributes;
@@ -79,8 +81,7 @@ public class DicomWebClient implements IDicomWebClient {
   public InputStream wadoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(
-              new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path)));
+          requestFactory.buildGetRequest(buildServiceUrl(path, false /* allowQuery */));
       httpRequest.getHeaders().put("Accept", "application/dicom; transfer-syntax=*");
       HttpResponse httpResponse = httpRequest.execute();
 
@@ -101,8 +102,7 @@ public class DicomWebClient implements IDicomWebClient {
   public JSONArray qidoRs(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildGetRequest(
-              new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path)));
+          requestFactory.buildGetRequest(buildServiceUrl(path, true /* allowQuery */));
       HttpResponse httpResponse = httpRequest.execute();
 
       // dcm4che server can return 204 responses.
@@ -178,8 +178,7 @@ public class DicomWebClient implements IDicomWebClient {
   public void delete(String path) throws IDicomWebClient.DicomWebException {
     try {
       HttpRequest httpRequest =
-          requestFactory.buildDeleteRequest(
-              new GenericUrl(serviceUrlPrefix + "/" + StringUtil.trim(path)));
+          requestFactory.buildDeleteRequest(buildServiceUrl(path, false /* allowQuery */));
       httpRequest.execute();
     } catch (HttpResponseException e) {
       throw new DicomWebException(
@@ -190,6 +189,23 @@ public class DicomWebClient implements IDicomWebClient {
     } catch (IOException | IllegalArgumentException e) {
       throw new IDicomWebClient.DicomWebException(e);
     }
+  }
+
+  private GenericUrl buildServiceUrl(String path, boolean allowQuery) {
+    String validatedPath = DicomWebValidation.validateRelativeRequestPath(path, allowQuery);
+    GenericUrl url = new GenericUrl(StringUtil.joinPath(serviceUrlPrefix, validatedPath));
+    URI baseUri = URI.create(StringUtil.trim(serviceUrlPrefix)).normalize();
+    URI resolvedUri = URI.create(url.build()).normalize();
+    String expectedPathPrefix =
+        baseUri.getPath() == null || baseUri.getPath().isEmpty() ? "/" : baseUri.getPath() + "/";
+    if (!Objects.equals(baseUri.getScheme(), resolvedUri.getScheme())
+        || !Objects.equals(baseUri.getAuthority(), resolvedUri.getAuthority())
+        || resolvedUri.getPath() == null
+        || !resolvedUri.getPath().startsWith(expectedPathPrefix)) {
+      throw new IllegalArgumentException(
+          "Resolved DICOMweb URL escapes configured serviceUrlPrefix: " + path);
+    }
+    return url;
   }
 
   /**
