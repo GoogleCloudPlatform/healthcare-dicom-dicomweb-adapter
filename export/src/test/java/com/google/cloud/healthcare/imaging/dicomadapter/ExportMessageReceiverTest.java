@@ -108,7 +108,17 @@ public final class ExportMessageReceiverTest {
   ExportMessageReceiver testCStoreExportMessageReceiver(
       int serverPort, FakeWebServer fakeWebServer, StubAckReplyConsumer replyConsumer)
       throws Exception {
-    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(testPubsubPath);
+    return testCStoreExportMessageReceiverWithPath(
+        serverPort, fakeWebServer, replyConsumer, testPubsubPath);
+  }
+
+  ExportMessageReceiver testCStoreExportMessageReceiverWithPath(
+      int serverPort,
+      FakeWebServer fakeWebServer,
+      StubAckReplyConsumer replyConsumer,
+      String pubsubPath)
+      throws Exception {
+    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(pubsubPath);
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(pubsubMessageBytes).build();
     DicomWebClient dicomWebClient =
         new DicomWebClient(fakeWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
@@ -125,7 +135,17 @@ public final class ExportMessageReceiverTest {
       FakeWebServer fakeSinkDicomWebServer,
       StubAckReplyConsumer replyConsumer)
       throws Exception {
-    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(testPubsubPath);
+    return testStowRsExportMessageReceiverWithPath(
+        fakeSourceDicomWebServer, fakeSinkDicomWebServer, replyConsumer, testPubsubPath);
+  }
+
+  ExportMessageReceiver testStowRsExportMessageReceiverWithPath(
+      FakeWebServer fakeSourceDicomWebServer,
+      FakeWebServer fakeSinkDicomWebServer,
+      StubAckReplyConsumer replyConsumer,
+      String pubsubPath)
+      throws Exception {
+    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(pubsubPath);
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(pubsubMessageBytes).build();
     DicomWebClient sourceDicomWebClient =
         new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
@@ -282,5 +302,55 @@ public final class ExportMessageReceiverTest {
     } finally {
       Flags.useGcpApplicationDefaultCredentials = false;
     }
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_StowRsRejectsPathTraversal() throws Exception {
+    FakeWebServer fakeSourceDicomWebServer = new FakeWebServer();
+    FakeWebServer fakeSinkDicomWebServer = new FakeWebServer();
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+
+    testStowRsExportMessageReceiverWithPath(
+        fakeSourceDicomWebServer,
+        fakeSinkDicomWebServer,
+        replyConsumer,
+        "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+
+    assertThat(replyConsumer.isAck()).isFalse();
+    assertThat(fakeSourceDicomWebServer.getRequests()).isEmpty();
+    assertThat(fakeSinkDicomWebServer.getRequests()).isEmpty();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_CStoreRejectsPathTraversal() throws Exception {
+    int serverPort = createServerDevice("*", "*", Status.Success);
+    FakeWebServer fakeWebServer = new FakeWebServer();
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+
+    testCStoreExportMessageReceiverWithPath(
+        serverPort,
+        fakeWebServer,
+        replyConsumer,
+        "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+
+    assertThat(replyConsumer.isAck()).isFalse();
+    assertThat(fakeWebServer.getRequests()).isEmpty();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_StowRsResourceRelativePathSuccess() throws Exception {
+    FakeWebServer fakeSourceDicomWebServer = new FakeWebServer();
+    fakeSourceDicomWebServer.addWadoResponse(TestUtils.readTestFile(TestUtils.TEST_MR_FILE));
+    FakeWebServer fakeSinkDicomWebServer = new FakeWebServer();
+    fakeSinkDicomWebServer.addResponseWithStatusCode(200);
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+
+    testStowRsExportMessageReceiverWithPath(
+        fakeSourceDicomWebServer,
+        fakeSinkDicomWebServer,
+        replyConsumer,
+        "projects/p/locations/l/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+
+    assertThat(replyConsumer.isAck()).isTrue();
   }
 }
