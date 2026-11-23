@@ -15,13 +15,17 @@ public class DicomWebValidation {
     private static String DICOMWEB_PATH = "https:\\/\\/healthcare.googleapis.com\\/.*?\\/projects\\/.*?\\/locations\\/.*?\\/datasets\\/.*?\\/dicomStores\\/.*?\\/dicomWeb";
     private static String HEALTHCARE_API_ROOT = "https://healthcare.googleapis.com";
 
-    private static final String SAFE_SEGMENT = "[^/\\\\?#]+";
+    // Allow-lists for WADO-RS path segments received via Pub/Sub. Resource IDs (project, location,
+    // dataset, DICOM store) may contain letters, digits, '.', '_', '-' and ':' (domain-scoped project
+    // IDs). DICOM UIDs only contain digits and '.'. Anything else (e.g. ';', '%') is rejected.
+    private static final String ID_SEGMENT = "[A-Za-z0-9._:-]+";
+    private static final String UID_SEGMENT = "[0-9.]+";
     private static final Pattern WADO_RS_INSTANCE_PATH_PATTERN =
         Pattern.compile(
             String.format(
                 "^(?:projects\\/%1$s\\/locations\\/%1$s\\/datasets\\/%1$s\\/dicomStores\\/%1$s\\/dicomWeb\\/)?"
-                    + "studies\\/%1$s\\/series\\/%1$s\\/instances\\/%1$s$",
-                SAFE_SEGMENT));
+                    + "studies\\/%2$s\\/series\\/%2$s\\/instances\\/%2$s$",
+                ID_SEGMENT, UID_SEGMENT));
 
     public static ValidationPattern DICOMWEB_ROOT_VALIDATION =
             new ValidationPattern(Pattern.compile(DICOMWEB_PATH), "Google Healthcare Api dicomWeb root path");
@@ -42,25 +46,25 @@ public class DicomWebValidation {
      */
     public static String validateRelativeRequestPath(String path, boolean allowQuery) {
         if (path == null) {
-            throw new IllegalArgumentException("DICOMweb request path must not be null");
+            throw new InvalidDicomWebPathException("DICOMweb request path must not be null");
         }
         for (int i = 0; i < path.length(); i++) {
             char c = path.charAt(i);
             if (c <= 0x1F || c == 0x7F || Character.isWhitespace(c)) {
-                throw new IllegalArgumentException(
+                throw new InvalidDicomWebPathException(
                     "Invalid control or whitespace character in DICOMweb path: " + path);
             }
         }
         if (path.indexOf('\\') >= 0 || path.indexOf('#') >= 0) {
-            throw new IllegalArgumentException("Invalid character in DICOMweb path: " + path);
+            throw new InvalidDicomWebPathException("Invalid character in DICOMweb path: " + path);
         }
         if (!allowQuery && path.indexOf('?') >= 0) {
-            throw new IllegalArgumentException("Unexpected query string in DICOMweb path: " + path);
+            throw new InvalidDicomWebPathException("Unexpected query string in DICOMweb path: " + path);
         }
 
         String trimmed = StringUtil.trim(path);
         if (Strings.isNullOrEmpty(trimmed)) {
-            throw new IllegalArgumentException("DICOMweb request path must not be empty");
+            throw new InvalidDicomWebPathException("DICOMweb request path must not be empty");
         }
 
         int queryIdx = trimmed.indexOf('?');
@@ -68,28 +72,29 @@ public class DicomWebValidation {
         if (Strings.isNullOrEmpty(pathPart)
             || pathPart.startsWith("/")
             || pathPart.endsWith("/")) {
-            throw new IllegalArgumentException("Invalid DICOMweb path: " + path);
+            throw new InvalidDicomWebPathException("Invalid DICOMweb path: " + path);
         }
 
         String lowerPathPart = pathPart.toLowerCase(Locale.ROOT);
         if (lowerPathPart.contains("%2f")
             || lowerPathPart.contains("%5c")
             || lowerPathPart.contains("%00")) {
-            throw new IllegalArgumentException("Encoded path separator in DICOMweb path: " + path);
+            throw new InvalidDicomWebPathException("Encoded path separator in DICOMweb path: " + path);
         }
 
         String[] segments = pathPart.split("/", -1);
         for (String segment : segments) {
             if (segment.isEmpty() || ".".equals(segment) || "..".equals(segment)) {
-                throw new IllegalArgumentException("Invalid path segment in DICOMweb path: " + path);
+                throw new InvalidDicomWebPathException("Invalid path segment in DICOMweb path: " + path);
             }
             String decodedSegment = urlDecodeSegment(segment, path);
             if (decodedSegment.isEmpty()
                 || ".".equals(decodedSegment)
                 || "..".equals(decodedSegment)
                 || decodedSegment.indexOf('/') >= 0
-                || decodedSegment.indexOf('\\') >= 0) {
-                throw new IllegalArgumentException(
+                || decodedSegment.indexOf('\\') >= 0
+                || decodedSegment.indexOf('%') >= 0) {
+                throw new InvalidDicomWebPathException(
                     "Invalid decoded path segment in DICOMweb path: " + path);
             }
         }
@@ -105,7 +110,7 @@ public class DicomWebValidation {
     public static String validateWadoRsInstancePath(String wadoUri) {
         String trimmed = validateRelativeRequestPath(wadoUri, false /* allowQuery */);
         if (!WADO_RS_INSTANCE_PATH_PATTERN.matcher(trimmed).matches()) {
-            throw new IllegalArgumentException(
+            throw new InvalidDicomWebPathException(
                 "Invalid WADO-RS instance path in Pub/Sub message: " + wadoUri);
         }
         return trimmed;
@@ -115,7 +120,7 @@ public class DicomWebValidation {
         try {
             return URLDecoder.decode(segment.replace("+", "%2B"), StandardCharsets.UTF_8.name());
         } catch (IllegalArgumentException | UnsupportedEncodingException e) {
-            throw new IllegalArgumentException("Malformed percent-encoding in DICOMweb path: " + fullPath, e);
+            throw new InvalidDicomWebPathException("Malformed percent-encoding in DICOMweb path: " + fullPath, e);
         }
     }
 

@@ -316,7 +316,7 @@ public final class ExportMessageReceiverTest {
         replyConsumer,
         "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
 
-    assertThat(replyConsumer.isAck()).isFalse();
+    assertThat(replyConsumer.isAck()).isTrue(); // invalid paths are acked (dropped), not retried
     assertThat(fakeSourceDicomWebServer.getRequests()).isEmpty();
     assertThat(fakeSinkDicomWebServer.getRequests()).isEmpty();
   }
@@ -333,7 +333,7 @@ public final class ExportMessageReceiverTest {
         replyConsumer,
         "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
 
-    assertThat(replyConsumer.isAck()).isFalse();
+    assertThat(replyConsumer.isAck()).isTrue(); // invalid paths are acked (dropped), not retried
     assertThat(fakeWebServer.getRequests()).isEmpty();
   }
 
