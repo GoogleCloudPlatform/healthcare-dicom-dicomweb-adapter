@@ -34,15 +34,26 @@ public class ExportMessageReceiver implements MessageReceiver {
       MonitoringService.addEvent(Event.REQUEST);
       dicomSender.send(message);
       consumer.ack();
-    } catch (InvalidDicomWebPathException e) {
-      // Invalid paths never succeed on retry, so ack (drop) the message instead of nacking it.
-      MonitoringService.addEvent(Event.ERROR);
-      e.printStackTrace();
-      consumer.ack();
     } catch (Exception e) {
       MonitoringService.addEvent(Event.ERROR);
       e.printStackTrace();
-      consumer.nack();
+      if (isInvalidPath(e)) {
+        // Invalid paths never succeed on retry, so ack (drop) the message instead of nacking it.
+        consumer.ack();
+      } else {
+        consumer.nack();
+      }
     }
+  }
+
+  // Returns true if the exception or any of its causes is an InvalidDicomWebPathException.
+  // DicomWebClient wraps path validation failures in DicomWebException, so check the cause chain.
+  private static boolean isInvalidPath(Throwable e) {
+    for (Throwable t = e; t != null; t = t.getCause()) {
+      if (t instanceof InvalidDicomWebPathException) {
+        return true;
+      }
+    }
+    return false;
   }
 }

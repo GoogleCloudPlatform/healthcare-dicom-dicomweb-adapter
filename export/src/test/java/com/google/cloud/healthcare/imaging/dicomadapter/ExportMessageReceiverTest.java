@@ -22,6 +22,7 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.InvalidDicomWebPathException;
 import com.google.cloud.healthcare.util.FakeWebServer;
 import com.google.cloud.healthcare.util.TestUtils;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
@@ -352,5 +353,28 @@ public final class ExportMessageReceiverTest {
         "projects/p/locations/l/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
 
     assertThat(replyConsumer.isAck()).isTrue();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_WrappedInvalidPathIsAcked() throws Exception {
+    DicomSender sender =
+        message -> {
+          throw new IDicomWebClient.DicomWebException(
+              new InvalidDicomWebPathException("Resolved DICOMweb URL escapes prefix"));
+        };
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+    new ExportMessageReceiver(sender).receiveMessage(PubsubMessage.getDefaultInstance(), replyConsumer);
+    assertThat(replyConsumer.isAck()).isTrue();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_WrappedOtherErrorIsNacked() throws Exception {
+    DicomSender sender =
+        message -> {
+          throw new IDicomWebClient.DicomWebException(new IOException("connection reset"));
+        };
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+    new ExportMessageReceiver(sender).receiveMessage(PubsubMessage.getDefaultInstance(), replyConsumer);
+    assertThat(replyConsumer.isAck()).isFalse();
   }
 }

@@ -202,7 +202,7 @@ public class DicomWebClient implements IDicomWebClient {
         || !Objects.equals(baseUri.getAuthority(), resolvedUri.getAuthority())
         || resolvedUri.getPath() == null
         || !resolvedUri.getPath().startsWith(expectedPathPrefix)) {
-      throw new IllegalArgumentException(
+      throw new InvalidDicomWebPathException(
           "Resolved DICOMweb URL escapes configured serviceUrlPrefix: " + path);
     }
     return url;
