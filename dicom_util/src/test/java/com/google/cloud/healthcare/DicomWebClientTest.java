@@ -142,4 +142,42 @@ public final class DicomWebClientTest {
         IDicomWebClient.DicomWebException.class,
         () -> client.stowRs(new ByteArrayInputStream(new byte[0])));
   }
+
+  @Test
+  public void testDicomWebClient_WadoRejectsPathTraversal() {
+    assertThrows(
+        IDicomWebClient.DicomWebException.class,
+        () ->
+            client.wadoRs(
+                "../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3"));
+    assertThrows(
+        IDicomWebClient.DicomWebException.class,
+        () -> client.wadoRs("studies/%2e%2e/series/2/instances/3"));
+    assertThrows(
+        IDicomWebClient.DicomWebException.class,
+        () -> client.wadoRs("studies/1/series/2/instances/3?extra=1"));
+    assertThat(fakeDicomWebServer.getRequests()).isEmpty();
+  }
+
+  @Test
+  public void testDicomWebClient_QidoRejectsPathTraversalAllowsQuery() throws Exception {
+    assertThrows(
+        IDicomWebClient.DicomWebException.class,
+        () -> client.qidoRs("../../other-store/dicomWeb/studies?00080018=3"));
+    assertThat(fakeDicomWebServer.getRequests()).isEmpty();
+
+    String qidoResponse =
+        "[{\"00080018\":{\"vr\":\"UI\",\"Value\":[\"1.2.3\"]}}]";
+    fakeDicomWebServer.addJsonResponse(qidoResponse);
+    JSONArray jsonArray = client.qidoRs("studies/1/series/2/instances?00080018=1.2.3");
+    assertThat(jsonArray.length()).isEqualTo(1);
+  }
+
+  @Test
+  public void testDicomWebClient_DeleteRejectsPathTraversal() {
+    assertThrows(
+        IDicomWebClient.DicomWebException.class,
+        () -> client.delete("../../other-store/dicomWeb/studies/1/series/2/instances/3"));
+    assertThat(fakeDicomWebServer.getRequests()).isEmpty();
+  }
 }

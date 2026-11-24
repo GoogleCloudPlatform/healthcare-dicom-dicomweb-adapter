@@ -14,6 +14,7 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import com.google.cloud.healthcare.InvalidDicomWebPathException;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
@@ -36,7 +37,23 @@ public class ExportMessageReceiver implements MessageReceiver {
     } catch (Exception e) {
       MonitoringService.addEvent(Event.ERROR);
       e.printStackTrace();
-      consumer.nack();
+      if (isInvalidPath(e)) {
+        // Invalid paths never succeed on retry, so ack (drop) the message instead of nacking it.
+        consumer.ack();
+      } else {
+        consumer.nack();
+      }
     }
+  }
+
+  // Returns true if the exception or any of its causes is an InvalidDicomWebPathException.
+  // DicomWebClient wraps path validation failures in DicomWebException, so check the cause chain.
+  private static boolean isInvalidPath(Throwable e) {
+    for (Throwable t = e; t != null; t = t.getCause()) {
+      if (t instanceof InvalidDicomWebPathException) {
+        return true;
+      }
+    }
+    return false;
   }
 }

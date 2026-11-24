@@ -51,4 +51,89 @@ public final class DicomWebPathValidationTest {
                 "almost/anything/is/valid/", DicomWebValidation.DICOMWEB_ROOT_VALIDATION);
     }
 
+    @Test
+    public void testValidateWadoRsInstancePath_storeRelativeValid() {
+        DicomWebValidation.validateWadoRsInstancePath("/studies/1.2.3/series/4.5.6/instances/7.8.9");
+        DicomWebValidation.validateWadoRsInstancePath("studies/1.2.3/series/4.5.6/instances/7.8.9");
+    }
+
+    @Test
+    public void testValidateWadoRsInstancePath_resourceRelativeValid() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "projects/my-project/locations/us-central1/datasets/my-dataset/dicomStores/my-store/dicomWeb/studies/1.2.3/series/4.5.6/instances/7.8.9");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_crossProjectTraversalRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_siblingStoreTraversalRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "../../other-store/dicomWeb/studies/1/series/2/instances/3");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_percentEncodedTraversalRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "studies/%2e%2e/series/2/instances/3");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_encodedSlashRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "studies/1/series/2/instances/..%2f..%2fother");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_queryStringRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "studies/1/series/2/instances/3?foo=bar");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_fragmentRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "studies/1/series/2/instances/3#frag");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateWadoRsInstancePath_nonInstancePathRejected() {
+        DicomWebValidation.validateWadoRsInstancePath("studies/1/series/2");
+    }
+
+
+    @Test(expected = InvalidDicomWebPathException.class)
+    public void testValidateWadoRsInstancePath_semicolonRejected() {
+        DicomWebValidation.validateWadoRsInstancePath("studies/1;x/series/2/instances/3");
+    }
+
+    @Test(expected = InvalidDicomWebPathException.class)
+    public void testValidateWadoRsInstancePath_dotDotSemicolonRejected() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "projects/p/locations/l/datasets/d/dicomStores/..;/dicomWeb/studies/1/series/2/instances/3");
+    }
+
+    @Test(expected = InvalidDicomWebPathException.class)
+    public void testValidateWadoRsInstancePath_doubleEncodedTraversalRejected() {
+        DicomWebValidation.validateWadoRsInstancePath("studies/%252e%252e/series/2/instances/3");
+    }
+
+    @Test(expected = InvalidDicomWebPathException.class)
+    public void testValidateRelativeRequestPath_doubleEncodedTraversalRejected() {
+        DicomWebValidation.validateRelativeRequestPath("studies/%252e%252e/series", false);
+    }
+
+    @Test(expected = InvalidDicomWebPathException.class)
+    public void testValidateWadoRsInstancePath_nonNumericUidRejected() {
+        DicomWebValidation.validateWadoRsInstancePath("studies/abc/series/2/instances/3");
+    }
+
+    @Test
+    public void testValidateWadoRsInstancePath_domainScopedProjectValid() {
+        DicomWebValidation.validateWadoRsInstancePath(
+                "projects/example.com:my-project/locations/us-central1/datasets/my_dataset/dicomStores/my-store/dicomWeb/studies/1.2.3/series/4.5.6/instances/7.8.9");
+    }
 }

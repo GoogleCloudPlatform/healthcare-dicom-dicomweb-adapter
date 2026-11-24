@@ -22,6 +22,7 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.healthcare.DicomWebClient;
 import com.google.cloud.healthcare.IDicomWebClient;
+import com.google.cloud.healthcare.InvalidDicomWebPathException;
 import com.google.cloud.healthcare.util.FakeWebServer;
 import com.google.cloud.healthcare.util.TestUtils;
 import com.google.cloud.healthcare.imaging.dicomadapter.util.PortUtil;
@@ -108,7 +109,17 @@ public final class ExportMessageReceiverTest {
   ExportMessageReceiver testCStoreExportMessageReceiver(
       int serverPort, FakeWebServer fakeWebServer, StubAckReplyConsumer replyConsumer)
       throws Exception {
-    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(testPubsubPath);
+    return testCStoreExportMessageReceiverWithPath(
+        serverPort, fakeWebServer, replyConsumer, testPubsubPath);
+  }
+
+  ExportMessageReceiver testCStoreExportMessageReceiverWithPath(
+      int serverPort,
+      FakeWebServer fakeWebServer,
+      StubAckReplyConsumer replyConsumer,
+      String pubsubPath)
+      throws Exception {
+    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(pubsubPath);
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(pubsubMessageBytes).build();
     DicomWebClient dicomWebClient =
         new DicomWebClient(fakeWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
@@ -125,7 +136,17 @@ public final class ExportMessageReceiverTest {
       FakeWebServer fakeSinkDicomWebServer,
       StubAckReplyConsumer replyConsumer)
       throws Exception {
-    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(testPubsubPath);
+    return testStowRsExportMessageReceiverWithPath(
+        fakeSourceDicomWebServer, fakeSinkDicomWebServer, replyConsumer, testPubsubPath);
+  }
+
+  ExportMessageReceiver testStowRsExportMessageReceiverWithPath(
+      FakeWebServer fakeSourceDicomWebServer,
+      FakeWebServer fakeSinkDicomWebServer,
+      StubAckReplyConsumer replyConsumer,
+      String pubsubPath)
+      throws Exception {
+    ByteString pubsubMessageBytes = ByteString.copyFromUtf8(pubsubPath);
     PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(pubsubMessageBytes).build();
     DicomWebClient sourceDicomWebClient =
         new DicomWebClient(fakeSourceDicomWebServer.createRequestFactory(), HttpTesting.SIMPLE_URL, "/studies");
@@ -282,5 +303,78 @@ public final class ExportMessageReceiverTest {
     } finally {
       Flags.useGcpApplicationDefaultCredentials = false;
     }
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_StowRsRejectsPathTraversal() throws Exception {
+    FakeWebServer fakeSourceDicomWebServer = new FakeWebServer();
+    FakeWebServer fakeSinkDicomWebServer = new FakeWebServer();
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+
+    testStowRsExportMessageReceiverWithPath(
+        fakeSourceDicomWebServer,
+        fakeSinkDicomWebServer,
+        replyConsumer,
+        "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+
+    assertThat(replyConsumer.isAck()).isTrue(); // invalid paths are acked (dropped), not retried
+    assertThat(fakeSourceDicomWebServer.getRequests()).isEmpty();
+    assertThat(fakeSinkDicomWebServer.getRequests()).isEmpty();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_CStoreRejectsPathTraversal() throws Exception {
+    int serverPort = createServerDevice("*", "*", Status.Success);
+    FakeWebServer fakeWebServer = new FakeWebServer();
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+
+    testCStoreExportMessageReceiverWithPath(
+        serverPort,
+        fakeWebServer,
+        replyConsumer,
+        "../../../../../../../../target-project/locations/us-central1/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+
+    assertThat(replyConsumer.isAck()).isTrue(); // invalid paths are acked (dropped), not retried
+    assertThat(fakeWebServer.getRequests()).isEmpty();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_StowRsResourceRelativePathSuccess() throws Exception {
+    FakeWebServer fakeSourceDicomWebServer = new FakeWebServer();
+    fakeSourceDicomWebServer.addWadoResponse(TestUtils.readTestFile(TestUtils.TEST_MR_FILE));
+    FakeWebServer fakeSinkDicomWebServer = new FakeWebServer();
+    fakeSinkDicomWebServer.addResponseWithStatusCode(200);
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+
+    testStowRsExportMessageReceiverWithPath(
+        fakeSourceDicomWebServer,
+        fakeSinkDicomWebServer,
+        replyConsumer,
+        "projects/p/locations/l/datasets/d/dicomStores/s/dicomWeb/studies/1/series/2/instances/3");
+
+    assertThat(replyConsumer.isAck()).isTrue();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_WrappedInvalidPathIsAcked() throws Exception {
+    DicomSender sender =
+        message -> {
+          throw new IDicomWebClient.DicomWebException(
+              new InvalidDicomWebPathException("Resolved DICOMweb URL escapes prefix"));
+        };
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+    new ExportMessageReceiver(sender).receiveMessage(PubsubMessage.getDefaultInstance(), replyConsumer);
+    assertThat(replyConsumer.isAck()).isTrue();
+  }
+
+  @Test
+  public void ExportMessageReceiverTest_WrappedOtherErrorIsNacked() throws Exception {
+    DicomSender sender =
+        message -> {
+          throw new IDicomWebClient.DicomWebException(new IOException("connection reset"));
+        };
+    StubAckReplyConsumer replyConsumer = new StubAckReplyConsumer();
+    new ExportMessageReceiver(sender).receiveMessage(PubsubMessage.getDefaultInstance(), replyConsumer);
+    assertThat(replyConsumer.isAck()).isFalse();
   }
 }

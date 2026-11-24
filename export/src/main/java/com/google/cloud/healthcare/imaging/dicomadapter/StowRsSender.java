@@ -14,6 +14,7 @@
 
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
+import com.google.cloud.healthcare.DicomWebValidation;
 import com.google.cloud.healthcare.IDicomWebClient;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
@@ -35,8 +36,9 @@ public class StowRsSender implements DicomSender {
 
   @Override
   public void send(PubsubMessage message) throws Exception {
-    // Invoke WADO-RS to get bulk DICOM.
-    String wadoUri = message.getData().toStringUtf8();
+    // Validate and invoke WADO-RS to get bulk DICOM.
+    String wadoUri =
+        DicomWebValidation.validateWadoRsInstancePath(message.getData().toStringUtf8());
     InputStream responseStream = sourceDicomWebClient.wadoRs(wadoUri);
 
     // Send the STOW-RS request to peer DicomWeb service.

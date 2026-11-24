@@ -15,6 +15,7 @@
 package com.google.cloud.healthcare.imaging.dicomadapter;
 
 import com.google.cloud.healthcare.DicomWebClient;
+import com.google.cloud.healthcare.DicomWebValidation;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.Event;
 import com.google.cloud.healthcare.imaging.dicomadapter.monitoring.MonitoringService;
 import com.google.common.io.CountingInputStream;
@@ -52,7 +53,8 @@ public class CStoreSender implements DicomSender {
 
   @Override
   public void send(PubsubMessage message) throws Exception {
-    String wadoUri = message.getData().toStringUtf8();
+    String wadoUri =
+        DicomWebValidation.validateWadoRsInstancePath(message.getData().toStringUtf8());
     String qidoUri = qidoFromWadoUri(wadoUri);
 
     // Invoke QIDO-RS to get DICOM tags needed to invoke C-Store.
